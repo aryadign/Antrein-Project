@@ -19,6 +19,14 @@ class QueueTicket extends Model
     public const string STATUS_DILEWATI = 'dilewati';
     public const string STATUS_DIBATALKAN = 'dibatalkan';
 
+    // English constant aliases
+    public const string STATUS_WAITING = self::STATUS_MENUNGGU;
+    public const string STATUS_CALLED = self::STATUS_DIPANGGIL;
+    public const string STATUS_SERVING = self::STATUS_SEDANG_DILAYANI;
+    public const string STATUS_COMPLETED = self::STATUS_SELESAI;
+    public const string STATUS_SKIPPED = self::STATUS_DILEWATI;
+    public const string STATUS_CANCELLED = self::STATUS_DIBATALKAN;
+
     public const string SOURCE_ONLINE = 'online';
     public const string SOURCE_WALK_IN = 'walk_in';
 
