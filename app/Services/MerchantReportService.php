@@ -23,13 +23,15 @@ class MerchantReportService
      * @param  string  $period 'today', '7_days', '30_days', 'custom'
      * @param  string|null  $startDate Y-m-d format for custom period
      * @param  string|null  $endDate Y-m-d format for custom period
+     * @param  bool  $includeTickets Whether to attach full ticket records for the period (for export)
      * @return array<string, mixed>
      */
     public function getReportData(
         Business $business,
         string $period = '7_days',
         ?string $startDate = null,
-        ?string $endDate = null
+        ?string $endDate = null,
+        bool $includeTickets = false
     ): array {
         $timezone = $business->timezone ?: 'Asia/Makassar';
         $now = Carbon::now($timezone);
@@ -112,6 +114,14 @@ class MerchantReportService
         // 6. Peak-Hour Analysis (M9-09 & OQ-15)
         $peakHourData = $this->calculatePeakHour($business->id, $dbStart, $dbEnd, $timezone);
 
+        // 7. Period Ticket Records (Included only when requested, e.g. for CSV/PDF export)
+        $tickets = $includeTickets
+            ? (clone $ticketsQuery)
+                ->with('service')
+                ->orderBy('created_at', 'asc')
+                ->get()
+            : collect();
+
         return [
             'period' => $period,
             'periodLabel' => $periodLabel,
@@ -134,6 +144,7 @@ class MerchantReportService
             'statusDistribution' => $statusDistribution,
             'servicesBreakdown' => $servicesBreakdown,
             'peakHour' => $peakHourData,
+            'tickets' => $tickets,
             'hasData' => $totalTickets > 0,
         ];
     }

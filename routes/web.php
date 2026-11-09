@@ -16,6 +16,7 @@ use App\Http\Controllers\Merchant\OnboardingController;
 use App\Http\Controllers\Merchant\QueueController;
 use App\Http\Controllers\Merchant\QueueOperationController;
 use App\Http\Controllers\Merchant\ReportController;
+use App\Http\Controllers\Merchant\ReportExportController;
 use App\Http\Controllers\Merchant\ServiceController;
 use App\Http\Controllers\Merchant\SettingsController;
 use App\Models\Business;
@@ -176,8 +177,10 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::get('/queues/qr', [QueueController::class, 'qr'])->name('queues.qr');
             Route::get('/queues/{ticket}', [QueueController::class, 'show'])->name('queues.show');
 
-            // Reports & Performance Analytics (Milestone 9)
+            // Reports & Performance Analytics (Milestone 9 & Milestone 11 Exports)
             Route::get('/reports', [ReportController::class, 'index'])->name('reports');
+            Route::get('/reports/export/csv', [ReportExportController::class, 'csv'])->name('reports.export.csv');
+            Route::get('/reports/export/pdf', [ReportExportController::class, 'pdf'])->name('reports.export.pdf');
 
             // Business Profile, Operating Hours & Status Settings
             Route::get('/settings', [SettingsController::class, 'show'])->name('settings');

@@ -62,17 +62,45 @@
                         </div>
                     </div>
 
-                    {{-- Active Scope Metadata (M9-10) --}}
-                    <div class="flex flex-col sm:flex-row sm:items-center gap-2 text-caption text-neutral-500">
-                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-neutral-50 border border-neutral-200">
-                            <svg class="w-3.5 h-3.5 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                            <strong class="text-neutral-800">{{ $report['periodLabel'] }}</strong>
-                        </span>
+                    {{-- Active Scope Metadata & Export Buttons (M9-10, M11: P1-06 & P1-07) --}}
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div class="flex flex-wrap items-center gap-2 text-caption text-neutral-500">
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-neutral-50 border border-neutral-200">
+                                <svg class="w-3.5 h-3.5 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                <strong class="text-neutral-800">{{ $report['periodLabel'] }}</strong>
+                            </span>
 
-                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-neutral-50 border border-neutral-200">
-                            <svg class="w-3.5 h-3.5 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            <span>Zona Waktu: <strong class="text-neutral-800">{{ $report['timezone'] }}</strong></span>
-                        </span>
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-neutral-50 border border-neutral-200">
+                                <svg class="w-3.5 h-3.5 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                <span>Zona Waktu: <strong class="text-neutral-800">{{ $report['timezone'] }}</strong></span>
+                            </span>
+                        </div>
+
+                        {{-- Export Buttons (P1-06 & P1-07) --}}
+                        <div class="flex items-center gap-2">
+                            <a
+                                href="{{ route('merchant.reports.export.csv', request()->query()) }}"
+                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-700 text-xs font-semibold shadow-xs transition focus:outline-hidden focus:ring-2 focus:ring-brand-500"
+                                title="Unduh laporan antrean format spreadsheet CSV"
+                            >
+                                <svg class="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                                <span>Ekspor CSV</span>
+                            </a>
+
+                            <a
+                                href="{{ route('merchant.reports.export.pdf', request()->query()) }}"
+                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-rose-200 bg-rose-50/60 hover:bg-rose-50 text-rose-800 text-xs font-semibold shadow-xs transition focus:outline-hidden focus:ring-2 focus:ring-rose-500"
+                                title="Unduh laporan performa antrean format dokumen PDF"
+                                target="_blank"
+                            >
+                                <svg class="w-4 h-4 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                                </svg>
+                                <span>Ekspor PDF</span>
+                            </a>
+                        </div>
                     </div>
                 </div>
 
