@@ -55,6 +55,7 @@ class QueueTicket extends Model
         'cancelled_at',
         'cancellation_reason',
         'notes',
+        'created_at',
     ];
 
     /**

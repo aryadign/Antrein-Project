@@ -61,7 +61,7 @@ class DashboardController extends Controller
         $totalQueues = QueueTicket::count();
         $completedQueues = QueueTicket::where('status', QueueTicket::STATUS_SELESAI)->count();
 
-        // Period-specific metrics
+        // Period-specific metrics (anti-duplicate, direct table scoping in app timezone)
         $periodTicketsQuery = QueueTicket::query()->whereBetween('created_at', [$startDate, $endDate]);
         $periodBusinessesQuery = Business::query()->whereBetween('created_at', [$startDate, $endDate]);
 
@@ -94,11 +94,13 @@ class DashboardController extends Controller
 
         for ($i = 0; $i < $daysCount; $i++) {
             $day = $pointStart->copy()->addDays($i);
-            $dayString = $day->toDateString();
+            $dayStart = $day->copy()->startOfDay();
+            $dayEnd = $day->copy()->endOfDay();
+
             $chartLabels[] = $day->translatedFormat('d M');
 
-            $businessTrend[] = Business::whereDate('created_at', $dayString)->count();
-            $queueTrend[] = QueueTicket::whereDate('created_at', $dayString)->count();
+            $businessTrend[] = Business::whereBetween('created_at', [$dayStart, $dayEnd])->count();
+            $queueTrend[] = QueueTicket::whereBetween('created_at', [$dayStart, $dayEnd])->count();
         }
 
         // Recent Activity Logs from real data
