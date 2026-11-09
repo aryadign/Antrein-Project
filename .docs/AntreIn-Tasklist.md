@@ -345,63 +345,63 @@ Sumber visual: `AntreIn-design.md`. Jangan membuat palette atau skala baru tanpa
 
 ## 7.1 Daily queue dan sequence
 
-- [ ] `M5-01` Implementasikan pembuatan race-safe daily queue (`firstOrCreate` dengan exception handling) berdasarkan UMKM dan tanggal operasional lokal.
-- [ ] `M5-02` Implementasikan sequence nomor antrean langsung dari `daily_queues.current_number` dengan row locking `SELECT ... FOR UPDATE`.
-- [ ] `M5-03` Terapkan transaksi database dan row locking/sequence locking yang sesuai saat menerbitkan nomor.
-- [ ] `M5-04` Terapkan unique constraint untuk mencegah nomor urut duplikat dalam periode yang sama.
-- [ ] `M5-05` Pastikan reset nomor harian konsisten dengan timezone dan definisi hari yang disetujui.
-- [ ] `M5-06` Buat automated concurrency test untuk beberapa request tiket pada waktu bersamaan.
+- [x] `M5-01` Implementasikan pembuatan race-safe daily queue (`firstOrCreate` dengan exception handling) berdasarkan UMKM dan tanggal operasional lokal.
+- [x] `M5-02` Implementasikan sequence nomor antrean langsung dari `daily_queues.current_number` dengan row locking `SELECT ... FOR UPDATE`.
+- [x] `M5-03` Terapkan transaksi database dan row locking/sequence locking yang sesuai saat menerbitkan nomor.
+- [x] `M5-04` Terapkan unique constraint untuk mencegah nomor urut duplikat dalam periode yang sama.
+- [x] `M5-05` Pastikan reset nomor harian konsisten dengan timezone dan definisi hari yang disetujui.
+- [x] `M5-06` Buat automated concurrency test untuk beberapa request tiket pada waktu bersamaan.
 
 ## 7.2 Pembuatan tiket online
 
-- [ ] `M5-07` Buat domain/service action untuk validasi kelayakan antrean online.
-- [ ] `M5-08` Validasi UMKM aktif, status operasional, onboarding minimum, dan layanan aktif.
-- [ ] `M5-09` Validasi kuota layanan sebelum pembuatan tiket (menghitung status Menunggu, Dipanggil, Sedang dilayani, Selesai, dan Dilewati).
-- [ ] `M5-10` Buat tiket dengan sumber `ONLINE`.
-- [ ] `M5-11` Simpan snapshot/detail layanan yang diperlukan agar histori tidak berubah jika layanan diedit kemudian.
-- [ ] `M5-12` Buat token publik unik dan sulit ditebak untuk akses tiket.
-- [ ] `M5-13` Pastikan form double-submit tidak membuat tiket ganda; gunakan idempotency/request protection yang sesuai.
-- [ ] `M5-14` Pastikan nomor baru hanya ditampilkan setelah transaksi penyimpanan berhasil.
+- [x] `M5-07` Buat domain/service action untuk validasi kelayakan antrean online.
+- [x] `M5-08` Validasi UMKM aktif, status operasional, onboarding minimum, dan layanan aktif.
+- [x] `M5-09` Validasi kuota layanan sebelum pembuatan tiket (menghitung status Menunggu, Dipanggil, Sedang dilayani, Selesai, dan Dilewati).
+- [x] `M5-10` Buat tiket dengan sumber `ONLINE`.
+- [x] `M5-11` Simpan snapshot/detail layanan yang diperlukan agar histori tidak berubah jika layanan diedit kemudian.
+- [x] `M5-12` Buat token publik unik dan sulit ditebak untuk akses tiket.
+- [x] `M5-13` Pastikan form double-submit tidak membuat tiket ganda; gunakan idempotency/request protection yang sesuai.
+- [x] `M5-14` Pastikan nomor baru hanya ditampilkan setelah transaksi penyimpanan berhasil.
 
 ## 7.3 Pembuatan tiket walk-in
 
-- [ ] `M5-15` Buat action tambah antrean manual dengan sumber `WALK_IN`.
-- [ ] `M5-16` Validasi layanan dan kuota yang dipilih.
-- [ ] `M5-17` Gunakan sequence yang sama dengan antrean online.
-- [ ] `M5-18` Pastikan tiket walk-in muncul di daftar yang sama dengan tiket online.
-- [ ] `M5-19` Terapkan aturan tautan/tiket publik walk-in sesuai keputusan OQ-04.
+- [x] `M5-15` Buat action tambah antrean manual dengan sumber `WALK_IN`.
+- [x] `M5-16` Validasi layanan dan kuota yang dipilih.
+- [x] `M5-17` Gunakan sequence yang sama dengan antrean online.
+- [x] `M5-18` Pastikan tiket walk-in muncul di daftar yang sama dengan tiket online.
+- [x] `M5-19` Terapkan aturan tautan/tiket publik walk-in sesuai keputusan OQ-04.
 
 ## 7.4 FIFO dan operator tunggal
 
-- [ ] `M5-20` Implementasikan query tiket Menunggu berdasarkan urutan pencatatan yang konsisten.
-- [ ] `M5-21` Implementasikan aturan satu operator aktif: tidak boleh ada tiket Dipanggil/Sedang dilayani lain ketika panggil berikutnya dilakukan.
-- [ ] `M5-22` Pastikan sumber ONLINE dan WALK_IN tidak mengubah prioritas.
-- [ ] `M5-23` Tangani kondisi tidak ada tiket menunggu.
-- [ ] `M5-24` Gunakan locking/validasi status untuk mencegah dua aksi panggil berikutnya memproses tiket yang sama.
+- [x] `M5-20` Implementasikan query tiket Menunggu berdasarkan urutan pencatatan yang konsisten.
+- [x] `M5-21` Implementasikan aturan satu operator aktif: tidak boleh ada tiket Dipanggil/Sedang dilayani lain ketika panggil berikutnya dilakukan.
+- [x] `M5-22` Pastikan sumber ONLINE dan WALK_IN tidak mengubah prioritas.
+- [x] `M5-23` Tangani kondisi tidak ada tiket menunggu.
+- [x] `M5-24` Gunakan locking/validasi status untuk mencegah dua aksi panggil berikutnya memproses tiket yang sama.
 
 ## 7.5 Status lifecycle dan history
 
-- [ ] `M5-25` Implementasikan enum/status antrean: Menunggu, Dipanggil, Sedang dilayani, Selesai, Dilewati, Dibatalkan.
-- [ ] `M5-26` Implementasikan transisi valid Menunggu → Dipanggil.
-- [ ] `M5-27` Implementasikan transisi valid Dipanggil → Sedang dilayani.
-- [ ] `M5-28` Implementasikan transisi valid Sedang dilayani → Selesai.
-- [ ] `M5-29` Implementasikan transisi valid Menunggu → Dilewati.
-- [ ] `M5-30` Implementasikan transisi valid Dipanggil → Dilewati.
-- [ ] `M5-31` Implementasikan pembatalan Menunggu → Dibatalkan hanya jika keputusan pembatalan sudah disetujui.
-- [ ] `M5-32` Tolak seluruh transisi yang tidak diizinkan oleh state machine MVP.
-- [ ] `M5-33` Catat timestamp untuk dibuat, dipanggil, panggil ulang, mulai dilayani, selesai, dilewati, dan dibatalkan sesuai kebutuhan.
-- [ ] `M5-34` Simpan setiap perubahan dan operational event pada `queue_status_histories` dengan `event_type` terstruktur (`status_changed`, `ticket_recalled`, `ticket_skipped`, `ticket_cancelled`).
-- [ ] `M5-35` Pastikan panggil ulang tidak membuat tiket baru, memperbarui `recalled_at`, dan menambahkan event `ticket_recalled` ke `queue_status_histories`.
-- [ ] `M5-36` Pastikan status Dilewati dan Dibatalkan tidak dihitung sebagai Selesai.
-- [ ] `M5-37` Buat automated tests untuk semua transisi valid dan invalid.
+- [x] `M5-25` Implementasikan enum/status antrean: Menunggu, Dipanggil, Sedang dilayani, Selesai, Dilewati, Dibatalkan.
+- [x] `M5-26` Implementasikan transisi valid Menunggu → Dipanggil.
+- [x] `M5-27` Implementasikan transisi valid Dipanggil → Sedang dilayani.
+- [x] `M5-28` Implementasikan transisi valid Sedang dilayani → Selesai.
+- [x] `M5-29` Implementasikan transisi valid Menunggu → Dilewati.
+- [x] `M5-30` Implementasikan transisi valid Dipanggil → Dilewati.
+- [x] `M5-31` Implementasikan pembatalan Menunggu → Dibatalkan hanya jika keputusan pembatalan sudah disetujui.
+- [x] `M5-32` Tolak seluruh transisi yang tidak diizinkan oleh state machine MVP.
+- [x] `M5-33` Catat timestamp untuk dibuat, dipanggil, panggil ulang, mulai dilayani, selesai, dilewati, dan dibatalkan sesuai kebutuhan.
+- [x] `M5-34` Simpan setiap perubahan dan operational event pada `queue_status_histories` dengan `event_type` terstruktur (`status_changed`, `ticket_recalled`, `ticket_skipped`, `ticket_cancelled`).
+- [x] `M5-35` Pastikan panggil ulang tidak membuat tiket baru, memperbarui `recalled_at`, dan menambahkan event `ticket_recalled` ke `queue_status_histories`.
+- [x] `M5-36` Pastikan status Dilewati dan Dibatalkan tidak dihitung sebagai Selesai.
+- [x] `M5-37` Buat automated tests untuk semua transisi valid dan invalid.
 
 ## 7.6 Posisi antrean dan kuota
 
-- [ ] `M5-38` Implementasikan jumlah antrean di depan berdasarkan tiket Menunggu yang lebih awal pada antrean yang sama.
-- [ ] `M5-39` Tentukan perilaku posisi ketika tiket Dipanggil/Sedang dilayani/Selesai/Dilewati/Dibatalkan.
-- [ ] `M5-40` Implementasikan pemakaian kuota sesuai definisi yang disetujui.
-- [ ] `M5-41` Pastikan pembatalan mengubah kapasitas hanya sesuai aturan yang telah disepakati.
-- [ ] `M5-42` Uji kondisi dua request bersamaan ketika kuota hampir habis.
+- [x] `M5-38` Implementasikan jumlah antrean di depan berdasarkan tiket Menunggu yang lebih awal pada antrean yang sama.
+- [x] `M5-39` Tentukan perilaku posisi ketika tiket Dipanggil/Sedang dilayani/Selesai/Dilewati/Dibatalkan.
+- [x] `M5-40` Implementasikan pemakaian kuota sesuai definisi yang disetujui.
+- [x] `M5-41` Pastikan pembatalan mengubah kapasitas hanya sesuai aturan yang telah disepakati.
+- [x] `M5-42` Uji kondisi dua request bersamaan ketika kuota hampir habis.
 
 **Exit Gate 5:** engine antrean memiliki nomor unik, FIFO, validasi kuota, state transition, timestamp, history, dan concurrency test yang lulus.
 

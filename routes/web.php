@@ -6,7 +6,9 @@ use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\Customer\QueueTicketController;
 use App\Http\Controllers\Merchant\OnboardingController;
+use App\Http\Controllers\Merchant\QueueOperationController;
 use App\Http\Controllers\Merchant\ServiceController;
 use App\Http\Controllers\Merchant\SettingsController;
 use App\Models\Business;
@@ -52,7 +54,7 @@ Route::get('/', function () {
     return view('preview.design-system');
 });
 
-// Customer Public Queue Route placeholder (Milestone 5 core)
+// Customer Public Queue Routes (Milestone 5 core)
 Route::get('/q/{slug}', function (string $slug) {
     $business = Business::query()->where('slug', $slug)->firstOrFail();
 
@@ -60,6 +62,9 @@ Route::get('/q/{slug}', function (string $slug) {
         'business' => $business,
     ]);
 })->name('customer.queue');
+
+Route::post('/q/{slug}/take-queue', [QueueTicketController::class, 'store'])->name('customer.queue.take');
+Route::get('/q/track/{token}', [QueueTicketController::class, 'track'])->name('customer.queue.track');
 
 // Design System & Layout Preview Testbed (Milestone 2)
 Route::get('/design-system', function () {
@@ -162,6 +167,16 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::put('/services/{service}', [ServiceController::class, 'update'])->name('services.update');
             Route::patch('/services/{service}/toggle-status', [ServiceController::class, 'toggleStatus'])->name('services.toggle-status');
             Route::delete('/services/{service}', [ServiceController::class, 'destroy'])->name('services.destroy');
+
+            // Queue Operations (Milestone 5 core)
+            Route::post('/queues/walk-in', [QueueOperationController::class, 'walkIn'])->name('queues.walk-in');
+            Route::post('/queues/call-next', [QueueOperationController::class, 'callNext'])->name('queues.call-next');
+            Route::post('/queues/{ticket}/recall', [QueueOperationController::class, 'recall'])->name('queues.recall');
+            Route::post('/queues/{ticket}/start-service', [QueueOperationController::class, 'startService'])->name('queues.start-service');
+            Route::post('/queues/{ticket}/complete', [QueueOperationController::class, 'complete'])->name('queues.complete');
+            Route::post('/queues/{ticket}/skip', [QueueOperationController::class, 'skip'])->name('queues.skip');
+            Route::post('/queues/{ticket}/cancel', [QueueOperationController::class, 'cancel'])->name('queues.cancel');
+            Route::get('/queues/status', [QueueOperationController::class, 'status'])->name('queues.status');
         });
     });
 });
