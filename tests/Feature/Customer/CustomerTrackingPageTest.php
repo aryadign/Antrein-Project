@@ -227,3 +227,4 @@ class CustomerTrackingPageTest extends TestCase
         Carbon::setTestNow(); // reset
     }
 }
+

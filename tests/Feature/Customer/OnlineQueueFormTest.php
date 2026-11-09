@@ -201,3 +201,4 @@ class OnlineQueueFormTest extends TestCase
         $this->assertEquals(1, QueueTicket::count());
     }
 }
+

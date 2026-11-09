@@ -202,3 +202,4 @@ class PublicBusinessPageTest extends TestCase
         $this->assertEquals('Aura Aesthetic Clinic', $response->json('data.business.name'));
     }
 }
+
