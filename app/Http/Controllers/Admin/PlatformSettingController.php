@@ -51,7 +51,20 @@ class PlatformSettingController extends Controller
 
         if ($request->hasFile('logo')) {
             $file = $request->file('logo');
-            $extension = $file->getClientOriginalExtension();
+            $extension = strtolower((string) $file->getClientOriginalExtension());
+            $mime = (string) $file->getMimeType();
+
+            // Strict SVG Security Sanitization (M10-06)
+            if ($extension === 'svg' || str_contains($mime, 'svg')) {
+                $content = (string) file_get_contents($file->getRealPath());
+                if (preg_match('/<\s*(script|iframe|foreignobject|object|embed)/i', $content) ||
+                    preg_match('/(on\w+\s*=|javascript\s*:|data\s*:)/i', $content)) {
+                    return back()->withErrors([
+                        'logo' => 'File SVG tidak aman. Format SVG dilarang mengandung script atau atribut interaktif.',
+                    ])->withInput();
+                }
+            }
+
             $safeName = 'platform-logo-' . Str::random(24) . '.' . $extension;
 
             $newLogoPath = $file->storeAs('platform', $safeName, 'public');
