@@ -54,6 +54,25 @@ class Service extends Model
     }
 
     /**
+     * Calculate remaining quota for a given daily queue session based on approved rule:
+     * Tickets consuming quota: menunggu, dipanggil, sedang_dilayani, selesai, dilewati.
+     * Only dibatalkan releases quota.
+     */
+    public function getRemainingQuotaForDailyQueue(DailyQueue $dailyQueue): ?int
+    {
+        if ($this->daily_quota === null) {
+            return null; // Unlimited quota
+        }
+
+        $consumedCount = $this->queueTickets()
+            ->where('daily_queue_id', $dailyQueue->id)
+            ->where('status', '!=', QueueTicket::STATUS_DIBATALKAN)
+            ->count();
+
+        return max(0, $this->daily_quota - $consumedCount);
+    }
+
+    /**
      * Get the business that offers this service.
      */
     public function business(): BelongsTo

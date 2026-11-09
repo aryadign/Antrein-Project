@@ -1,10 +1,10 @@
 @php
     $navItems = [
-        ['name' => 'Beranda', 'route' => 'umkm.dashboard', 'icon' => 'home'],
-        ['name' => 'Antrean', 'route' => 'umkm.queues', 'icon' => 'queue'],
-        ['name' => 'Layanan', 'route' => 'umkm.services', 'icon' => 'scissors'],
-        ['name' => 'Laporan', 'route' => 'umkm.reports', 'icon' => 'chart'],
-        ['name' => 'Pengaturan', 'route' => 'umkm.settings', 'icon' => 'cog'],
+        ['name' => 'Beranda', 'route' => 'merchant.dashboard', 'icon' => 'home'],
+        ['name' => 'Antrean', 'route' => 'merchant.queues', 'icon' => 'queue'],
+        ['name' => 'Layanan', 'route' => 'merchant.services.index', 'icon' => 'scissors'],
+        ['name' => 'Laporan', 'route' => 'merchant.reports', 'icon' => 'chart'],
+        ['name' => 'Pengaturan', 'route' => 'merchant.settings', 'icon' => 'cog'],
     ];
 
     $currentRoute = request()->route() ? request()->route()->getName() : '';
