@@ -114,4 +114,16 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Staff Invitation Expiration Window (Hours)
+    |--------------------------------------------------------------------------
+    |
+    | Defines how many hours a staff operator invitation token remains valid
+    | before expiring. Default is 72 hours (3 days).
+    |
+    */
+
+    'staff_invitation_expiry_hours' => (int) env('AUTH_STAFF_INVITATION_EXPIRY_HOURS', 72),
+
 ];

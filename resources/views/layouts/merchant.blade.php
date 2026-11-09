@@ -111,11 +111,17 @@
 
                         <x-slot name="content">
                             <div class="px-4 py-2 border-b border-neutral-100">
-                                <p class="text-caption font-medium text-neutral-900">{{ auth()->user()?->name ?? 'Pemilik UMKM' }}</p>
-                                <p class="text-[11px] text-neutral-500 truncate">{{ auth()->user()?->email ?? 'owner@antrein.id' }}</p>
+                                <p class="text-caption font-medium text-neutral-900">{{ auth()->user()?->name ?? 'Pengguna' }}</p>
+                                <p class="text-[11px] text-neutral-500 truncate">{{ auth()->user()?->email ?? 'user@antrein.id' }}</p>
+                                <span class="inline-block mt-1 text-[10px] font-semibold px-2 py-0.5 rounded-full {{ auth()->user()?->isOwner() ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700' }}">
+                                    {{ auth()->user()?->isOwner() ? 'Pemilik Usaha' : 'Staf Operator' }}
+                                </span>
                             </div>
-                            <a href="{{ route('merchant.settings', ['tab' => 'profile']) }}" class="block px-4 py-2 text-label text-neutral-700 hover:bg-neutral-50 transition">Profil & Jam Buka</a>
-                            <a href="{{ route('merchant.settings', ['tab' => 'account']) }}" class="block px-4 py-2 text-label text-neutral-700 hover:bg-neutral-50 transition">Pengaturan Akun</a>
+                            @if (auth()->user()?->isOwner())
+                                <a href="{{ route('merchant.settings', ['tab' => 'profile']) }}" class="block px-4 py-2 text-label text-neutral-700 hover:bg-neutral-50 transition">Profil & Jam Buka</a>
+                                <a href="{{ route('merchant.staff.index') }}" class="block px-4 py-2 text-label text-neutral-700 hover:bg-neutral-50 transition">Kelola Staf</a>
+                                <a href="{{ route('merchant.settings', ['tab' => 'account']) }}" class="block px-4 py-2 text-label text-neutral-700 hover:bg-neutral-50 transition">Pengaturan Akun</a>
+                            @endif
                             <form method="POST" action="{{ route('logout') }}">
                                 @csrf
                                 <button type="submit" class="w-full text-left px-4 py-2 text-label text-danger-700 hover:bg-red-50 transition border-t border-neutral-100">Keluar</button>

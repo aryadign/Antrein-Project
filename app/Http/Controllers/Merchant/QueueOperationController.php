@@ -250,6 +250,12 @@ class QueueOperationController extends Controller
     public function cancel(Request $request, QueueTicket $ticket): JsonResponse|RedirectResponse
     {
         $user = $request->user();
+
+        // Cancellation of tickets is strictly restricted to Owner (M12 RBAC)
+        if ($user->isOperator()) {
+            abort(403, 'Akses tidak diizinkan. Pembatalan tiket hanya dapat dilakukan oleh Pemilik Usaha.');
+        }
+
         $this->authorizeTicketOwnership($ticket, $user->business);
 
         $validated = $request->validate([

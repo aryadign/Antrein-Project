@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'active' => \App\Http\Middleware\EnsureUserIsActive::class,
             'onboarded' => \App\Http\Middleware\EnsureMerchantOnboarded::class,
             'owns.business' => \App\Http\Middleware\EnsureUserOwnsBusiness::class,
+            'business.role' => \App\Http\Middleware\EnsureBusinessRole::class,
         ]);
 
         $middleware->appendToGroup('web', \App\Http\Middleware\EnsureUserIsActive::class);

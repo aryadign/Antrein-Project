@@ -10,6 +10,7 @@ use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\Auth\StaffInvitationController;
 use App\Http\Controllers\Customer\QueueTicketController;
 use App\Http\Controllers\Merchant\DashboardController;
 use App\Http\Controllers\Merchant\OnboardingController;
@@ -19,6 +20,7 @@ use App\Http\Controllers\Merchant\ReportController;
 use App\Http\Controllers\Merchant\ReportExportController;
 use App\Http\Controllers\Merchant\ServiceController;
 use App\Http\Controllers\Merchant\SettingsController;
+use App\Http\Controllers\Merchant\StaffManagementController;
 use App\Models\Business;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
@@ -89,6 +91,16 @@ Route::get('/preview/customer', function () {
 Route::get('/preview/auth', function () {
     return view('preview.auth');
 })->name('preview.auth');
+
+/*
+|--------------------------------------------------------------------------
+| Staff Operator Invitation Routes (P1-01 & P1-02)
+|--------------------------------------------------------------------------
+*/
+Route::get('/invite/{token}', [StaffInvitationController::class, 'show'])->name('invitations.show');
+Route::post('/invite/{token}/accept', [StaffInvitationController::class, 'accept'])
+    ->middleware('throttle:10,1')
+    ->name('invitations.accept');
 
 /*
 |--------------------------------------------------------------------------
@@ -170,42 +182,57 @@ Route::middleware(['auth', 'active'])->group(function () {
 
         // Operational merchant routes (Restricted by 'onboarded' middleware)
         Route::middleware('onboarded')->group(function () {
-            Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+            // Shared Operational Routes (Accessible to both Owner and Operator)
+            Route::middleware('business.role:owner,operator')->group(function () {
+                Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-            // Queue Management & Views (Milestone 7)
-            Route::get('/queues', [QueueController::class, 'index'])->name('queues');
-            Route::get('/queues/qr', [QueueController::class, 'qr'])->name('queues.qr');
-            Route::get('/queues/{ticket}', [QueueController::class, 'show'])->name('queues.show');
+                // Queue Management & Views (Milestone 7)
+                Route::get('/queues', [QueueController::class, 'index'])->name('queues');
+                Route::get('/queues/qr', [QueueController::class, 'qr'])->name('queues.qr');
+                Route::get('/queues/{ticket}', [QueueController::class, 'show'])->name('queues.show');
 
-            // Reports & Performance Analytics (Milestone 9 & Milestone 11 Exports)
-            Route::get('/reports', [ReportController::class, 'index'])->name('reports');
-            Route::get('/reports/export/csv', [ReportExportController::class, 'csv'])->name('reports.export.csv');
-            Route::get('/reports/export/pdf', [ReportExportController::class, 'pdf'])->name('reports.export.pdf');
+                // Queue Operations (Milestone 5 & Milestone 12)
+                Route::post('/queues/walk-in', [QueueOperationController::class, 'walkIn'])->name('queues.walk-in');
+                Route::post('/queues/call-next', [QueueOperationController::class, 'callNext'])->name('queues.call-next');
+                Route::post('/queues/{ticket}/recall', [QueueOperationController::class, 'recall'])->name('queues.recall');
+                Route::post('/queues/{ticket}/start-service', [QueueOperationController::class, 'startService'])->name('queues.start-service');
+                Route::post('/queues/{ticket}/complete', [QueueOperationController::class, 'complete'])->name('queues.complete');
+                Route::post('/queues/{ticket}/skip', [QueueOperationController::class, 'skip'])->name('queues.skip');
+                Route::get('/queues/status', [QueueOperationController::class, 'status'])->name('queues.status');
+            });
 
-            // Business Profile, Operating Hours & Status Settings
-            Route::get('/settings', [SettingsController::class, 'show'])->name('settings');
-            Route::put('/settings/profile', [SettingsController::class, 'updateProfile'])->name('settings.profile');
-            Route::delete('/settings/logo', [SettingsController::class, 'removeLogo'])->name('settings.logo.remove');
-            Route::put('/settings/hours', [SettingsController::class, 'updateHours'])->name('settings.hours');
-            Route::patch('/settings/status', [SettingsController::class, 'updateStatus'])->name('settings.status');
-            Route::put('/settings/account', [SettingsController::class, 'updateAccount'])->name('settings.account');
+            // Owner-Only Administrative Routes (Restricted to Owner)
+            Route::middleware('business.role:owner')->group(function () {
+                // Owner-only Queue Operation: Cancellation
+                Route::post('/queues/{ticket}/cancel', [QueueOperationController::class, 'cancel'])->name('queues.cancel');
 
-            // Services Management
-            Route::get('/services', [ServiceController::class, 'index'])->name('services.index');
-            Route::post('/services', [ServiceController::class, 'store'])->name('services.store');
-            Route::put('/services/{service}', [ServiceController::class, 'update'])->name('services.update');
-            Route::patch('/services/{service}/toggle-status', [ServiceController::class, 'toggleStatus'])->name('services.toggle-status');
-            Route::delete('/services/{service}', [ServiceController::class, 'destroy'])->name('services.destroy');
+                // Reports & Performance Analytics (Milestone 9 & Milestone 11 Exports)
+                Route::get('/reports', [ReportController::class, 'index'])->name('reports');
+                Route::get('/reports/export/csv', [ReportExportController::class, 'csv'])->name('reports.export.csv');
+                Route::get('/reports/export/pdf', [ReportExportController::class, 'pdf'])->name('reports.export.pdf');
 
-            // Queue Operations (Milestone 5 core)
-            Route::post('/queues/walk-in', [QueueOperationController::class, 'walkIn'])->name('queues.walk-in');
-            Route::post('/queues/call-next', [QueueOperationController::class, 'callNext'])->name('queues.call-next');
-            Route::post('/queues/{ticket}/recall', [QueueOperationController::class, 'recall'])->name('queues.recall');
-            Route::post('/queues/{ticket}/start-service', [QueueOperationController::class, 'startService'])->name('queues.start-service');
-            Route::post('/queues/{ticket}/complete', [QueueOperationController::class, 'complete'])->name('queues.complete');
-            Route::post('/queues/{ticket}/skip', [QueueOperationController::class, 'skip'])->name('queues.skip');
-            Route::post('/queues/{ticket}/cancel', [QueueOperationController::class, 'cancel'])->name('queues.cancel');
-            Route::get('/queues/status', [QueueOperationController::class, 'status'])->name('queues.status');
+                // Business Profile, Operating Hours & Status Settings
+                Route::get('/settings', [SettingsController::class, 'show'])->name('settings');
+                Route::put('/settings/profile', [SettingsController::class, 'updateProfile'])->name('settings.profile');
+                Route::delete('/settings/logo', [SettingsController::class, 'removeLogo'])->name('settings.logo.remove');
+                Route::put('/settings/hours', [SettingsController::class, 'updateHours'])->name('settings.hours');
+                Route::patch('/settings/status', [SettingsController::class, 'updateStatus'])->name('settings.status');
+                Route::put('/settings/account', [SettingsController::class, 'updateAccount'])->name('settings.account');
+
+                // Services Management
+                Route::get('/services', [ServiceController::class, 'index'])->name('services.index');
+                Route::post('/services', [ServiceController::class, 'store'])->name('services.store');
+                Route::put('/services/{service}', [ServiceController::class, 'update'])->name('services.update');
+                Route::patch('/services/{service}/toggle-status', [ServiceController::class, 'toggleStatus'])->name('services.toggle-status');
+                Route::delete('/services/{service}', [ServiceController::class, 'destroy'])->name('services.destroy');
+
+                // Staff Management (Milestone 12 - P1-01 & P1-02)
+                Route::get('/staff', [StaffManagementController::class, 'index'])->name('staff.index');
+                Route::post('/staff/invitations', [StaffManagementController::class, 'storeInvitation'])->name('staff.invitations.store');
+                Route::delete('/staff/invitations/{invitation}', [StaffManagementController::class, 'revokeInvitation'])->name('staff.invitations.revoke');
+                Route::patch('/staff/{membership}/toggle-status', [StaffManagementController::class, 'toggleStatus'])->name('staff.toggle-status');
+                Route::delete('/staff/{membership}', [StaffManagementController::class, 'destroy'])->name('staff.destroy');
+            });
         });
     });
 });

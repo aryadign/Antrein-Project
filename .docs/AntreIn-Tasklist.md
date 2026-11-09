@@ -738,12 +738,54 @@ Sumber visual: `AntreIn-design.md`. Jangan membuat palette atau skala baru tanpa
 
 ---
 
-# 14. Milestone P1 — Pengembangan setelah MVP
+# 14. Milestone 12 — Multi-Staf Management & Role-Based Access Control (P1-01 & P1-02)
+
+**Dependensi:** M5 (Core Queue Engine), M7 (Dashboard & Operasional), M9 (Audit Log), M10 (Hardening), M11 (Report Export).
+
+## 14.1 Relasi Multi-Staf & Database Memberships (P1-01)
+
+- [x] `M12-01` Buat migrasi tabel `business_memberships` dengan relasi `user_id` unik (aturan satu akun pengguna hanya dapat terhubung ke satu unit usaha pada lingkup rilis ini).
+- [x] `M12-02` Tetapkan role keanggotaan bisnis: `owner` (pemilik usaha dengan otoritas penuh) dan `operator` (staf operasional antrean).
+- [x] `M12-03` Buat migrasi data otomatis untuk menyalin seluruh pemilik usaha aktif saat ini ke dalam `business_memberships` dengan role `owner`.
+- [x] `M12-04` Buat migrasi tabel `staff_invitations` dengan token SHA-256 yang aman, timestamp kadaluarsa (default 72 jam), status diterima (`accepted_at`), dan status dicabut (`revoked_at`).
+- [x] `M12-05` Definisikan model Eloquent `BusinessMembership` dengan relasi `business()`, `user()`, konstanta role, dan helper methods (`isOwner()`, `isOperator()`).
+- [x] `M12-06` Definisikan model Eloquent `StaffInvitation` dengan helper method `generateSecureToken()`, `isValid()`, `isExpired()`, `isAccepted()`, `isRevoked()`.
+- [x] `M12-07` Tambahkan relasi `memberships()`, `members()`, `staffMemberships()`, `invitations()`, `pendingInvitations()` pada model `Business`.
+- [x] `M12-08` Tambahkan relasi dan helper pada model `User`: `business()`, `ownedBusiness()`, `businessMembership()`, `isOwner()`, `isOperator()`, `isBusinessMemberActive()`, `hasCompletedOnboarding()`.
+- [x] `M12-09` Pasang event lifecycle model pada `Business` (`booted()`) untuk memastikan pembentukan otomatis keanggotaan `owner` saat unit usaha baru dibuat.
+
+## 14.2 Role-Based Access Control & Middleware (P1-02)
+
+- [x] `M12-10` Buat middleware `EnsureBusinessRole` (`business.role`) untuk memvalidasi keberadaan membership, status aktif, dan batasan peran bisnis.
+- [x] `M12-11` Daftarkan middleware alias `'business.role'` di `bootstrap/app.php`.
+- [x] `M12-12` Lindungi rute administratif pemilik (`business.role:owner`): Laporan & ekspor (CSV/PDF), pengaturan profil/jam buka/status, CRUD layanan, dan manajemen staf.
+- [x] `M12-13` Izinkan rute konsol operasional untuk owner dan operator (`business.role:owner,operator`): Dashboard operasional, daftar antrean, ambil antrean walk-in, panggil antrean, panggil ulang, mulai layanan, dan selesaikan tiket.
+- [x] `M12-14` Batasi aksi pembatalan tiket antrean (`cancel`) secara khusus hanya untuk role `owner`; tolak aksi pembatalan oleh operator dengan response 403 Forbidden.
+- [x] `M12-15` Lindungi primary owner: cegah penonaktifan atau penghapusan keanggotaan pemilik utama unit usaha.
+- [x] `M12-16` Sesuaikan `OnboardingController` agar staf operator yang baru bergabung langsung diarahkan ke konsol operasional tanpa harus mengisi formulir wizard onboarding bisnis.
+
+## 14.3 Staff Management Interface & Undangan (P1-01 & P1-02)
+
+- [x] `M12-17` Implementasikan `StaffManagementController` pada route `/umkm/staff` dengan fitur daftar staf aktif/nonaktif, statistik tim, dan daftar undangan tertunda.
+- [x] `M12-18` Implementasikan pembuatan undangan staf dengan form input email, validasi duplikasi, pencegahan undang akun admin/owner/anggota UMKM lain, dan penghasilan tautan instan.
+- [x] `M12-19` Sediakan flash banner dengan tombol salin tautan undangan instan ke clipboard untuk pemilik usaha.
+- [x] `M12-20` Implementasikan pencabutan undangan tertunda (`revokeInvitation`) oleh pemilik usaha.
+- [x] `M12-21` Implementasikan pengalihan status aktif staf (`toggleStatus`) dan penghapusan staf (`destroy`) oleh pemilik usaha.
+- [x] `M12-22` Bangun antarmuka publik/auth penerimaan undangan pada route `GET /invite/{token}` dan `POST /invite/{token}/accept` yang mendukung pendaftaran akun baru staf atau login akun terdaftar.
+- [x] `M12-23` Perbarui navigasi sidebar dan user dropdown merchant agar secara dinamis menyesuaikan menu berdasarkan peran (`owner` vs `operator`).
+- [x] `M12-24` Catat audit log menyeluruh via `ActivityLog` untuk pembuatan undangan, pencabutan undangan, penerimaan undangan, pengubahan status staf, dan penghapusan staf.
+- [x] `M12-25` Pertahankan integritas Core Queue Engine: aturan single active ticket per bisnis tetap berlaku penuh across multiple operators tanpa merusak FIFO terpadu.
+
+**Exit Gate 12:** Seluruh fitur multi-staf dan RBAC berfungsi, terisolasi per unit usaha, aturan single-business per staf terpenuhi, proteksi pemilik utama aktif, dan seluruh automated test lulus 100%.
+
+---
+
+# 15. Milestone P1 — Pengembangan setelah MVP
 
 Jangan mulai sebelum MVP selesai dan mendapat persetujuan.
 
-- [ ] `P1-01` Multi-staf dan relasi banyak user ke business.
-- [ ] `P1-02` Role dan permission operator/staf.
+- [x] `P1-01` Multi-staf dan relasi banyak user ke business.
+- [x] `P1-02` Role dan permission operator/staf.
 - [ ] `P1-03` Multi-loket dan penugasan antrean.
 - [ ] `P1-04` Laravel Reverb/WebSocket untuk update status real-time.
 - [ ] `P1-05` Notifikasi email/browser sesuai kanal yang dipilih.
@@ -753,7 +795,7 @@ Jangan mulai sebelum MVP selesai dan mendapat persetujuan.
 - [ ] `P1-09` Ulasan pelanggan.
 - [ ] `P1-10` Estimasi waktu tunggu berbasis data historis jika kualitas data mencukupi.
 
-# 15. Milestone P2 — Pengembangan lanjutan
+# 16. Milestone P2 — Pengembangan lanjutan
 
 - [ ] `P2-01` Multi-cabang.
 - [ ] `P2-02` Integrasi WhatsApp API.
