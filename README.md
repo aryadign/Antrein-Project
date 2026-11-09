@@ -129,6 +129,17 @@ php artisan test --filter=Security
    - Polling Pelacakan Antrean: 60 permintaan per menit per IP (`Retry-After: 60`).
 4. **Validasi Berkas Ketat (*SVG & File Upload Sanitization*):** Validasi tipe MIME, ukuran maksimum (2 MB), serta inspeksi regex terhadap berkas SVG untuk memblokir tag `<script>`, `<iframe>`, `<foreignObject>`, dan event handler `on*`.
 5. **Token Pelacakan Kriptografis:** Token pelacakan antrean dibuat acak 64 karakter heksadesimal (`bin2hex(random_bytes(32))`) yang aman dan otomatis kedaluwarsa setelah tiket berstatus terminal (`completed`, `cancelled`, `skipped`) lewat dari 24 jam.
+6. **Perlindungan Ekspor CSV & Formula Injection:** Seluruh nilai pada ekspor CSV yang diawali karakter trigger formula (`=`, `+`, `-`, `@`, `\t`, `\r`) diproteksi dengan sanitasi prefix petik tunggal (`'`) untuk memitigasi eksekusi formula jahat (*CSV Formula Injection*). Berkas CSV dilengkapi UTF-8 BOM untuk kompatibilitas otomatis Microsoft Excel.
+
+---
+
+## 📊 Ekspor Laporan Operasional (CSV & PDF)
+
+Merchant dapat mengunduh rekaman kinerja operasional antrean dalam dua format:
+- **Spreadsheet CSV:** Streaming download data terstruktur (metadata eksekutif, rekapitulasi status, breakdown layanan, dan rincian tiket antrean).
+- **Dokumen PDF:** Layout siap cetak standar A4 Portrait berdesain AntreIn, memuat ringkasan KPI eksekutif, analisis jam sibuk (OQ-15), performa layanan, serta daftar tiket pada periode terpilih.
+
+Tautan unduh dapat diakses langsung dari dashboard laporan merchant (`/umkm/reports`).
 
 ---
 

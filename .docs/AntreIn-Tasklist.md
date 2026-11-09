@@ -694,7 +694,51 @@ Sumber visual: `AntreIn-design.md`. Jangan membuat palette atau skala baru tanpa
 
 ---
 
-# 13. Milestone P1 — Pengembangan setelah MVP
+# 13. Milestone 11 — Report Export: CSV & PDF
+
+**Dependensi:** M9 (Laporan dan Analitik), M10 (Hardening & Quality Assurance).
+
+## 13.1 CSV Report Export (P1-06)
+
+- [x] `M11-01` Implementasikan endpoint streaming download CSV pada route `/umkm/reports/export/csv`.
+- [x] `M11-02` Terapkan filter tanggal (Hari Ini, 7 Hari, 30 Hari, dan Rentang Kustom) secara konsisten dengan dashboard laporan.
+- [x] `M11-03` Gunakan zona waktu operasional UMKM untuk konversi batas tanggal dan formatting waktu tiket.
+- [x] `M11-04` Ekspor metadata laporan: Nama UMKM, Kategori, Periode, Rentang Tanggal, Timezone, Waktu Pengunduhan.
+- [x] `M11-05` Ekspor ringkasan metrik operasional: Total Tiket, Selesai, Menunggu, Dipanggil, Dilayani, Dilewati, Dibatalkan, Waktu Tunggu, Durasi Layanan, Jam Sibuk.
+- [x] `M11-06` Ekspor rekapitulasi performa berdasarkan layanan (nama, status, total, selesai, dilewati, dibatalkan, rata-rata durasi).
+- [x] `M11-07` Ekspor rincian tiket antrean periode lengkap dengan nomor tiket, nama pelanggan, layanan, sumber, status, dan timestamp.
+- [x] `M11-08` Terapkan mitigasi CSV Formula Injection (escape karakter `=`, `+`, `-`, `@`, `\t`, `\r` dengan prefix petik tunggal).
+- [x] `M11-09` Gunakan encoding UTF-8 dengan BOM (`\xEF\xBB\xBF`) untuk kompatibilitas penuh Microsoft Excel.
+- [x] `M11-10` Pastikan token sensitif (`access_token`, `idempotency_key`) tidak diekspor ke file CSV.
+
+## 13.2 PDF Report Export (P1-07)
+
+- [x] `M11-11` Integrasikan library PDF (`barryvdh/laravel-dompdf` v3.1) yang kompatibel dengan Laravel 13 dan PHP 8.4.
+- [x] `M11-12` Implementasikan endpoint download PDF pada route `/umkm/reports/export/pdf`.
+- [x] `M11-13` Susun layout PDF profesional A4 Portrait berstandar AntreIn Design System (Primary `#1E40AF`, font Inter/DejaVu Sans).
+- [x] `M11-14` Tampilkan header resmi: Identitas UMKM, kategori, kontak, judul laporan, periode laporan, dan waktu cetak.
+- [x] `M11-15` Sajikan ringkasan KPI eksekutif dalam bentuk kartu metrik terstruktur.
+- [x] `M11-16` Sajikan kotak analisis jam sibuk operasional sesuai aturan ambang batas OQ-15 (minimal 50 tiket/jam).
+- [x] `M11-17` Sajikan tabel rekapitulasi kinerja layanan dengan badge status aktif/nonaktif dan rata-rata durasi.
+- [x] `M11-18` Sajikan tabel rincian tiket antrean dengan penanganan page break (`page-break-inside: avoid`).
+- [x] `M11-19` Tangani dataset kosong (*empty state*) tanpa memicu exception atau error kompilasi PDF.
+- [x] `M11-20` Tampilkan footer resmi AntreIn pada setiap halaman dokumen.
+
+## 13.3 UI Integration & Security Controls
+
+- [x] `M11-21` Tambahkan tombol aksi "Ekspor CSV" dan "Ekspor PDF" pada halaman laporan merchant (`/umkm/reports`).
+- [x] `M11-22` Pastikan parameter filter query (`period`, `start_date`, `end_date`) otomatis diteruskan ke tautan ekspor.
+- [x] `M11-23` Terapkan proteksi autentikasi (`auth`), otorisasi role (`role:merchant`), dan status onboarding (`onboarded`).
+- [x] `M11-24` Terapkan isolasi multi-tenant ketat: data laporan selalu di-scope ke `$request->user()->business`.
+- [x] `M11-25` Cegah akses Admin terhadap ekspor laporan merchant (Admin dibatasi read-only monitoring).
+- [x] `M11-26` Terapkan rate limiting pada endpoint ekspor untuk melindungi server dari scraping/abuse.
+- [x] `M11-27` Tangani input rentang tanggal tidak valid dengan redirect informatif dan pesan validasi error.
+
+**Exit Gate 11:** Seluruh fitur ekspor CSV dan PDF berfungsi, konsisten dengan data dashboard, aman dari formula injection & kebocoran tenant, serta lulus 100% automated tests.
+
+---
+
+# 14. Milestone P1 — Pengembangan setelah MVP
 
 Jangan mulai sebelum MVP selesai dan mendapat persetujuan.
 
@@ -703,13 +747,13 @@ Jangan mulai sebelum MVP selesai dan mendapat persetujuan.
 - [ ] `P1-03` Multi-loket dan penugasan antrean.
 - [ ] `P1-04` Laravel Reverb/WebSocket untuk update status real-time.
 - [ ] `P1-05` Notifikasi email/browser sesuai kanal yang dipilih.
-- [ ] `P1-06` Ekspor CSV.
-- [ ] `P1-07` Ekspor PDF.
+- [x] `P1-06` Ekspor CSV.
+- [x] `P1-07` Ekspor PDF.
 - [ ] `P1-08` Display antrean publik.
 - [ ] `P1-09` Ulasan pelanggan.
 - [ ] `P1-10` Estimasi waktu tunggu berbasis data historis jika kualitas data mencukupi.
 
-# 14. Milestone P2 — Pengembangan lanjutan
+# 15. Milestone P2 — Pengembangan lanjutan
 
 - [ ] `P2-01` Multi-cabang.
 - [ ] `P2-02` Integrasi WhatsApp API.
