@@ -10,6 +10,7 @@ use App\Models\BusinessHour;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -270,6 +271,50 @@ class SettingsController extends Controller
 
         return redirect()->route('merchant.settings', ['tab' => 'status'])
             ->with('status', sprintf('Status operasional usaha berhasil diubah menjadi %s.', $statusLabels[$newStatus] ?? $newStatus));
+    }
+
+    /**
+     * Update merchant user profile and credentials (FR-SET-04).
+     */
+    public function updateAccount(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => [
+                'required',
+                'string',
+                'email',
+                'max:255',
+                Rule::unique('users', 'email')->ignore($user->id),
+            ],
+            'current_password' => ['nullable', 'required_with:password', 'current_password'],
+            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
+        ], [
+            'current_password.current_password' => 'Password saat ini tidak sesuai dengan data kami.',
+            'password.confirmed' => 'Konfirmasi password baru tidak cocok.',
+            'password.min' => 'Password baru minimal berjumlah 8 karakter.',
+        ]);
+
+        $user->name = $validated['name'];
+        $user->email = $validated['email'];
+
+        if (! empty($validated['password'])) {
+            $user->password = Hash::make($validated['password']);
+        }
+
+        $user->save();
+
+        ActivityLog::log(
+            action: 'account_updated',
+            description: 'Informasi akun profil/kredensial pengguna diperbarui',
+            business: $user->business,
+            user: $user
+        );
+
+        return redirect()->route('merchant.settings', ['tab' => 'account'])
+            ->with('status', 'Informasi akun dan keamanan berhasil diperbarui!');
     }
 }
 

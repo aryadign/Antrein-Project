@@ -466,61 +466,61 @@ Sumber visual: `AntreIn-design.md`. Jangan membuat palette atau skala baru tanpa
 
 ## 9.1 Dashboard UMKM
 
-- [ ] `M7-01` Implementasikan halaman `/umkm/dashboard` (FR-MER-01).
-- [ ] `M7-02` Tampilkan nama usaha, tanggal operasional, dan status Buka/Tutup/Jeda.
-- [ ] `M7-03` Tampilkan statistik total, Menunggu, Dipanggil, Sedang dilayani, Selesai, Dilewati, dan Dibatalkan.
-- [ ] `M7-04` Tampilkan beberapa tiket aktif paling relevan, bukan seluruh riwayat.
-- [ ] `M7-05` Tampilkan aksi cepat: Kelola Antrean, Tambah Manual, Tambah Layanan, Jam Operasional.
-- [ ] `M7-06` Tampilkan checklist onboarding jika setup belum lengkap.
-- [ ] `M7-07` Implementasikan empty, loading, error, dan usaha tutup/jeda states.
+- [x] `M7-01` Implementasikan halaman `/umkm/dashboard` (FR-MER-01).
+- [x] `M7-02` Tampilkan nama usaha, tanggal operasional, dan status Buka/Tutup/Jeda.
+- [x] `M7-03` Tampilkan statistik total, Menunggu, Dipanggil, Sedang dilayani, Selesai, Dilewati, dan Dibatalkan.
+- [x] `M7-04` Tampilkan beberapa tiket aktif paling relevan, bukan seluruh riwayat.
+- [x] `M7-05` Tampilkan aksi cepat: Kelola Antrean, Tambah Manual, Tambah Layanan, Jam Operasional.
+- [x] `M7-06` Tampilkan checklist onboarding jika setup belum lengkap.
+- [x] `M7-07` Implementasikan empty, loading, error, dan usaha tutup/jeda states.
 
 ## 9.2 Daftar antrean
 
-- [ ] `M7-08` Implementasikan halaman `/umkm/queues` (FR-MER-02).
-- [ ] `M7-09` Tampilkan ringkasan jumlah per status.
-- [ ] `M7-10` Tampilkan nomor tiket, nama/label, layanan, sumber, waktu dibuat, status, dan aksi.
-- [ ] `M7-11` Implementasikan pencarian nomor tiket/nama.
-- [ ] `M7-12` Implementasikan filter status, layanan, sumber, dan periode riwayat.
-- [ ] `M7-13` Implementasikan pagination atau load more.
-- [ ] `M7-14` Pada mobile, ubah tabel menjadi kartu atau tampilan ringkas tanpa horizontal scrolling berlebihan.
+- [x] `M7-08` Implementasikan halaman `/umkm/queues` (FR-MER-02).
+- [x] `M7-09` Tampilkan ringkasan jumlah per status.
+- [x] `M7-10` Tampilkan nomor tiket, nama/label, layanan, sumber, waktu dibuat, status, dan aksi.
+- [x] `M7-11` Implementasikan pencarian nomor tiket/nama.
+- [x] `M7-12` Implementasikan filter status, layanan, sumber, dan periode riwayat.
+- [x] `M7-13` Implementasikan pagination atau load more.
+- [x] `M7-14` Pada mobile, ubah tabel menjadi kartu atau tampilan ringkas tanpa horizontal scrolling berlebihan.
 
 ## 9.3 Now Serving dan aksi operasional
 
-- [ ] `M7-15` Implementasikan komponen Now Serving (FR-MER-03).
-- [ ] `M7-16` Implementasikan Panggil Berikutnya (FR-MER-04).
-- [ ] `M7-17` Implementasikan Panggil Ulang (FR-MER-05).
-- [ ] `M7-18` Implementasikan Mulai Melayani (FR-MER-06).
-- [ ] `M7-19` Implementasikan Selesaikan Antrean (FR-MER-07).
-- [ ] `M7-20` Implementasikan Lewati Antrean (FR-MER-08).
-- [ ] `M7-21` Sesuaikan tombol dengan status saat ini; jangan tampilkan aksi yang tidak valid.
-- [ ] `M7-22` Berikan feedback dan proteksi double click pada setiap aksi.
-- [ ] `M7-23` Pastikan perubahan UI hanya menunjukkan sukses setelah server menyimpan perubahan.
+- [x] `M7-15` Implementasikan komponen Now Serving (FR-MER-03).
+- [x] `M7-16` Implementasikan Panggil Berikutnya (FR-MER-04).
+- [x] `M7-17` Implementasikan Panggil Ulang (FR-MER-05).
+- [x] `M7-18` Implementasikan Mulai Melayani (FR-MER-06).
+- [x] `M7-19` Implementasikan Selesaikan Antrean (FR-MER-07).
+- [x] `M7-20` Implementasikan Lewati Antrean (FR-MER-08).
+- [x] `M7-21` Sesuaikan tombol dengan status saat ini; jangan tampilkan aksi yang tidak valid.
+- [x] `M7-22` Berikan feedback dan proteksi double click pada setiap aksi.
+- [x] `M7-23` Pastikan perubahan UI hanya menunjukkan sukses setelah server menyimpan perubahan.
 
 ## 9.4 Antrean manual dan detail
 
-- [ ] `M7-24` Implementasikan form tambah walk-in (FR-MER-09).
-- [ ] `M7-25` Tampilkan nomor tiket setelah penyimpanan berhasil.
-- [ ] `M7-26` Implementasikan panel/halaman detail tiket (FR-MER-10).
-- [ ] `M7-27` Tampilkan timestamp dan riwayat status.
-- [ ] `M7-28` Implementasikan riwayat antrean baca-saja dengan pencarian dan filter.
+- [x] `M7-24` Implementasikan form tambah walk-in (FR-MER-09).
+- [x] `M7-25` Tampilkan nomor tiket setelah penyimpanan berhasil.
+- [x] `M7-26` Implementasikan panel/halaman detail tiket (FR-MER-10).
+- [x] `M7-27` Tampilkan timestamp dan riwayat status.
+- [x] `M7-28` Implementasikan riwayat antrean baca-saja dengan pencarian dan filter.
 
 ## 9.5 Layanan dan pengaturan UMKM
 
-- [ ] `M7-29` Hubungkan halaman CRUD layanan ke backend (FR-SVC-01 sampai FR-SVC-03).
-- [ ] `M7-30` Hubungkan profil usaha (FR-SET-01).
-- [ ] `M7-31` Hubungkan jam operasional (FR-SET-02).
-- [ ] `M7-32` Implementasikan halaman URL/QR antrean (FR-SET-03).
-- [ ] `M7-33` Implementasikan salin tautan dan unduh QR jika generator QR tersedia.
-- [ ] `M7-34` Implementasikan pengaturan akun pemilik (FR-SET-04).
-- [ ] `M7-35` Tampilkan preferensi notifikasi hanya untuk kanal yang benar-benar didukung (FR-SET-05).
+- [x] `M7-29` Hubungkan halaman CRUD layanan ke backend (FR-SVC-01 sampai FR-SVC-03).
+- [x] `M7-30` Hubungkan profil usaha (FR-SET-01).
+- [x] `M7-31` Hubungkan jam operasional (FR-SET-02).
+- [x] `M7-32` Implementasikan halaman URL/QR antrean (FR-SET-03).
+- [x] `M7-33` Implementasikan salin tautan dan unduh QR jika generator QR tersedia.
+- [x] `M7-34` Implementasikan pengaturan akun pemilik (FR-SET-04).
+- [x] `M7-35` Tampilkan preferensi notifikasi hanya untuk kanal yang benar-benar didukung (FR-SET-05).
 
 ## 9.6 Responsive UMKM web
 
-- [ ] `M7-36` Verifikasi layout desktop pada lebar 1280 px dan 1440 px.
-- [ ] `M7-37` Verifikasi layout tablet pada rentang 768–1023 px.
-- [ ] `M7-38` Verifikasi layout mobile di bawah 768 px.
-- [ ] `M7-39` Pastikan sidebar menjadi drawer/icon rail sesuai design system.
-- [ ] `M7-40` Pastikan aksi antrean utama tetap mudah ditemukan pada layar sempit.
+- [x] `M7-36` Verifikasi layout desktop pada lebar 1280 px dan 1440 px.
+- [x] `M7-37` Verifikasi layout tablet pada rentang 768–1023 px.
+- [x] `M7-38` Verifikasi layout mobile di bawah 768 px.
+- [x] `M7-39` Pastikan sidebar menjadi drawer/icon rail sesuai design system.
+- [x] `M7-40` Pastikan aksi antrean utama tetap mudah ditemukan pada layar sempit.
 
 **Exit Gate 7:** Pemilik dapat menjalankan operasional dari dashboard, termasuk antrean online dan walk-in, sampai tiket selesai atau dilewati.
 

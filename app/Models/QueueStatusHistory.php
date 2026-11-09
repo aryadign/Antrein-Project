@@ -58,5 +58,13 @@ class QueueStatusHistory extends Model
     {
         return $this->belongsTo(QueueTicket::class);
     }
+
+    /**
+     * Get the user who performed the status transition.
+     */
+    public function actor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'actor_id');
+    }
 }
 
