@@ -242,6 +242,23 @@ class QueueTicketController extends Controller
      */
     public function track(Request $request, string $token): JsonResponse|Response|View
     {
+        // Rate Limiting (M10-08): Protect tracking & polling against denial-of-service (60 requests/minute per IP)
+        $throttleKey = 'queue-track-poll:'.$request->ip();
+        if (RateLimiter::tooManyAttempts($throttleKey, 60)) {
+            $seconds = RateLimiter::availableIn($throttleKey);
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Terlalu banyak permintaan pembaruan status antrean. Silakan tunggu sejenak.',
+                    'retry_after' => $seconds,
+                ], 429, ['Retry-After' => $seconds]);
+            }
+
+            return response('Terlalu banyak permintaan pembaruan status antrean. Silakan tunggu sejenak.', 429, ['Retry-After' => $seconds]);
+        }
+        RateLimiter::hit($throttleKey, 60);
+
         /** @var QueueTicket $ticket */
         $ticket = QueueTicket::where('access_token', $token)
             ->with(['business.category', 'business.hours', 'service'])

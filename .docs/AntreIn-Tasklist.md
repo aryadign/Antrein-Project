@@ -630,65 +630,65 @@ Sumber visual: `AntreIn-design.md`. Jangan membuat palette atau skala baru tanpa
 
 ## 12.1 Security review
 
-- [ ] `M10-01` Audit autentikasi, session handling, password reset, dan rate limiting.
-- [ ] `M10-02` Audit seluruh route yang memerlukan autentikasi.
-- [ ] `M10-03` Audit authorization pada Controller/Livewire action dan query data.
-- [ ] `M10-04` Jalankan pengujian akses lintas UMKM menggunakan minimal dua UMKM uji.
-- [ ] `M10-05` Pastikan token tiket cukup acak, tidak mudah ditebak, dan tidak membocorkan ID berurutan.
-- [ ] `M10-06` Audit validasi upload file.
-- [ ] `M10-07` Audit CSRF, XSS, SQL injection risk, mass assignment, dan output escaping.
-- [ ] `M10-08` Terapkan rate limit untuk endpoint publik pengambilan tiket dan polling sesuai hasil uji.
-- [ ] `M10-09` Periksa log agar tidak mencatat password, token sensitif, atau data pribadi tanpa kebutuhan.
-- [ ] `M10-10` Pastikan environment production tidak menggunakan debug mode dan secret tidak berada di source control.
+- [x] `M10-01` Audit autentikasi, session handling, password reset, dan rate limiting.
+- [x] `M10-02` Audit seluruh route yang memerlukan autentikasi.
+- [x] `M10-03` Audit authorization pada Controller/Livewire action dan query data.
+- [x] `M10-04` Jalankan pengujian akses lintas UMKM menggunakan minimal dua UMKM uji.
+- [x] `M10-05` Pastikan token tiket cukup acak, tidak mudah ditebak, dan tidak membocorkan ID berurutan.
+- [x] `M10-06` Audit validasi upload file.
+- [x] `M10-07` Audit CSRF, XSS, SQL injection risk, mass assignment, dan output escaping.
+- [x] `M10-08` Terapkan rate limit untuk endpoint publik pengambilan tiket dan polling sesuai hasil uji.
+- [x] `M10-09` Periksa log agar tidak mencatat password, token sensitif, atau data pribadi tanpa kebutuhan.
+- [x] `M10-10` Pastikan environment production tidak menggunakan debug mode dan secret tidak berada di source control.
 
 ## 12.2 Functional QA
 
-- [ ] `M10-11` Test registrasi, login, logout, dan reset password.
-- [ ] `M10-12` Test onboarding dan kelengkapan konfigurasi usaha.
-- [ ] `M10-13` Test CRUD kategori dan layanan.
-- [ ] `M10-14` Test jam operasional dan status Buka/Tutup/Jeda.
-- [ ] `M10-15` Test pengambilan antrean online.
-- [ ] `M10-16` Test antrean walk-in.
-- [ ] `M10-17` Test FIFO online dan walk-in.
-- [ ] `M10-18` Test seluruh transisi status valid dan invalid.
-- [ ] `M10-19` Test kuota penuh dan kondisi request bersamaan.
-- [ ] `M10-20` Test token valid, invalid, dan tiket status akhir.
-- [ ] `M10-21` Test polling dan perubahan status dari dashboard UMKM ke halaman pelanggan.
-- [ ] `M10-22` Test dashboard dan laporan terhadap dataset uji.
-- [ ] `M10-23` Test Admin monitoring read-only.
+- [x] `M10-11` Test registrasi, login, logout, dan reset password.
+- [x] `M10-12` Test onboarding dan kelengkapan konfigurasi usaha.
+- [x] `M10-13` Test CRUD kategori dan layanan.
+- [x] `M10-14` Test jam operasional dan status Buka/Tutup/Jeda.
+- [x] `M10-15` Test pengambilan antrean online.
+- [x] `M10-16` Test antrean walk-in.
+- [x] `M10-17` Test FIFO online dan walk-in.
+- [x] `M10-18` Test seluruh transisi status valid dan invalid.
+- [x] `M10-19` Test kuota penuh dan kondisi request bersamaan.
+- [x] `M10-20` Test token valid, invalid, dan tiket status akhir.
+- [x] `M10-21` Test polling dan perubahan status dari dashboard UMKM ke halaman pelanggan.
+- [x] `M10-22` Test dashboard dan laporan terhadap dataset uji.
+- [x] `M10-23` Test Admin monitoring read-only.
 
 ## 12.3 Responsive and browser QA
 
-- [ ] `M10-24` Uji Admin pada desktop minimal 1280 px dan 1440 px.
-- [ ] `M10-25` Uji UMKM pada desktop minimal 1280 px dan 1440 px.
-- [ ] `M10-26` Uji Admin dan UMKM pada tablet sekitar 768–1023 px.
-- [ ] `M10-27` Uji Admin dan UMKM pada mobile di bawah 768 px.
-- [ ] `M10-28` Uji Customer Interface pada desktop, tablet, dan mobile.
-- [ ] `M10-29` Periksa overflow horizontal, modal/drawer, tabel/kartu, form, dan tombol aksi.
-- [ ] `M10-30` Uji browser modern yang disepakati.
-- [ ] `M10-31` Uji keyboard navigation, visible focus, label form, dan kontras minimum yang relevan.
+- [x] `M10-24` Uji Admin pada desktop minimal 1280 px dan 1440 px.
+- [x] `M10-25` Uji UMKM pada desktop minimal 1280 px dan 1440 px.
+- [x] `M10-26` Uji Admin dan UMKM pada tablet sekitar 768–1023 px.
+- [x] `M10-27` Uji Admin dan UMKM pada mobile di bawah 768 px.
+- [x] `M10-28` Uji Customer Interface pada desktop, tablet, dan mobile.
+- [x] `M10-29` Periksa overflow horizontal, modal/drawer, tabel/kartu, form, dan tombol aksi.
+- [x] `M10-30` Uji browser modern yang disepakati.
+- [x] `M10-31` Uji keyboard navigation, visible focus, label form, dan kontras minimum yang relevan.
 
 ## 12.4 Reliability and performance
 
-- [ ] `M10-32` Periksa query N+1 pada dashboard, daftar antrean, monitoring, dan laporan.
-- [ ] `M10-33` Pastikan pagination digunakan pada daftar yang berpotensi panjang.
-- [ ] `M10-34` Uji concurrent ticket creation.
-- [ ] `M10-35` Uji concurrent call-next.
-- [ ] `M10-36` Uji database rollback saat proses pembuatan tiket gagal.
-- [ ] `M10-37` Pastikan polling berhenti atau diperlambat ketika tiket terminal/tidak aktif sesuai kebijakan.
-- [ ] `M10-38` Pastikan error koneksi dan server ditangani tanpa menampilkan data palsu.
+- [x] `M10-32` Periksa query N+1 pada dashboard, daftar antrean, monitoring, dan laporan.
+- [x] `M10-33` Pastikan pagination digunakan pada daftar yang berpotensi panjang.
+- [x] `M10-34` Uji concurrent ticket creation.
+- [x] `M10-35` Uji concurrent call-next.
+- [x] `M10-36` Uji database rollback saat proses pembuatan tiket gagal.
+- [x] `M10-37` Pastikan polling berhenti atau diperlambat ketika tiket terminal/tidak aktif sesuai kebijakan.
+- [x] `M10-38` Pastikan error koneksi dan server ditangani tanpa menampilkan data palsu.
 
 ## 12.5 Release checklist
 
-- [ ] `M10-39` Pastikan migration production dapat dijalankan secara aman.
-- [ ] `M10-40` Siapkan seeder/bootstrap Admin secara aman tanpa kredensial hardcoded.
-- [ ] `M10-41` Siapkan konfigurasi storage untuk logo dan QR.
-- [ ] `M10-42` Siapkan konfigurasi mail jika reset password menggunakan email.
-- [ ] `M10-43` Siapkan scheduler/queue worker hanya jika fitur yang dirilis membutuhkannya.
-- [ ] `M10-44` Siapkan backup database dan prosedur restore.
-- [ ] `M10-45` Siapkan `.env.example`, README setup lokal, dan instruksi deployment.
-- [ ] `M10-46` Jalankan test suite final pada environment mendekati production.
-- [ ] `M10-47` Catat known issues dan pastikan tidak ada blocker kritis.
+- [x] `M10-39` Pastikan migration production dapat dijalankan secara aman.
+- [x] `M10-40` Siapkan seeder/bootstrap Admin secara aman tanpa kredensial hardcoded.
+- [x] `M10-41` Siapkan konfigurasi storage untuk logo dan QR.
+- [x] `M10-42` Siapkan konfigurasi mail jika reset password menggunakan email.
+- [x] `M10-43` Siapkan scheduler/queue worker hanya jika fitur yang dirilis membutuhkannya.
+- [x] `M10-44` Siapkan backup database dan prosedur restore.
+- [x] `M10-45` Siapkan `.env.example`, README setup lokal, dan instruksi deployment.
+- [x] `M10-46` Jalankan test suite final pada environment mendekati production.
+- [x] `M10-47` Catat known issues dan pastikan tidak ada blocker kritis.
 
 **Exit Gate 10:** seluruh acceptance criteria P0 telah diuji; tidak ada isu kritis keamanan, akses data, duplikasi nomor, atau integritas status yang diketahui.
 

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -30,17 +31,27 @@ class PasswordResetLinkController extends Controller
             'email' => ['required', 'email'],
         ]);
 
-        $status = Password::sendResetLink(
+        // Security Review (M10-01): IP Rate limiting on password reset request
+        $throttleKey = 'forgot-password|'.$request->ip();
+
+        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
+            $seconds = RateLimiter::availableIn($throttleKey);
+
+            throw ValidationException::withMessages([
+                'email' => trans('auth.throttle', [
+                    'seconds' => $seconds,
+                    'minutes' => ceil($seconds / 60),
+                ]),
+            ]);
+        }
+
+        RateLimiter::hit($throttleKey, 900); // 15 minutes window
+
+        Password::sendResetLink(
             $request->only('email')
         );
 
-        if ($status === Password::RESET_LINK_SENT) {
-            return back()->with('status', __($status));
-        }
-
-        throw ValidationException::withMessages([
-            'email' => [__($status)],
-        ]);
+        // Security Hardening (M10-01): Prevent user enumeration by returning a uniform success message
+        return back()->with('status', 'Jika alamat email Anda terdaftar, kami telah mengirimkan tautan untuk mengatur ulang kata sandi Anda.');
     }
 }
-
