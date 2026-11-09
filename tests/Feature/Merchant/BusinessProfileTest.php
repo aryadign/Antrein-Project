@@ -188,3 +188,4 @@ class BusinessProfileTest extends TestCase
         $response->assertRedirect(route('login'));
     }
 }
+

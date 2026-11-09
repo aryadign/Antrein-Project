@@ -124,3 +124,4 @@ class OperatingHoursTest extends TestCase
         $this->assertDatabaseCount('business_hours', 7);
     }
 }
+

@@ -189,3 +189,4 @@ class BusinessCategoryController extends Controller
             ->with('status', sprintf('Kategori "%s" berhasil dihapus.', $categoryName));
     }
 }
+

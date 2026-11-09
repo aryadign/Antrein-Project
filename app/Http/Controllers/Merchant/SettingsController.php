@@ -272,3 +272,4 @@ class SettingsController extends Controller
             ->with('status', sprintf('Status operasional usaha berhasil diubah menjadi %s.', $statusLabels[$newStatus] ?? $newStatus));
     }
 }
+

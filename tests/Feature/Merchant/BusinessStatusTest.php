@@ -140,3 +140,4 @@ class BusinessStatusTest extends TestCase
         $this->assertSame(QueueTicket::STATUS_MENUNGGU, $freshTicket->status);
     }
 }
+

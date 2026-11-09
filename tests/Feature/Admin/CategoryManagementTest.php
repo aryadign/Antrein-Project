@@ -178,3 +178,4 @@ class CategoryManagementTest extends TestCase
         $response->assertRedirect(route('login'));
     }
 }
+
