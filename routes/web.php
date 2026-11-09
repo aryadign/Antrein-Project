@@ -54,17 +54,12 @@ Route::get('/', function () {
     return view('preview.design-system');
 });
 
-// Customer Public Queue Routes (Milestone 5 core)
-Route::get('/q/{slug}', function (string $slug) {
-    $business = Business::query()->where('slug', $slug)->firstOrFail();
-
-    return view('preview.customer', [
-        'business' => $business,
-    ]);
-})->name('customer.queue');
-
+// Customer Public Queue Routes (Milestone 6)
+Route::get('/q/{slug}', [QueueTicketController::class, 'show'])->name('customer.queue');
+Route::get('/q/{slug}/take-queue', [QueueTicketController::class, 'create'])->name('customer.queue.create');
 Route::post('/q/{slug}/take-queue', [QueueTicketController::class, 'store'])->name('customer.queue.take');
 Route::get('/q/track/{token}', [QueueTicketController::class, 'track'])->name('customer.queue.track');
+Route::get('/ticket/{token}', [QueueTicketController::class, 'track'])->name('customer.ticket.show');
 
 // Design System & Layout Preview Testbed (Milestone 2)
 Route::get('/design-system', function () {

@@ -413,48 +413,48 @@ Sumber visual: `AntreIn-design.md`. Jangan membuat palette atau skala baru tanpa
 
 ## 8.1 Halaman publik UMKM
 
-- [ ] `M6-01` Implementasikan route `/q/{slug}`.
-- [ ] `M6-02` Tampilkan logo, nama, kategori, deskripsi, alamat, dan kontak yang memang publik.
-- [ ] `M6-03` Tampilkan status Buka/Tutup/Jeda dengan label yang jelas.
-- [ ] `M6-04` Tampilkan daftar layanan aktif, durasi, harga jika tersedia, dan ketersediaan.
-- [ ] `M6-05` Nonaktifkan CTA ambil antrean ketika usaha tutup/jeda, layanan tidak tersedia, atau kuota penuh.
-- [ ] `M6-06` Buat halaman usaha tidak ditemukan dan belum memiliki layanan aktif.
+- [x] `M6-01` Implementasikan route `/q/{slug}`.
+- [x] `M6-02` Tampilkan logo, nama, kategori, deskripsi, alamat, dan kontak yang memang publik.
+- [x] `M6-03` Tampilkan status Buka/Tutup/Jeda dengan label yang jelas.
+- [x] `M6-04` Tampilkan daftar layanan aktif, durasi, harga jika tersedia, dan ketersediaan.
+- [x] `M6-05` Nonaktifkan CTA ambil antrean ketika usaha tutup/jeda, layanan tidak tersedia, atau kuota penuh.
+- [x] `M6-06` Buat halaman usaha tidak ditemukan dan belum memiliki layanan aktif.
 
 ## 8.2 Form pengambilan antrean
 
-- [ ] `M6-07` Implementasikan route GET `/q/{slug}/take-queue` untuk form antrean dan POST `/q/{slug}/take-queue` untuk submit tiket (PRG pattern).
-- [ ] `M6-08` Implementasikan pilihan layanan dan field nama/label wajib.
-- [ ] `M6-09` Tambahkan nomor telepon hanya jika keputusan privasi/penggunaan data telah ditetapkan.
-- [ ] `M6-10` Tampilkan ringkasan layanan sebelum konfirmasi.
-- [ ] `M6-11` Tampilkan validasi field dan pesan kegagalan yang mudah dipahami.
-- [ ] `M6-12` Hubungkan submit dengan queue engine tanpa menduplikasi aturan bisnis di frontend.
-- [ ] `M6-13` Tangani kuota habis atau usaha berubah menjadi Tutup/Jeda sebelum submit selesai.
+- [x] `M6-07` Implementasikan route GET `/q/{slug}/take-queue` untuk form antrean dan POST `/q/{slug}/take-queue` untuk submit tiket (PRG pattern).
+- [x] `M6-08` Implementasikan pilihan layanan dan field nama/label wajib.
+- [x] `M6-09` Tambahkan nomor telepon hanya jika keputusan privasi/penggunaan data telah ditetapkan.
+- [x] `M6-10` Tampilkan ringkasan layanan sebelum konfirmasi.
+- [x] `M6-11` Tampilkan validasi field dan pesan kegagalan yang mudah dipahami.
+- [x] `M6-12` Hubungkan submit dengan queue engine tanpa menduplikasi aturan bisnis di frontend.
+- [x] `M6-13` Tangani kuota habis atau usaha berubah menjadi Tutup/Jeda sebelum submit selesai.
 
 ## 8.3 Konfirmasi dan tiket
 
-- [ ] `M6-14` Buat halaman konfirmasi setelah tiket berhasil dibuat.
-- [ ] `M6-15` Tampilkan nomor tiket, nama UMKM, nama pelanggan, layanan, waktu ambil, dan status.
-- [ ] `M6-16` Sediakan tautan pemantauan dan tombol salin tautan.
-- [ ] `M6-17` Pastikan token tidak terekspos dalam log atau informasi yang tidak diperlukan.
+- [x] `M6-14` Buat halaman konfirmasi setelah tiket berhasil dibuat.
+- [x] `M6-15` Tampilkan nomor tiket, nama UMKM, nama pelanggan, layanan, waktu ambil, dan status.
+- [x] `M6-16` Sediakan tautan pemantauan dan tombol salin tautan.
+- [x] `M6-17` Pastikan token tidak terekspos dalam log atau informasi yang tidak diperlukan.
 
 ## 8.4 Pemantauan tiket
 
-- [ ] `M6-18` Implementasikan route `/ticket/{token}` (berlaku selama non-terminal dan hingga 24 jam post-terminal; token kadaluarsa tidak membocorkan PII).
-- [ ] `M6-19` Validasi token dan pastikan hanya tiket yang tepat dapat diakses.
-- [ ] `M6-20` Tampilkan status, nomor yang sedang dilayani, posisi di depan, dan waktu pengambilan.
-- [ ] `M6-21` Tampilkan estimasi waktu hanya jika data memadai; jangan tampilkan angka 0 sebagai pengganti data kosong.
-- [ ] `M6-22` Implementasikan adaptive polling (5s Menunggu/Dipanggil, 15s Dilayani) dan hentikan polling segera pada status terminal.
-- [ ] `M6-23` Tangani token invalid, tiket tidak ditemukan, dan koneksi gagal.
-- [ ] `M6-24` Tampilkan instruksi yang sesuai untuk tiap status.
-- [ ] `M6-25` Terapkan pembatalan pelanggan hanya jika disetujui dan hanya untuk status yang diizinkan.
+- [x] `M6-18` Implementasikan route `/ticket/{token}` (berlaku selama non-terminal dan hingga 24 jam post-terminal; token kadaluarsa tidak membocorkan PII).
+- [x] `M6-19` Validasi token dan pastikan hanya tiket yang tepat dapat diakses.
+- [x] `M6-20` Tampilkan status, nomor yang sedang dilayani, posisi di depan, dan waktu pengambilan.
+- [x] `M6-21` Tampilkan estimasi waktu hanya jika data memadai; jangan tampilkan angka 0 sebagai pengganti data kosong.
+- [x] `M6-22` Implementasikan adaptive polling (5s Menunggu/Dipanggil, 15s Dilayani) dan hentikan polling segera pada status terminal.
+- [x] `M6-23` Tangani token invalid, tiket tidak ditemukan, dan koneksi gagal.
+- [x] `M6-24` Tampilkan instruksi yang sesuai untuk tiap status.
+- [x] `M6-25` Terapkan pembatalan pelanggan hanya jika disetujui dan hanya untuk status yang diizinkan.
 
 ## 8.5 Responsive customer web
 
-- [ ] `M6-26` Buat layout desktop dengan header website dan konten terstruktur.
-- [ ] `M6-27` Buat layout tablet satu/dua kolom sesuai ruang.
-- [ ] `M6-28` Buat layout mobile satu kolom dengan CTA mudah dijangkau.
-- [ ] `M6-29` Pastikan nomor tiket tetap dominan pada desktop dan mobile.
-- [ ] `M6-30` Pastikan tidak ada horizontal overflow pada halaman pelanggan.
+- [x] `M6-26` Buat layout desktop dengan header website dan konten terstruktur.
+- [x] `M6-27` Buat layout tablet satu/dua kolom sesuai ruang.
+- [x] `M6-28` Buat layout mobile satu kolom dengan CTA mudah dijangkau.
+- [x] `M6-29` Pastikan nomor tiket tetap dominan pada desktop dan mobile.
+- [x] `M6-30` Pastikan tidak ada horizontal overflow pada halaman pelanggan.
 
 **Exit Gate 6:** pelanggan dapat membuka halaman UMKM, mengambil antrean tanpa login, memperoleh tiket, dan memantau status dengan token yang valid.
 

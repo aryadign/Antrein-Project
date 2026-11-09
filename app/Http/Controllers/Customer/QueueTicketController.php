@@ -7,18 +7,133 @@ use App\Models\Business;
 use App\Models\QueueTicket;
 use App\Models\Service;
 use App\Services\QueueService;
+use Carbon\Carbon;
 use DomainException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Illuminate\View\View;
 
 class QueueTicketController extends Controller
 {
     public function __construct(
         protected QueueService $queueService
     ) {}
+
+    /**
+     * Display the public UMKM page with service catalog and intake options.
+     */
+    public function show(Request $request, string $slug): JsonResponse|View
+    {
+        /** @var Business $business */
+        $business = Business::where('slug', $slug)
+            ->with(['category', 'hours'])
+            ->firstOrFail();
+
+        $dailyQueue = $this->queueService->getOrCreateDailyQueue($business);
+
+        $services = $business->services()->active()->get();
+
+        $servicesWithQuota = $services->map(function (Service $service) use ($dailyQueue) {
+            $remaining = $service->getRemainingQuotaForDailyQueue($dailyQueue);
+            $service->remaining_quota = $remaining;
+            $service->is_quota_full = ($service->daily_quota !== null && $remaining !== null && $remaining <= 0);
+
+            return $service;
+        });
+
+        $servingTicket = $this->queueService->getCurrentServingTicket($business);
+
+        $waitingCount = QueueTicket::where('business_id', $business->id)
+            ->where('daily_queue_id', $dailyQueue->id)
+            ->where('status', QueueTicket::STATUS_MENUNGGU)
+            ->count();
+
+        // Resolve today's schedule based on business timezone
+        $timezone = $business->timezone ?: 'Asia/Makassar';
+        $todayDayOfWeek = (int) Carbon::now($timezone)->dayOfWeek; // 0 = Minggu, 6 = Sabtu
+        $todayHour = $business->hours->firstWhere('day_of_week', $todayDayOfWeek);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'business' => [
+                        'id' => $business->id,
+                        'name' => $business->name,
+                        'slug' => $business->slug,
+                        'description' => $business->description,
+                        'category' => $business->category?->name,
+                        'address' => $business->address,
+                        'phone' => $business->phone,
+                        'status' => $business->status,
+                        'is_open' => $business->isOpen(),
+                        'is_paused' => $business->isPaused(),
+                        'is_closed' => $business->isClosed(),
+                        'is_suspended' => (bool) $business->is_suspended,
+                        'timezone' => $business->timezone,
+                        'today_schedule' => $todayHour ? $todayHour->getFormattedSchedule() : null,
+                    ],
+                    'services' => $servicesWithQuota->map(fn (Service $s) => [
+                        'id' => $s->id,
+                        'name' => $s->name,
+                        'description' => $s->description,
+                        'duration_minutes' => $s->duration_minutes,
+                        'price' => $s->price,
+                        'daily_quota' => $s->daily_quota,
+                        'remaining_quota' => $s->remaining_quota,
+                        'is_quota_full' => $s->is_quota_full,
+                    ]),
+                    'now_serving' => $servingTicket?->ticket_number,
+                    'waiting_count' => $waitingCount,
+                ],
+            ]);
+        }
+
+        return view('customer.show', [
+            'business' => $business,
+            'services' => $servicesWithQuota,
+            'dailyQueue' => $dailyQueue,
+            'servingTicket' => $servingTicket,
+            'waitingCount' => $waitingCount,
+            'todayHour' => $todayHour,
+        ]);
+    }
+
+    /**
+     * Display the dedicated online queue intake form.
+     */
+    public function create(Request $request, string $slug): View
+    {
+        /** @var Business $business */
+        $business = Business::where('slug', $slug)
+            ->with(['category', 'hours'])
+            ->firstOrFail();
+
+        $dailyQueue = $this->queueService->getOrCreateDailyQueue($business);
+
+        $services = $business->services()->active()->get()->map(function (Service $service) use ($dailyQueue) {
+            $remaining = $service->getRemainingQuotaForDailyQueue($dailyQueue);
+            $service->remaining_quota = $remaining;
+            $service->is_quota_full = ($service->daily_quota !== null && $remaining !== null && $remaining <= 0);
+
+            return $service;
+        });
+
+        $selectedServiceId = (int) $request->query('service_id');
+        $idempotencyKey = (string) Str::uuid();
+
+        return view('customer.form', [
+            'business' => $business,
+            'services' => $services,
+            'selectedServiceId' => $selectedServiceId,
+            'idempotencyKey' => $idempotencyKey,
+        ]);
+    }
 
     /**
      * Handle public online queue ticket creation.
@@ -125,11 +240,11 @@ class QueueTicketController extends Controller
     /**
      * Public ticket tracking lookup via secure access token.
      */
-    public function track(Request $request, string $token): JsonResponse|\Illuminate\View\View
+    public function track(Request $request, string $token): JsonResponse|Response|View
     {
         /** @var QueueTicket $ticket */
         $ticket = QueueTicket::where('access_token', $token)
-            ->with(['business', 'service'])
+            ->with(['business.category', 'business.hours', 'service'])
             ->firstOrFail();
 
         $isExpired = $this->queueService->isTokenExpired($ticket);
@@ -143,17 +258,17 @@ class QueueTicketController extends Controller
                 ], 410);
             }
 
-            return view('preview.customer', [
+            return response()->view('customer.expired', [
                 'business' => $ticket->business,
-                'ticket' => null,
                 'isExpired' => true,
-            ]);
+            ], 410);
         }
 
         $position = $this->queueService->calculateQueuePosition($ticket);
+        $aheadCount = max(0, $position - 1);
         $servingTicket = $this->queueService->getCurrentServingTicket($ticket->business);
 
-        // Mask phone number for privacy if returned
+        // Mask phone number for privacy
         $maskedPhone = null;
         if ($ticket->customer_phone) {
             $phone = $ticket->customer_phone;
@@ -175,12 +290,14 @@ class QueueTicketController extends Controller
             'status' => $ticket->status,
             'source' => $ticket->source,
             'queue_position' => $position,
+            'ahead_count' => $aheadCount,
             'estimated_wait_minutes' => $estimatedWaitMinutes,
             'service_name' => $ticket->service->name,
             'business_name' => $ticket->business->name,
             'service' => [
                 'name' => $ticket->service->name,
                 'duration_minutes' => $ticket->service->duration_minutes,
+                'price' => $ticket->service->price,
             ],
             'business' => [
                 'name' => $ticket->business->name,
@@ -199,10 +316,16 @@ class QueueTicketController extends Controller
             ]);
         }
 
-        return view('preview.customer', [
-            'business' => $ticket->business,
+        return view('customer.track', [
             'ticket' => $ticket,
+            'business' => $ticket->business,
+            'service' => $ticket->service,
             'data' => $data,
+            'position' => $position,
+            'aheadCount' => $aheadCount,
+            'servingTicket' => $servingTicket,
+            'maskedPhone' => $maskedPhone,
+            'estimatedWaitMinutes' => $estimatedWaitMinutes,
             'isExpired' => false,
         ]);
     }
