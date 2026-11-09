@@ -333,3 +333,4 @@ class QueueManagementTest extends TestCase
         $response->assertSee('<svg', false);
     }
 }
+
