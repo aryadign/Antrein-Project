@@ -7,7 +7,9 @@ use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Customer\QueueTicketController;
+use App\Http\Controllers\Merchant\DashboardController;
 use App\Http\Controllers\Merchant\OnboardingController;
+use App\Http\Controllers\Merchant\QueueController;
 use App\Http\Controllers\Merchant\QueueOperationController;
 use App\Http\Controllers\Merchant\ServiceController;
 use App\Http\Controllers\Merchant\SettingsController;
@@ -145,9 +147,12 @@ Route::middleware(['auth', 'active'])->group(function () {
 
         // Operational merchant routes (Restricted by 'onboarded' middleware)
         Route::middleware('onboarded')->group(function () {
-            Route::get('/dashboard', function () {
-                return view('preview.merchant');
-            })->name('dashboard');
+            Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+            // Queue Management & Views (Milestone 7)
+            Route::get('/queues', [QueueController::class, 'index'])->name('queues');
+            Route::get('/queues/qr', [QueueController::class, 'qr'])->name('queues.qr');
+            Route::get('/queues/{ticket}', [QueueController::class, 'show'])->name('queues.show');
 
             // Business Profile, Operating Hours & Status Settings
             Route::get('/settings', [SettingsController::class, 'show'])->name('settings');
@@ -155,6 +160,7 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::delete('/settings/logo', [SettingsController::class, 'removeLogo'])->name('settings.logo.remove');
             Route::put('/settings/hours', [SettingsController::class, 'updateHours'])->name('settings.hours');
             Route::patch('/settings/status', [SettingsController::class, 'updateStatus'])->name('settings.status');
+            Route::put('/settings/account', [SettingsController::class, 'updateAccount'])->name('settings.account');
 
             // Services Management
             Route::get('/services', [ServiceController::class, 'index'])->name('services.index');

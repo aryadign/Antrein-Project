@@ -85,6 +85,12 @@
                 >
                     Status Operasional Antrean
                 </a>
+                <a
+                    href="{{ route('merchant.settings', ['tab' => 'account']) }}"
+                    class="pb-3 px-1 border-b-2 font-medium text-sm transition-colors {{ $activeTab === 'account' ? 'border-brand-700 text-brand-700 font-bold' : 'border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300' }}"
+                >
+                    Akun & Keamanan
+                </a>
             </nav>
         </div>
 
@@ -401,6 +407,97 @@
                     <div class="pt-4 flex justify-end border-t border-neutral-200">
                         <x-button type="submit" variant="primary" class="px-6 h-11" :disabled="$business->is_suspended">
                             Terapkan Status Operasional
+                        </x-button>
+                    </div>
+                </form>
+            </x-card>
+        @endif
+
+        <!-- TAB CONTENT: PENGATURAN AKUN (FR-SET-04, FR-SET-05) -->
+        @if ($activeTab === 'account')
+            <x-card padding="lg">
+                <x-slot name="header">
+                    <div>
+                        <h2 class="text-h3 font-bold text-neutral-900">Pengaturan Akun Pengguna</h2>
+                        <p class="text-caption text-neutral-500 mt-1">Perbarui nama pengguna, alamat email login, dan kata sandi pemilik usaha.</p>
+                    </div>
+                </x-slot>
+
+                <form method="POST" action="{{ route('merchant.settings.account') }}" class="space-y-6">
+                    @csrf
+                    @method('PUT')
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        <div>
+                            <x-form-label for="name" value="Nama Lengkap Pemilik" required />
+                            <x-input id="name" name="name" type="text" :value="old('name', auth()->user()->name)" required class="mt-1.5" />
+                            <x-input-error :messages="$errors->get('name')" class="mt-1" />
+                        </div>
+
+                        <div>
+                            <x-form-label for="email" value="Alamat Email Login" required />
+                            <x-input id="email" name="email" type="email" :value="old('email', auth()->user()->email)" required class="mt-1.5" />
+                            <x-input-error :messages="$errors->get('email')" class="mt-1" />
+                        </div>
+                    </div>
+
+                    <div class="border-t border-neutral-200 pt-6">
+                        <h3 class="text-h3 font-bold text-neutral-900">Ubah Password</h3>
+                        <p class="text-caption text-neutral-500 mt-1">Kosongkan jika Anda tidak bermaksud mengubah kata sandi saat ini.</p>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-5 mt-4">
+                            <div>
+                                <x-form-label for="current_password" value="Password Saat Ini" />
+                                <x-input id="current_password" name="current_password" type="password" placeholder="••••••••" class="mt-1.5" />
+                                <x-input-error :messages="$errors->get('current_password')" class="mt-1" />
+                            </div>
+
+                            <div>
+                                <x-form-label for="password" value="Password Baru" />
+                                <x-input id="password" name="password" type="password" placeholder="Minimal 8 karakter" class="mt-1.5" />
+                                <x-input-error :messages="$errors->get('password')" class="mt-1" />
+                            </div>
+
+                            <div>
+                                <x-form-label for="password_confirmation" value="Ulangi Password Baru" />
+                                <x-input id="password_confirmation" name="password_confirmation" type="password" placeholder="••••••••" class="mt-1.5" />
+                                <x-input-error :messages="$errors->get('password_confirmation')" class="mt-1" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-neutral-200 pt-6">
+                        <h3 class="text-h3 font-bold text-neutral-900">Preferensi Notifikasi Antrean (FR-SET-05)</h3>
+                        <p class="text-caption text-neutral-500 mt-1">Kanal pengiriman status antrean kepada pengguna dan pelanggan.</p>
+
+                        <div class="space-y-3 mt-4">
+                            <div class="p-3.5 bg-neutral-50 rounded-xl border border-neutral-200 flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                                    <div>
+                                        <p class="text-sm font-semibold text-neutral-900">Web Polling Real-time (In-App)</p>
+                                        <p class="text-xs text-neutral-500">Pembaruan berkala di halaman publik pelanggan dan console operasional.</p>
+                                    </div>
+                                </div>
+                                <span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">Aktif</span>
+                            </div>
+
+                            <div class="p-3.5 bg-neutral-50 rounded-xl border border-neutral-200 flex items-center justify-between opacity-60">
+                                <div class="flex items-center gap-3">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-neutral-400"></span>
+                                    <div>
+                                        <p class="text-sm font-semibold text-neutral-900">Notifikasi WhatsApp & SMS Gateway</p>
+                                        <p class="text-xs text-neutral-500">Pengiriman pengingat antrean via WhatsApp Business API.</p>
+                                    </div>
+                                </div>
+                                <span class="text-xs font-semibold text-neutral-500 bg-neutral-200 px-2.5 py-1 rounded-full">Belum Didukung di MVP</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-4 flex justify-end border-t border-neutral-200">
+                        <x-button type="submit" variant="primary" class="px-6 h-11">
+                            Simpan Perubahan Akun
                         </x-button>
                     </div>
                 </form>
