@@ -1,11 +1,14 @@
 <?php
 
+use App\Http\Controllers\Admin\BusinessCategoryController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Merchant\OnboardingController;
+use App\Http\Controllers\Merchant\ServiceController;
+use App\Http\Controllers\Merchant\SettingsController;
 use App\Models\Business;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
@@ -117,6 +120,13 @@ Route::middleware(['auth', 'active'])->group(function () {
         })->name('dashboard');
 
         Route::post('/users/{user}/deactivate', [UserManagementController::class, 'deactivate'])->name('users.deactivate');
+
+        // Business Categories Management
+        Route::get('/categories', [BusinessCategoryController::class, 'index'])->name('categories.index');
+        Route::post('/categories', [BusinessCategoryController::class, 'store'])->name('categories.store');
+        Route::put('/categories/{category}', [BusinessCategoryController::class, 'update'])->name('categories.update');
+        Route::patch('/categories/{category}/toggle-status', [BusinessCategoryController::class, 'toggleStatus'])->name('categories.toggle-status');
+        Route::delete('/categories/{category}', [BusinessCategoryController::class, 'destroy'])->name('categories.destroy');
     });
 
     /*
@@ -138,6 +148,20 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::get('/dashboard', function () {
                 return view('preview.merchant');
             })->name('dashboard');
+
+            // Business Profile, Operating Hours & Status Settings
+            Route::get('/settings', [SettingsController::class, 'show'])->name('settings');
+            Route::put('/settings/profile', [SettingsController::class, 'updateProfile'])->name('settings.profile');
+            Route::delete('/settings/logo', [SettingsController::class, 'removeLogo'])->name('settings.logo.remove');
+            Route::put('/settings/hours', [SettingsController::class, 'updateHours'])->name('settings.hours');
+            Route::patch('/settings/status', [SettingsController::class, 'updateStatus'])->name('settings.status');
+
+            // Services Management
+            Route::get('/services', [ServiceController::class, 'index'])->name('services.index');
+            Route::post('/services', [ServiceController::class, 'store'])->name('services.store');
+            Route::put('/services/{service}', [ServiceController::class, 'update'])->name('services.update');
+            Route::patch('/services/{service}/toggle-status', [ServiceController::class, 'toggleStatus'])->name('services.toggle-status');
+            Route::delete('/services/{service}', [ServiceController::class, 'destroy'])->name('services.destroy');
         });
     });
 });

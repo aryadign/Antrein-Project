@@ -306,34 +306,34 @@ Sumber visual: `AntreIn-design.md`. Jangan membuat palette atau skala baru tanpa
 
 ## 6.1 Profil UMKM dan kategori
 
-- [ ] `M4-01` Implementasikan CRUD kategori untuk Admin (FR-ADM-07).
-- [ ] `M4-02` Implementasikan daftar, pencarian, filter, dan pagination kategori jika diperlukan.
-- [ ] `M4-03` Implementasikan profil usaha: nama, logo, kategori, deskripsi, alamat, kontak (FR-SET-01).
-- [ ] `M4-04` Implementasikan upload logo dengan validasi tipe, ukuran, dan penyimpanan aman.
-- [ ] `M4-05` Implementasikan status kategori aktif/nonaktif dan aturan kategori yang telah digunakan.
-- [ ] `M4-06` Implementasikan slug publik unik untuk setiap UMKM.
+- [x] `M4-01` Implementasikan CRUD kategori untuk Admin (FR-ADM-07).
+- [x] `M4-02` Implementasikan daftar, pencarian, filter, dan pagination kategori jika diperlukan.
+- [x] `M4-03` Implementasikan profil usaha: nama, logo, kategori, deskripsi, alamat, kontak (FR-SET-01).
+- [x] `M4-04` Implementasikan upload logo dengan validasi tipe, ukuran, dan penyimpanan aman.
+- [x] `M4-05` Implementasikan status kategori aktif/nonaktif dan aturan kategori yang telah digunakan.
+- [x] `M4-06` Implementasikan slug publik unik untuk setiap UMKM.
 
 ## 6.2 Jam operasional
 
-- [ ] `M4-07` Implementasikan jadwal operasional untuk setiap hari.
-- [ ] `M4-08` Implementasikan jam buka, jam tutup, dan hari libur.
-- [ ] `M4-09` Implementasikan status manual Buka, Tutup, dan Jeda.
-- [ ] `M4-10` Pisahkan jam operasional terjadwal dari status operasional manual.
-- [ ] `M4-11` Validasi waktu dan penanganan jadwal sesuai keputusan timezone.
-- [ ] `M4-12` Pastikan status Tutup/Jeda mencegah tiket online baru tetapi tidak menghapus tiket aktif.
-- [ ] `M4-13` Tampilkan feedback ketika perubahan status memengaruhi kemampuan menerima antrean baru.
+- [x] `M4-07` Implementasikan jadwal operasional untuk setiap hari.
+- [x] `M4-08` Implementasikan jam buka, jam tutup, dan hari libur.
+- [x] `M4-09` Implementasikan status manual Buka, Tutup, dan Jeda.
+- [x] `M4-10` Pisahkan jam operasional terjadwal dari status operasional manual.
+- [x] `M4-11` Validasi waktu dan penanganan jadwal sesuai keputusan timezone.
+- [x] `M4-12` Pastikan status Tutup/Jeda mencegah tiket online baru tetapi tidak menghapus tiket aktif.
+- [x] `M4-13` Tampilkan feedback ketika perubahan status memengaruhi kemampuan menerima antrean baru.
 
 ## 6.3 Layanan
 
-- [ ] `M4-14` Implementasikan daftar layanan UMKM (FR-SVC-01).
-- [ ] `M4-15` Implementasikan tambah dan edit layanan (FR-SVC-02).
-- [ ] `M4-16` Implementasikan nama, deskripsi, estimasi durasi, harga opsional, kuota opsional, dan status.
-- [ ] `M4-17` Terapkan validasi durasi positif, harga non-negatif, dan kuota valid.
-- [ ] `M4-18` Implementasikan aktivasi/nonaktif layanan (FR-SVC-03).
-- [ ] `M4-19` Pastikan layanan nonaktif tidak muncul untuk tiket baru.
-- [ ] `M4-20` Pertahankan referensi layanan historis pada tiket lama.
-- [ ] `M4-21` Pastikan kuota, jika digunakan, terhubung dengan periode antrean harian yang benar.
-- [ ] `M4-22` Buat empty state saat UMKM belum mempunyai layanan aktif.
+- [x] `M4-14` Implementasikan daftar layanan UMKM (FR-SVC-01).
+- [x] `M4-15` Implementasikan tambah dan edit layanan (FR-SVC-02).
+- [x] `M4-16` Implementasikan nama, deskripsi, estimasi durasi, harga opsional, kuota opsional, dan status.
+- [x] `M4-17` Terapkan validasi durasi positif, harga non-negatif, dan kuota valid.
+- [x] `M4-18` Implementasikan aktivasi/nonaktif layanan (FR-SVC-03).
+- [x] `M4-19` Pastikan layanan nonaktif tidak muncul untuk tiket baru.
+- [x] `M4-20` Pertahankan referensi layanan historis pada tiket lama.
+- [x] `M4-21` Pastikan kuota, jika digunakan, terhubung dengan periode antrean harian yang benar.
+- [x] `M4-22` Buat empty state saat UMKM belum mempunyai layanan aktif.
 
 **Exit Gate 4:** UMKM dapat menyiapkan profil, jam operasional, kategori, dan minimal satu layanan aktif; halaman publik dapat mengidentifikasi usaha melalui slug.
 

@@ -49,6 +49,18 @@ class Business extends Model
     }
 
     /**
+     * Get the public URL for the business logo.
+     */
+    public function getLogoUrl(): ?string
+    {
+        if (! $this->logo_path) {
+            return null;
+        }
+
+        return \Illuminate\Support\Facades\Storage::disk('public')->url($this->logo_path);
+    }
+
+    /**
      * Determine whether the business is currently open for queue intake.
      */
     public function isOpen(): bool
