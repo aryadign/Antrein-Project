@@ -591,34 +591,34 @@ Sumber visual: `AntreIn-design.md`. Jangan membuat palette atau skala baru tanpa
 
 ## 11.1 Laporan UMKM
 
-- [ ] `M9-01` Implementasikan filter Hari Ini, 7 Hari, 30 Hari, dan rentang tanggal khusus (FR-REP-01).
-- [ ] `M9-02` Implementasikan total antrean berdasarkan tiket dibuat pada periode.
-- [ ] `M9-03` Implementasikan jumlah tiket Selesai, Dilewati, dan Dibatalkan secara terpisah.
-- [ ] `M9-04` Implementasikan rata-rata waktu tunggu dari dibuat ke mulai dilayani, hanya untuk data lengkap.
-- [ ] `M9-05` Implementasikan rata-rata durasi pelayanan dari mulai dilayani ke selesai, hanya untuk data lengkap.
-- [ ] `M9-06` Implementasikan grafik tren antrean.
-- [ ] `M9-07` Implementasikan distribusi status.
-- [ ] `M9-08` Implementasikan jumlah antrean berdasarkan layanan.
-- [ ] `M9-09` Implementasikan analisis jam ramai berdasarkan `created_at` (demand kedatangan) dengan threshold minimal 50 tiket pada periode; tampilkan empty state informatif jika kurang.
-- [ ] `M9-10` Tampilkan periode laporan secara eksplisit.
-- [ ] `M9-11` Tampilkan no-data state untuk metrik yang tidak dapat dihitung; jangan mengubah data kosong menjadi nol.
-- [ ] `M9-12` Validasi hasil agregasi menggunakan dataset uji yang diketahui hasil hitungnya.
+- [x] `M9-01` Implementasikan filter Hari Ini, 7 Hari, 30 Hari, dan rentang tanggal khusus (FR-REP-01).
+- [x] `M9-02` Implementasikan total antrean berdasarkan tiket dibuat pada periode.
+- [x] `M9-03` Implementasikan jumlah tiket Selesai, Dilewati, dan Dibatalkan secara terpisah.
+- [x] `M9-04` Implementasikan rata-rata waktu tunggu dari dibuat ke mulai dilayani, hanya untuk data lengkap.
+- [x] `M9-05` Implementasikan rata-rata durasi pelayanan dari mulai dilayani ke selesai, hanya untuk data lengkap.
+- [x] `M9-06` Implementasikan grafik tren antrean.
+- [x] `M9-07` Implementasikan distribusi status.
+- [x] `M9-08` Implementasikan jumlah antrean berdasarkan layanan.
+- [x] `M9-09` Implementasikan analisis jam ramai berdasarkan `created_at` (demand kedatangan) dengan threshold minimal 50 tiket pada periode; tampilkan empty state informatif jika kurang.
+- [x] `M9-10` Tampilkan periode laporan secara eksplisit.
+- [x] `M9-11` Tampilkan no-data state untuk metrik yang tidak dapat dihitung; jangan mengubah data kosong menjadi nol.
+- [x] `M9-12` Validasi hasil agregasi menggunakan dataset uji yang diketahui hasil hitungnya.
 
 ## 11.2 Statistik Admin
 
-- [ ] `M9-13` Validasi definisi total antrean platform dan periode penghitungan.
-- [ ] `M9-14` Pastikan statistik agregat tidak menggandakan tiket.
-- [ ] `M9-15` Pastikan filter periode diterapkan konsisten ke seluruh visualisasi terkait.
+- [x] `M9-13` Validasi definisi total antrean platform dan periode penghitungan.
+- [x] `M9-14` Pastikan statistik agregat tidak menggandakan tiket.
+- [x] `M9-15` Pastikan filter periode diterapkan konsisten ke seluruh visualisasi terkait.
 
 ## 11.3 Activity log
 
-- [ ] `M9-16` Catat perubahan status UMKM.
-- [ ] `M9-17` Catat perubahan status akun pengguna.
-- [ ] `M9-18` Catat perubahan kategori.
-- [ ] `M9-19` Catat perubahan konfigurasi usaha yang penting.
-- [ ] `M9-20` Catat perubahan status tiket.
-- [ ] `M9-21` Pastikan log menyimpan actor, jenis aksi, resource, waktu, dan metadata minimum yang disetujui.
-- [ ] `M9-22` Pastikan data sensitif tidak disalin berlebihan ke log.
+- [x] `M9-16` Catat perubahan status UMKM.
+- [x] `M9-17` Catat perubahan status akun pengguna.
+- [x] `M9-18` Catat perubahan kategori.
+- [x] `M9-19` Catat perubahan konfigurasi usaha yang penting.
+- [x] `M9-20` Catat perubahan status tiket.
+- [x] `M9-21` Pastikan log menyimpan actor, jenis aksi, resource, waktu, dan metadata minimum yang disetujui.
+- [x] `M9-22` Pastikan data sensitif tidak disalin berlebihan ke log.
 
 **Exit Gate 9:** laporan dan statistik dapat direkonsiliasi dengan data tiket; aktivitas penting tercatat.
 
