@@ -1,6 +1,10 @@
 <?php
 
 use App\Http\Controllers\Admin\BusinessCategoryController;
+use App\Http\Controllers\Admin\BusinessManagementController;
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\PlatformSettingController;
+use App\Http\Controllers\Admin\QueueMonitoringController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\NewPasswordController;
@@ -117,18 +121,35 @@ Route::middleware(['auth', 'active'])->group(function () {
     |--------------------------------------------------------------------------
     */
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
-        Route::get('/dashboard', function () {
-            return view('preview.admin');
-        })->name('dashboard');
+        // Platform Dashboard (M8-01 to M8-07)
+        Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
 
+        // Business Management (M8-08 to M8-14)
+        Route::get('/businesses', [BusinessManagementController::class, 'index'])->name('businesses.index');
+        Route::get('/umkm', [BusinessManagementController::class, 'index'])->name('umkm'); // Alias for nav
+        Route::get('/businesses/{business}', [BusinessManagementController::class, 'show'])->name('businesses.show');
+        Route::patch('/businesses/{business}/toggle-suspension', [BusinessManagementController::class, 'toggleSuspension'])->name('businesses.toggle-suspension');
+
+        // User Management (M8-15 to M8-19)
+        Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
+        Route::get('/users/{user}', [UserManagementController::class, 'show'])->name('users.show');
         Route::post('/users/{user}/deactivate', [UserManagementController::class, 'deactivate'])->name('users.deactivate');
+        Route::post('/users/{user}/activate', [UserManagementController::class, 'activate'])->name('users.activate');
 
-        // Business Categories Management
+        // Queue Monitoring (M8-20 to M8-26, read-only)
+        Route::get('/queues', [QueueMonitoringController::class, 'index'])->name('queues.index');
+        Route::get('/queues/{ticket}', [QueueMonitoringController::class, 'show'])->name('queues.show');
+
+        // Business Categories Management (M4 / M8 integration)
         Route::get('/categories', [BusinessCategoryController::class, 'index'])->name('categories.index');
         Route::post('/categories', [BusinessCategoryController::class, 'store'])->name('categories.store');
         Route::put('/categories/{category}', [BusinessCategoryController::class, 'update'])->name('categories.update');
         Route::patch('/categories/{category}/toggle-status', [BusinessCategoryController::class, 'toggleStatus'])->name('categories.toggle-status');
         Route::delete('/categories/{category}', [BusinessCategoryController::class, 'destroy'])->name('categories.destroy');
+
+        // Platform Settings (M8-27 to M8-29)
+        Route::get('/settings', [PlatformSettingController::class, 'show'])->name('settings');
+        Route::put('/settings', [PlatformSettingController::class, 'update'])->name('settings.update');
     });
 
     /*

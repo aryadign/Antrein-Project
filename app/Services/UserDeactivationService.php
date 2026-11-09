@@ -31,6 +31,27 @@ class UserDeactivationService
         return DB::transaction(function () use ($targetUser, $performedBy, $emergencyForce, $reason): array {
             $cancelledCount = 0;
 
+            // Last Active Admin Protection (M8-19)
+            if ($targetUser->isAdmin()) {
+                $activeAdminCount = User::query()
+                    ->where('role', User::ROLE_ADMIN)
+                    ->where('is_active', true)
+                    ->lockForUpdate()
+                    ->count();
+
+                if ($activeAdminCount <= 1) {
+                    throw new DomainException(
+                        'Tidak dapat menonaktifkan akun administrator aktif terakhir. Platform wajib memiliki minimal satu administrator aktif.'
+                    );
+                }
+
+                if ($targetUser->id === $performedBy->id && $activeAdminCount <= 1) {
+                    throw new DomainException(
+                        'Anda tidak dapat menonaktifkan akun administrator Anda sendiri karena Anda adalah satu-satunya administrator aktif yang tersisa.'
+                    );
+                }
+            }
+
             // Only merchant owners have operational business queues to safeguard
             if ($targetUser->isMerchant() && $targetUser->business) {
                 $business = $targetUser->business;
@@ -123,6 +144,36 @@ class UserDeactivationService
                 'message' => $cancelledCount > 0
                     ? sprintf('Akun dinonaktifkan via prosedur darurat. %d antrean aktif telah dibatalkan otomatis.', $cancelledCount)
                     : 'Akun berhasil dinonaktifkan.',
+            ];
+        });
+    }
+
+    /**
+     * Activate an inactive user account.
+     *
+     * @param  User  $targetUser The user account to be activated
+     * @param  User  $performedBy The administrator performing the activation
+     * @return array{success: bool, message: string}
+     */
+    public function activate(User $targetUser, User $performedBy): array
+    {
+        return DB::transaction(function () use ($targetUser, $performedBy): array {
+            $targetUser->is_active = true;
+            $targetUser->save();
+
+            ActivityLog::log(
+                action: 'user_activated',
+                description: sprintf('Akun %s (%s) diaktifkan kembali.', $targetUser->name, $targetUser->email),
+                business: $targetUser->business,
+                user: $performedBy,
+                properties: [
+                    'target_user_id' => $targetUser->id,
+                ]
+            );
+
+            return [
+                'success' => true,
+                'message' => sprintf('Akun %s berhasil diaktifkan kembali.', $targetUser->name),
             ];
         });
     }

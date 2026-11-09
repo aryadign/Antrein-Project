@@ -532,54 +532,54 @@ Sumber visual: `AntreIn-design.md`. Jangan membuat palette atau skala baru tanpa
 
 ## 10.1 Dashboard Admin
 
-- [ ] `M8-01` Implementasikan `/admin/dashboard` (FR-ADM-01).
-- [ ] `M8-02` Tampilkan total UMKM, UMKM aktif/nonaktif, total pengguna, total antrean, dan antrean selesai.
-- [ ] `M8-03` Implementasikan filter periode untuk metrik yang memiliki dimensi waktu.
-- [ ] `M8-04` Implementasikan grafik tren pendaftaran UMKM dan antrean.
-- [ ] `M8-05` Implementasikan distribusi antrean berdasarkan status.
-- [ ] `M8-06` Implementasikan aktivitas terbaru dari sumber yang tercatat.
-- [ ] `M8-07` Pastikan empty state dan definisi periode konsisten.
+- [x] `M8-01` Implementasikan `/admin/dashboard` (FR-ADM-01).
+- [x] `M8-02` Tampilkan total UMKM, UMKM aktif/nonaktif, total pengguna, total antrean, dan antrean selesai.
+- [x] `M8-03` Implementasikan filter periode untuk metrik yang memiliki dimensi waktu.
+- [x] `M8-04` Implementasikan grafik tren pendaftaran UMKM dan antrean.
+- [x] `M8-05` Implementasikan distribusi antrean berdasarkan status.
+- [x] `M8-06` Implementasikan aktivitas terbaru dari sumber yang tercatat.
+- [x] `M8-07` Pastikan empty state dan definisi periode konsisten.
 
 ## 10.2 Manajemen UMKM
 
-- [ ] `M8-08` Implementasikan daftar UMKM dengan search, filter, dan pagination (FR-ADM-02).
-- [ ] `M8-09` Tampilkan nama usaha, pemilik, kategori, alamat, tanggal daftar, jumlah layanan, jumlah antrean, dan status.
-- [ ] `M8-10` Implementasikan halaman detail UMKM (FR-ADM-03).
-- [ ] `M8-11` Implementasikan aktivasi/penonaktifan dengan konfirmasi (FR-ADM-04).
-- [ ] `M8-12` Pertahankan data historis saat UMKM dinonaktifkan.
-- [ ] `M8-13` Terapkan aturan tiket aktif sesuai keputusan OQ-07.
-- [ ] `M8-14` Catat perubahan status dalam activity log.
+- [x] `M8-08` Implementasikan daftar UMKM dengan search, filter, dan pagination (FR-ADM-02).
+- [x] `M8-09` Tampilkan nama usaha, pemilik, kategori, alamat, tanggal daftar, jumlah layanan, jumlah antrean, dan status.
+- [x] `M8-10` Implementasikan halaman detail UMKM (FR-ADM-03).
+- [x] `M8-11` Implementasikan aktivasi/penonaktifan dengan konfirmasi (FR-ADM-04).
+- [x] `M8-12` Pertahankan data historis saat UMKM dinonaktifkan.
+- [x] `M8-13` Terapkan aturan tiket aktif sesuai keputusan OQ-07.
+- [x] `M8-14` Catat perubahan status dalam activity log.
 
 ## 10.3 Manajemen pengguna
 
-- [ ] `M8-15` Implementasikan daftar pengguna (FR-ADM-05).
-- [ ] `M8-16` Implementasikan pencarian nama/email dan filter role.
-- [ ] `M8-17` Tampilkan UMKM terkait apabila akun adalah Pemilik UMKM.
-- [ ] `M8-18` Implementasikan detail dan aktivasi/penonaktifan akun.
-- [ ] `M8-19` Pastikan Admin tidak dapat menonaktifkan akun sendiri hingga menyebabkan platform tidak memiliki administrator aktif tanpa mekanisme pencegahan.
+- [x] `M8-15` Implementasikan daftar pengguna (FR-ADM-05).
+- [x] `M8-16` Implementasikan pencarian nama/email dan filter role.
+- [x] `M8-17` Tampilkan UMKM terkait apabila akun adalah Pemilik UMKM.
+- [x] `M8-18` Implementasikan detail dan aktivasi/penonaktifan akun.
+- [x] `M8-19` Pastikan Admin tidak dapat menonaktifkan akun sendiri hingga menyebabkan platform tidak memiliki administrator aktif tanpa mekanisme pencegahan.
 
 ## 10.4 Monitoring antrean
 
-- [ ] `M8-20` Implementasikan monitoring antrean lintas UMKM (FR-ADM-06).
-- [ ] `M8-21` Tampilkan nomor tiket, UMKM, layanan, label pelanggan, sumber, waktu dibuat, dan status.
-- [ ] `M8-22` Implementasikan pencarian nomor tiket/nama UMKM.
-- [ ] `M8-23` Implementasikan filter status, sumber, dan tanggal.
-- [ ] `M8-24` Implementasikan halaman detail tiket read-only.
-- [ ] `M8-25` Pastikan tidak ada tombol perubahan status operasional di area Admin.
-- [ ] `M8-26` Batasi data pelanggan yang sensitif sesuai keputusan OQ-14 (masking nomor telepon pada monitoring Admin).
+- [x] `M8-20` Implementasikan monitoring antrean lintas UMKM (FR-ADM-06).
+- [x] `M8-21` Tampilkan nomor tiket, UMKM, layanan, label pelanggan, sumber, waktu dibuat, dan status.
+- [x] `M8-22` Implementasikan pencarian nomor tiket/nama UMKM.
+- [x] `M8-23` Implementasikan filter status, sumber, dan tanggal.
+- [x] `M8-24` Implementasikan halaman detail tiket read-only.
+- [x] `M8-25` Pastikan tidak ada tombol perubahan status operasional di area Admin.
+- [x] `M8-26` Batasi data pelanggan yang sensitif sesuai keputusan OQ-14 (masking nomor telepon pada monitoring Admin).
 
 ## 10.5 Pengaturan platform
 
-- [ ] `M8-27` Implementasikan pengaturan identitas platform (FR-ADM-08).
-- [ ] `M8-28` Implementasikan validasi logo dan informasi kontak.
-- [ ] `M8-29` Pastikan konfigurasi hanya dapat diubah oleh Admin berwenang.
+- [x] `M8-27` Implementasikan pengaturan identitas platform (FR-ADM-08).
+- [x] `M8-28` Implementasikan validasi logo dan informasi kontak.
+- [x] `M8-29` Pastikan konfigurasi hanya dapat diubah oleh Admin berwenang.
 
 ## 10.6 Responsive Admin web
 
-- [ ] `M8-30` Verifikasi desktop-first layout dan tabel pada desktop.
-- [ ] `M8-31` Verifikasi sidebar drawer/icon rail pada tablet.
-- [ ] `M8-32` Verifikasi ringkasan statistik dan daftar data pada mobile.
-- [ ] `M8-33` Pastikan tabel tidak memaksa horizontal scrolling pada halaman penting; gunakan kartu atau kolom prioritas.
+- [x] `M8-30` Verifikasi desktop-first layout dan tabel pada desktop.
+- [x] `M8-31` Verifikasi sidebar drawer/icon rail pada tablet.
+- [x] `M8-32` Verifikasi ringkasan statistik dan daftar data pada mobile.
+- [x] `M8-33` Pastikan tabel tidak memaksa horizontal scrolling pada halaman penting; gunakan kartu atau kolom prioritas.
 
 **Exit Gate 8:** Admin dapat mengelola platform dan memonitor antrean tanpa mengubah status pelayanan UMKM.
 

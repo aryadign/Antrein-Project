@@ -1,10 +1,10 @@
 @php
     $navItems = [
         ['name' => 'Dashboard', 'route' => 'admin.dashboard', 'icon' => 'home'],
-        ['name' => 'Manajemen UMKM', 'route' => 'admin.umkm', 'icon' => 'store'],
-        ['name' => 'Manajemen Pengguna', 'route' => 'admin.users', 'icon' => 'users'],
-        ['name' => 'Monitoring Antrean', 'route' => 'admin.queues', 'icon' => 'queue'],
-        ['name' => 'Kategori UMKM', 'route' => 'admin.categories', 'icon' => 'tag'],
+        ['name' => 'Manajemen UMKM', 'route' => 'admin.businesses.index', 'icon' => 'store'],
+        ['name' => 'Manajemen Pengguna', 'route' => 'admin.users.index', 'icon' => 'users'],
+        ['name' => 'Monitoring Antrean', 'route' => 'admin.queues.index', 'icon' => 'queue'],
+        ['name' => 'Kategori UMKM', 'route' => 'admin.categories.index', 'icon' => 'tag'],
         ['name' => 'Pengaturan Platform', 'route' => 'admin.settings', 'icon' => 'cog'],
     ];
 
