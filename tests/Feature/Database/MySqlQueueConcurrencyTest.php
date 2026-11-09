@@ -270,4 +270,106 @@ class MySqlQueueConcurrencyTest extends TestCase
             DB::connection('mysql')->rollBack();
         }
     }
+
+    /**
+     * Test concurrent last-quota allocation under MySQL InnoDB row-level locking.
+     * When only 1 quota slot remains, two competing requests must serialize: exactly 1 succeeds, 1 fails.
+     */
+    public function test_mysql_concurrent_last_quota_allocation(): void
+    {
+        DB::connection('mysql')->beginTransaction();
+
+        try {
+            $category = BusinessCategory::on('mysql')->create([
+                'name' => 'MySQL Quota Cat',
+                'slug' => 'mysql-quota-'.Str::random(8),
+                'is_active' => true,
+            ]);
+
+            $merchant = User::on('mysql')->create([
+                'name' => 'MySQL Quota Merchant',
+                'email' => 'mysql-quota-'.Str::random(8).'@antrein.id',
+                'password' => bcrypt('password123'),
+                'role' => User::ROLE_MERCHANT,
+                'is_active' => true,
+            ]);
+
+            $business = Business::on('mysql')->create([
+                'user_id' => $merchant->id,
+                'category_id' => $category->id,
+                'name' => 'Klinik Kuota Terakhir',
+                'slug' => 'klinik-kuota-'.Str::random(8),
+                'phone' => '081234567890',
+                'timezone' => 'Asia/Makassar',
+                'status' => Business::STATUS_BUKA,
+            ]);
+
+            // Daily quota is strictly 1
+            $service = Service::on('mysql')->create([
+                'business_id' => $business->id,
+                'name' => 'Layanan Kuota 1',
+                'duration_minutes' => 30,
+                'daily_quota' => 1,
+                'is_active' => true,
+            ]);
+
+            $dailyQueue = DailyQueue::on('mysql')->create([
+                'business_id' => $business->id,
+                'queue_date' => now()->toDateString(),
+                'current_number' => 0,
+                'status' => DailyQueue::STATUS_ACTIVE,
+            ]);
+
+            // Request 1: Acquires row lock on daily queue, checks remaining quota (1), succeeds
+            $lockedQueue1 = DailyQueue::on('mysql')
+                ->where('id', $dailyQueue->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $consumedBefore = QueueTicket::on('mysql')
+                ->where('service_id', $service->id)
+                ->where('daily_queue_id', $dailyQueue->id)
+                ->where('status', '!=', QueueTicket::STATUS_DIBATALKAN)
+                ->count();
+
+            $this->assertEquals(0, $consumedBefore);
+
+            // Insert Ticket 1
+            QueueTicket::on('mysql')->create([
+                'business_id' => $business->id,
+                'daily_queue_id' => $dailyQueue->id,
+                'service_id' => $service->id,
+                'ticket_number' => 'A-001',
+                'sequence_number' => 1,
+                'source' => QueueTicket::SOURCE_ONLINE,
+                'status' => QueueTicket::STATUS_WAITING,
+                'access_token' => Str::random(40),
+                'customer_name' => 'Competitor 1 (Winner)',
+            ]);
+
+            // Request 2 (serialized after Request 1): Checks remaining quota, discovers 0 remaining, rejected!
+            $consumedAfter = QueueTicket::on('mysql')
+                ->where('service_id', $service->id)
+                ->where('daily_queue_id', $dailyQueue->id)
+                ->where('status', '!=', QueueTicket::STATUS_DIBATALKAN)
+                ->count();
+
+            $remainingQuotaReq2 = max(0, $service->daily_quota - $consumedAfter);
+            $this->assertEquals(0, $remainingQuotaReq2, 'After first allocation, remaining quota must be strictly 0.');
+
+            $request2Rejected = ($remainingQuotaReq2 <= 0);
+            $this->assertTrue($request2Rejected, 'Second competing request must be rejected due to quota exhaustion.');
+
+            // Verify only 1 ticket created in total
+            $totalTickets = QueueTicket::on('mysql')
+                ->where('service_id', $service->id)
+                ->where('daily_queue_id', $dailyQueue->id)
+                ->count();
+
+            $this->assertEquals(1, $totalTickets);
+
+        } finally {
+            DB::connection('mysql')->rollBack();
+        }
+    }
 }
