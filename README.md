@@ -275,6 +275,27 @@ AntreIn menyediakan modul umpan balik dan penilaian kepuasan pelanggan yang teri
 
 ---
 
+## ⏱️ Estimasi Waktu Tunggu Historis / Historical Waiting Time Estimation (P1-10)
+
+AntreIn menghitung perkiraan waktu tunggu pelanggan dari data historis pelayanan nyata, menggantikan estimasi statis berbasis durasi layanan konfigurasi:
+
+1. **Basis Data Historis per Unit Usaha:**
+   - Sampel diambil dari durasi layanan aktual terukur (`service_started_at → completed_at`) tiket **Selesai** milik unit usaha yang sama dalam jendela 30 hari terakhir, dibatasi pada timezone lokal usaha.
+   - Statistik **median** (bukan rata-rata) dipilih agar tahan terhadap pencilan — satu pelayanan yang tidak normal tidak akan mendistorsi perkiraan.
+   - Minimum 5 sampel valid wajib terpenuhi sebelum angka dipublikasikan; tiket yang telah teranonimisasi (ADR-13) tetap valid sebagai sampel karena hanya timestamps yang dibaca.
+2. **Sadar Multi-Loket:**
+   - Rumus: `perkiraan = ceil(antrean efektif × median durasi historis ÷ jumlah loket aktif)` dengan penyesuaian loket kosong yang dapat memanggil antrean terdepan hampir seketika.
+   - Semantik loket sibuk mengikuti engine pemanggilan (`callNext`); loket nonaktif tidak pernah mempercepat perkiraan.
+3. **Fallback Jujur Tanpa Angka Karangan:**
+   - Ketika riwayat belum mencukupi (`insufficient_history`), belum ada loket aktif (`no_active_counters`), atau tiket sudah lewat fase menunggu (`not_waiting`), respons mengembalikan `null` dengan alasan eksplisit — **tidak pernah** mensubstitusi angka nol yang menyesatkan (Spesifikasi 7.6).
+4. **Tampilan pada Halaman Pelacakan:**
+   - Estimasi tampil sebagai "**± X menit**" di dalam kartu status **Menunggu** disertai disclaimer eksplisit bahwa angka tersebut *bukan janji waktu pelayanan*, beserta penjelasan basis perhitungannya (riwayat historis + jumlah loket aktif).
+   - Posisi antrean tetap menjadi informasi utama; estimasi diperbarui melalui mekanisme *real-time* yang sudah ada (WebSocket Reverb + *adaptive polling*) dan tidak pernah tampil basi pada status terminal.
+5. **Keamanan & Privasi:**
+   - Kueri terisolasi per tenant, hanya membaca kolom timestamps (bebas PII), respons hanya berisi agregat, dan service bersifat *read-only* — tidak menyentuh FIFO, siklus hidup tiket, kuota, maupun mekanisme multi-loket.
+
+---
+
 ## 💾 Prosedur Backup & Restore Database
 
 ### 1. Pencadangan (*Backup*) Harian Database MySQL

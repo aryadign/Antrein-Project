@@ -1017,7 +1017,33 @@ Remediasi temuan audit keamanan/privasi pra-M18 pada branch `fix/pre-m18-securit
 
 ---
 
-# 20. Milestone P1 — Pengembangan setelah MVP
+# 20. Milestone 18 — Historical Waiting Time Estimation (P1-10)
+
+## 20.1 Layanan Estimasi Waktu Tunggu Historis (P1-10)
+
+- [x] `M18-01` Buat `app/Services/WaitingTimeEstimationService.php` sebagai service read-only terpisah (tidak pernah memutasi tiket, urutan antrean, loket, atau kuota) dengan konstanta `MIN_SERVICE_SAMPLES = 5`, `HISTORY_WINDOW_DAYS = 30`, `MAX_SAMPLES = 200`, dan tiga alasan fallback eksplisit (`not_waiting`, `insufficient_history`, `no_active_counters`). Definisi waktu tunggu aktual mengikuti implementasi engine: `created_at → called_at` (pemanggilan pertama ditulis tepat sekali di `QueueService::callNext`; recall menulis `recalled_at`).
+- [x] `M18-02` Implementasikan `historicalMedianServiceMinutes()`: sampel durasi layanan aktual terukur (`service_started_at → completed_at`, konvensi tanda Carbon 3 `earlier -> later` positif) dari tiket `selesai` milik unit usaha yang sama, jendela 30 hari dibatasi pada timezone lokal usaha lalu dikonversi ke timezone aplikasi untuk scoping kueri (meniru pola `MerchantReportService`), maksimum 200 sampel terbaru, filter durasi valid non-negatif, median tahan outlier, dan median wajib > 0. Tiket teranonimisasi (ADR-13) tetap valid sebagai sampel karena hanya timestamps yang dibaca — tidak ada kolom PII yang di-select.
+- [x] `M18-03` Implementasikan `estimateForTicket()`: `menit = ceil(antreanEfektif × medianDurasiHistoris / jumlahLoketAktif)` dengan `antreanEfektif = max(0, posisiAntrean − loketKosong)`; `freeCounterCount()` meniru semantik `QueueService::callNext` (loket sibuk saat memegang tiket `dipanggil`/`sedang_dilayani`; tiket aktif legacy tanpa `counter_id` memblokir semua loket).
+- [x] `M18-04` Terapkan fallback jujur tanpa substitusi nol (Spesifikasi 7.6 melarang estimasi menyesatkan): tiket non-`menunggu` → `not_waiting`; riwayat < 5 sampel valid atau median ≤ 0 → `insufficient_history`; tanpa loket aktif → `no_active_counters`.
+- [x] `M18-05` Integrasikan estimasi pada `QueueTicketController::store()` dan `track()` melalui DI service — tanpa route, migrasi schema, atau dependency baru: kunci JSON `estimated_wait_minutes` kini nullable plus kunci baru `estimated_wait_reason`; data view `estimate` menggantikan skalar `estimatedWaitMinutes` lama. Basis per-unit-usaha (FIFO global tunggal per harian sesuai batasan MVP #3), bukan per-loket/per-layanan.
+
+## 20.2 Antarmuka Pelacakan Pelanggan (P1-10)
+
+- [x] `M18-06` Tambahkan blok estimasi di dalam kartu callout status MENUNGGU pada `customer/track.blade.php`: status tersedia ("± X menit" tebal + disclaimer eksplisit "bukan janji waktu pelayanan" + penjelasan basis riwayat historis dan jumlah loket aktif), status fallback dengan pesan berbasis alasan, serta guard SSR anti-flash. Blok otomatis tersembunyi pada semua status lain — estimasi basi tidak pernah tampil pada status terminal (polling memang berhenti di status terminal).
+- [x] `M18-07` Perbarui state Alpine `queueTracker`: state `estimatedWaitReason`, metode `estimateFallbackMessage()`, dan pembaruan polling `estimated_wait_minutes ?? null` / `estimated_wait_reason ?? null` melalui mekanisme refresh yang sudah ada (listener Echo `ticket.{tokenHash}` + adaptive polling 5s/15s fallback) — tanpa sistem WebSocket atau event baru, tanpa duplikasi event.
+
+## 20.3 Pengujian Komprehensif & Verifikasi (P1-10)
+
+- [x] `M18-08` Buat test suite komprehensif `tests/Feature/Queue/HistoricalWaitingTimeEstimationTest.php` (18 tests, 71 assertions) mencakup: bisnis baru tanpa riwayat (null, bukan substitusi 0), di bawah ambang sampel minimum, tepat di ambang minimum, resistensi outlier median (bukan mean), pembulatan ke atas (ceil), pembagian durasi oleh loket aktif, loket sibuk tidak dihitung kosong, loket nonaktif tidak mempercepat estimasi, tanpa loket aktif, tiket `dipanggil`/`sedang_dilayani`/terminal tanpa estimasi, isolasi tenant antar-bisnis (median masing-masing), sampel teranonimisasi tetap terpakai, eksklusi sampel durasi negatif/belum selesai/dilewati/di luar jendela 30 hari, determinisme tanpa mutasi state antrean, respons bebas PII pelanggan lain, respons JSON pembuatan tiket, dan render UI dengan disclaimer.
+- [x] `M18-09` Perbarui `OnlineTicketCreationTest`: bisnis baru tanpa riwayat kini mengharapkan `null` + alasan `insufficient_history` (bukan nilai 0 yang dikarang).
+- [x] `M18-10` Jalankan seluruh regression test suite proyek (`php artisan test`: 420 tests, 415 passed, 5 skipped opt-in MySQL, 2.550 assertions, 0 failure) — 5 skipped adalah test integrasi MySQL opt-in (`DB_TEST_*` tidak dikonfigurasi) dan tidak dihitung sebagai lulus; baseline sebelumnya 402 tests / 397 passed / 5 skipped / 2.478 assertions.
+- [x] `M18-11` Kompilasi aset frontend via `npm run build` berhasil, `php artisan route:list` tanpa perubahan route, dan `git diff --check` bersih.
+
+**Exit Gate 18:** Estimasi waktu tunggu pelanggan dihitung dari data historis layanan nyata per unit usaha (median tahan outlier, jendela 30 hari timezone-aware, sadar multi-loket), dapat dijelaskan, menolak mengarang angka ketika data tidak mencukupi (fallback alasan eksplisit, bukan nol), terisolasi tenant, bebas PII lintas pelanggan, tidak mengubah FIFO/lifecycle/kuota/mechanism multi-loket/queue engine, diperbarui real-time via mekanisme yang sudah ada, dan seluruh regression suite lulus 100% (415 passed, 5 skipped opt-in MySQL).
+
+---
+
+# 21. Milestone P1 — Pengembangan setelah MVP
 
 Jangan mulai sebelum MVP selesai dan mendapat persetujuan.
 
@@ -1030,7 +1056,7 @@ Jangan mulai sebelum MVP selesai dan mendapat persetujuan.
 - [x] `P1-07` Ekspor PDF.
 - [x] `P1-08` Display antrean publik.
 - [x] `P1-09` Ulasan pelanggan.
-- [ ] `P1-10` Estimasi waktu tunggu berbasis data historis jika kualitas data mencukupi.
+- [x] `P1-10` Estimasi waktu tunggu berbasis data historis jika kualitas data mencukupi.
 
 # 18. Milestone P2 — Pengembangan lanjutan
 
