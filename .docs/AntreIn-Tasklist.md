@@ -866,7 +866,49 @@ Fokus utama: Implementasi pembaruan antrean real-time berbasis WebSocket menggun
 
 ---
 
-# 17. Milestone P1 — Pengembangan setelah MVP
+# 17. Milestone 15 — Email & Browser Notifications (P1-05)
+
+## 17.1 Fondasi Notifikasi, Konfigurasi VAPID & Service Worker (P1-05)
+
+- [x] `M15-01` Pasang dependensi `minishlink/web-push` via Composer dan buat konfigurasi `config/webpush.php`.
+- [x] `M15-02` Perbarui `.env.example` dan `.env` dengan kredensial VAPID (`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `VITE_VAPID_PUBLIC_KEY`).
+- [x] `M15-03` Buat artisan command `GenerateVapidKeysCommand` (`php artisan webpush:vapid`) untuk auto-generasi pasangan kunci VAPID P-256 terstandarisasi.
+- [x] `M15-04` Buat service worker `public/sw.js` dengan listener event `push` dan `notificationclick` yang membuka tautan pelacakan tiket atau console UMKM.
+- [x] `M15-05` Implementasikan `WebPushService` dengan deteksi konfigurasi OpenSSL otomatis pada Windows, enkripsi pesan VAPID, serta auto-pruning endpoint kedaluwarsa (HTTP 404/410).
+
+## 17.2 Skema Database & Model (P1-05)
+
+- [x] `M15-06` Buat migrasi penambahan kolom intake email opsional pada `queue_tickets`: `customer_email`, `customer_email_consented_at`, dan `last_notified_status` (idempotency key).
+- [x] `M15-07` Buat migrasi dan model `UserNotificationPreference` (`user_id`, `email_on_new_online_ticket`, `browser_on_new_online_ticket`).
+- [x] `M15-08` Buat migrasi dan model `PushSubscription` (`user_id`, `queue_ticket_id`, `endpoint`, `endpoint_hash`, `public_key`, `auth_token`, `content_encoding`) dengan cast terenkripsi.
+- [x] `M15-09` Perbarui model `User` dan `QueueTicket` dengan relasi notifikasi, preferensi, serta helper status penerimaan email/push.
+
+## 17.3 Notifikasi Mailable & Listener Event Antrean (P1-05)
+
+- [x] `M15-10` Buat mailable queued notification `CustomerTicketStatusNotification` untuk pembaruan status antrean pelanggan (dipanggil, sedang dilayani, selesai, dilewati, dibatalkan) dengan tautan pelacakan aman, nama loket, dan zona waktu usaha.
+- [x] `M15-11` Buat mailable queued notification `MerchantNewOnlineTicketNotification` untuk staf usaha saat pelanggan mendaftar tiket online baru.
+- [x] `M15-12` Buat queued event listener `SendQueueNotificationListener` yang terhubung ke `QueueTicketCreated` dan `QueueTicketStatusChanged` dengan proteksi idempotensi status dan deduplikasi penerima staf.
+- [x] `M15-13` Daftarkan listener pada `AppServiceProvider`.
+
+## 17.4 Endpoint, Controller, & Antarmuka Frontend (P1-05)
+
+- [x] `M15-14` Perbarui form pendaftaran online pelanggan `customer/form.blade.php` dan `QueueTicketController::store` dengan checkbox persetujuan eksplisit (`notify_email`) dan validasi format email opsional.
+- [x] `M15-15` Implementasikan `CustomerPushSubscriptionController` (`POST /push-subscriptions/customer`, `DELETE /push-subscriptions/customer`) dengan validasi access_token tiket aktif.
+- [x] `M15-16` Implementasikan `NotificationPreferenceController` (`PUT /umkm/settings/notifications`, `POST /umkm/settings/push-subscription`, `DELETE /umkm/settings/push-subscription`) untuk merchant owner dan operator.
+- [x] `M15-17` Tambahkan antarmuka Web Push Notification pada halaman pelacakan pelanggan `customer/track.blade.php`.
+- [x] `M15-18` Tambahkan tab "Notifikasi" pada halaman pengaturan usaha `merchant/settings/index.blade.php` untuk konfigurasi preferensi email/push dan registrasi peramban aktif.
+
+## 17.5 Pengujian Komprehensif & Verifikasi (P1-05)
+
+- [x] `M15-19` Buat test suite komprehensif `tests/Feature/Notifications/EmailAndBrowserNotificationsTest.php` (20 automated tests, 43 assertions) mencakup intake email, persetujuan pelanggan, idempotensi status, preferensi staf, isolasi tenant, langganan Web Push pelanggan dan merchant, serta pembersihan push subscription saat status terminal.
+- [x] `M15-20` Jalankan seluruh regression test suite proyek (335 automated tests, 2,260 assertions) dengan kelulusan 100%.
+- [x] `M15-21` Kompilasi aset Vite frontend via `npm run build` berhasil.
+
+**Exit Gate 15:** Saluran notifikasi email dan browser Web Push terintegrasi penuh pada alur antrean digital pelanggan dan staf UMKM, persetujuan email pelanggan terjaga opsional dan privat, token dan kredensial terenkripsi aman, dan seluruh 335 tests lulus 100%.
+
+---
+
+# 18. Milestone P1 — Pengembangan setelah MVP
 
 Jangan mulai sebelum MVP selesai dan mendapat persetujuan.
 
@@ -874,7 +916,7 @@ Jangan mulai sebelum MVP selesai dan mendapat persetujuan.
 - [x] `P1-02` Role dan permission operator/staf.
 - [x] `P1-03` Multi-loket dan penugasan antrean.
 - [x] `P1-04` Laravel Reverb/WebSocket untuk update status real-time.
-- [ ] `P1-05` Notifikasi email/browser sesuai kanal yang dipilih.
+- [x] `P1-05` Notifikasi email/browser sesuai kanal yang dipilih.
 - [x] `P1-06` Ekspor CSV.
 - [x] `P1-07` Ekspor PDF.
 - [ ] `P1-08` Display antrean publik.

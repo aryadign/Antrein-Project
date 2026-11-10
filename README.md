@@ -187,6 +187,35 @@ Secara default Reverb berjalan pada port `8080` (dapat dikonfigurasi melalui var
 
 ---
 
+## 🔔 Notifikasi Email & Browser Web Push (P1-05)
+
+AntreIn mendukung kanal notifikasi multi-tier yang menjamin pelanggan dan staf UMKM tetap mendapatkan pembaruan antrean meskipun peramban atau layar HP diminimalkan/terkunci:
+
+1. **Hierarki Kanal Notifikasi Terpadu:**
+   - **WebSocket (Reverb):** Akselerator real-time instan saat antarmuka aktif di latar depan (*foreground*).
+   - **Web Push Notifications (W3C Push API / Service Worker):** Peringatan visual dan nada dering langsung di layar komputer atau HP saat tab peramban diminimalkan atau ditutup.
+   - **Email Transaksional:** Rekaman status permanen dan kanal konfirmasi terpercaya bagi pelanggan serta staf usaha.
+2. **Persetujuan Eksplisit & Privasi Pelanggan (GDPR / UU PDP):**
+   - Penerimaan email pelanggan bersifat opsional (*opt-in* eksplisit). Pelanggan harus mencentang persetujuan penerimaan notifikasi saat mendaftar tiket online (`notify_email = 1`).
+   - Alamat email pelanggan tidak pernah ditampilkan di publik, tidak dibocorkan di API pelacakan tiket, dan tidak diekspor ke laporan umum.
+3. **Standar Kriptografi VAPID (RFC 8292):**
+   - Menggunakan pasangan kunci kurva eliptik ECDSA P-256 terstandarisasi.
+   - Kredensial push browser (`public_key` dan `auth_token`) disimpan dalam database dengan enkripsi native Laravel (`encrypted` casts).
+   - *Auto-pruning:* Endpoint langganan browser yang kedaluwarsa atau dinonaktifkan (HTTP 404/410) otomatis dibersihkan dari basis data. Langganan tiket tamu otomatis dihapus saat tiket mencapai status terminal (`selesai`, `dilewati`, `dibatalkan`).
+4. **Preferensi Staf & Isolasi Tenant:**
+   - Pemilik dan operator UMKM dapat mengatur preferensi notifikasi secara mandiri melalui menu **Pengaturan Usaha → Notifikasi** (`/umkm/settings?tab=notifications`).
+   - Notifikasi staf diproteksi isolasi multi-tenant; staf hanya menerima notifikasi tiket dari unit usahanya sendiri.
+   - Tiket *walk-in* tidak memicu notifikasi staf untuk mencegah banjir notifikasi di kasir.
+
+### Pembuatan Kunci VAPID:
+Untuk menginisialisasi atau memperbarui pasangan kunci VAPID:
+```bash
+php artisan webpush:vapid
+```
+Kunci publik dan privat akan otomatis diperbarui pada berkas `.env` aplikasi Anda.
+
+---
+
 ## 💾 Prosedur Backup & Restore Database
 
 ### 1. Pencadangan (*Backup*) Harian Database MySQL

@@ -82,7 +82,9 @@ class QueueService
         string $customerName,
         ?string $customerPhone = null,
         ?string $idempotencyKey = null,
-        array $activeSessionTicketIds = []
+        array $activeSessionTicketIds = [],
+        ?string $customerEmail = null,
+        ?\DateTimeInterface $customerEmailConsentedAt = null
     ): QueueTicket {
         // 1. Business Operational Validation
         if ($business->is_suspended) {
@@ -143,7 +145,7 @@ class QueueService
         }
 
         // 5. Atomic Transaction: Locking, Quota, Numbering & Insert
-        return DB::transaction(function () use ($business, $service, $trimmedName, $customerPhone, $idempotencyKey) {
+        return DB::transaction(function () use ($business, $service, $trimmedName, $customerPhone, $idempotencyKey, $customerEmail, $customerEmailConsentedAt) {
             $dailyQueue = $this->getOrCreateDailyQueue($business);
 
             // Row-level lock on the daily queue record to serialize numbering and quota checks
@@ -172,6 +174,8 @@ class QueueService
                 'sequence_number' => $nextSequence,
                 'customer_name' => $trimmedName,
                 'customer_phone' => $customerPhone ? trim($customerPhone) : null,
+                'customer_email' => $customerEmail ? trim($customerEmail) : null,
+                'customer_email_consented_at' => $customerEmailConsentedAt,
                 'source' => QueueTicket::SOURCE_ONLINE,
                 'status' => QueueTicket::STATUS_MENUNGGU,
                 'access_token' => $accessToken,

@@ -329,6 +329,68 @@
                         Gunakan tautan ini untuk memantau status giliran Anda dari HP lain kapan saja.
                     </p>
                 </div>
+
+                {{-- Web Push Notifications Box (Milestone 15 - P1-05) --}}
+                <div
+                    x-show="!isTerminalStatus()"
+                    class="mt-6 pt-5 border-t border-neutral-200"
+                    x-data="customerPushManager({
+                        token: '{{ $ticket->access_token }}',
+                        vapidPublicKey: '{{ config('webpush.vapid.public_key') }}',
+                        subscribeUrl: '{{ route('customer.push.subscribe') }}',
+                        unsubscribeUrl: '{{ route('customer.push.unsubscribe') }}'
+                    })"
+                    x-init="checkSubscription()"
+                >
+                    <div class="p-4 rounded-xl bg-gradient-to-r from-brand-50 to-neutral-50 border border-brand-200">
+                        <div class="flex items-start gap-3">
+                            <div class="w-9 h-9 rounded-lg bg-brand-100 text-brand-700 flex items-center justify-center shrink-0 mt-0.5">
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                            </div>
+                            <div class="flex-1 text-xs">
+                                <div class="font-bold text-neutral-900 text-sm flex items-center justify-between">
+                                    <span>Notifikasi Giliran di HP / Browser</span>
+                                    <template x-if="isSubscribed">
+                                        <span class="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Aktif
+                                        </span>
+                                    </template>
+                                </div>
+                                <p class="text-neutral-600 mt-1 leading-relaxed">
+                                    Dapatkan peringatan layar dan nada dering saat nomor antrean Anda dipanggil kasir/operator, bahkan jika layar HP Anda redup atau aplikasi tertutup.
+                                </p>
+
+                                <div x-show="permission === 'denied'" class="mt-2 text-rose-700 font-medium">
+                                    Izin notifikasi diblokir di peramban ini. Buka pengaturan izin situs untuk mengaktifkannya.
+                                </div>
+
+                                <div x-show="isSupported && permission !== 'denied'" class="mt-3 flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        x-show="!isSubscribed"
+                                        @click="subscribe()"
+                                        :disabled="isLoading"
+                                        class="px-4 py-2 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-semibold text-xs transition shadow-2xs disabled:opacity-50"
+                                    >
+                                        <span x-text="isLoading ? 'Menghubungkan...' : 'Aktifkan Notifikasi Giliran'"></span>
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        x-show="isSubscribed"
+                                        @click="unsubscribe()"
+                                        :disabled="isLoading"
+                                        class="px-3 py-1.5 rounded-lg bg-neutral-200 hover:bg-neutral-300 text-neutral-700 font-semibold text-xs transition disabled:opacity-50"
+                                    >
+                                        <span x-text="isLoading ? 'Menghapus...' : 'Nonaktifkan Notifikasi'"></span>
+                                    </button>
+
+                                    <span x-show="message" class="text-[11px] font-semibold" :class="isError ? 'text-rose-600' : 'text-emerald-700'" x-text="message"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </x-card>
 
             {{-- Footer link back to merchant --}}
@@ -511,6 +573,143 @@
                         this.scheduleNextPoll();
                     } finally {
                         this.isFetching = false;
+                    }
+                }
+            };
+        }
+
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            return outputArray;
+        }
+
+        function customerPushManager(config) {
+            return {
+                token: config.token,
+                vapidPublicKey: config.vapidPublicKey,
+                subscribeUrl: config.subscribeUrl,
+                unsubscribeUrl: config.unsubscribeUrl,
+                isSupported: ('serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window),
+                permission: ('Notification' in window) ? Notification.permission : 'default',
+                isSubscribed: false,
+                isLoading: false,
+                message: '',
+                isError: false,
+
+                async checkSubscription() {
+                    if (!this.isSupported) return;
+                    try {
+                        const registration = await navigator.serviceWorker.register('/sw.js');
+                        const subscription = await registration.pushManager.getSubscription();
+                        this.isSubscribed = !(subscription === null);
+                    } catch (e) {
+                        console.warn('Customer push check error:', e);
+                    }
+                },
+
+                async subscribe() {
+                    if (!this.isSupported) return;
+                    this.isLoading = true;
+                    this.message = '';
+                    this.isError = false;
+
+                    try {
+                        const perm = await Notification.requestPermission();
+                        this.permission = perm;
+                        if (perm !== 'granted') {
+                            this.isError = true;
+                            this.message = 'Izin notifikasi tidak diberikan.';
+                            this.isLoading = false;
+                            return;
+                        }
+
+                        const registration = await navigator.serviceWorker.register('/sw.js');
+                        await navigator.serviceWorker.ready;
+
+                        const convertedVapidKey = urlBase64ToUint8Array(this.vapidPublicKey);
+                        const subscription = await registration.pushManager.subscribe({
+                            userVisibleOnly: true,
+                            applicationServerKey: convertedVapidKey
+                        });
+
+                        const subJson = subscription.toJSON();
+                        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+                        const response = await fetch(this.subscribeUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': csrfToken,
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            },
+                            body: JSON.stringify({
+                                token: this.token,
+                                endpoint: subscription.endpoint,
+                                public_key: subJson.keys?.p256dh,
+                                auth_token: subJson.keys?.auth,
+                                content_encoding: (PushManager.supportedContentEncodings || ['aesgcm'])[0]
+                            })
+                        });
+
+                        const result = await response.json();
+                        if (response.ok && result.success) {
+                            this.isSubscribed = true;
+                            this.message = 'Notifikasi berhasil diaktifkan!';
+                        } else {
+                            this.isError = true;
+                            this.message = result.message || 'Gagal mengaktifkan notifikasi.';
+                        }
+                    } catch (err) {
+                        this.isError = true;
+                        this.message = 'Terjadi kesalahan: ' + err.message;
+                    } finally {
+                        this.isLoading = false;
+                    }
+                },
+
+                async unsubscribe() {
+                    if (!this.isSupported) return;
+                    this.isLoading = true;
+                    this.message = '';
+                    this.isError = false;
+
+                    try {
+                        const registration = await navigator.serviceWorker.ready;
+                        const subscription = await registration.pushManager.getSubscription();
+                        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+                        if (subscription) {
+                            await fetch(this.unsubscribeUrl, {
+                                method: 'DELETE',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': csrfToken,
+                                    'Accept': 'application/json',
+                                    'X-Requested-With': 'XMLHttpRequest'
+                                },
+                                body: JSON.stringify({
+                                    token: this.token,
+                                    endpoint: subscription.endpoint
+                                })
+                            });
+
+                            await subscription.unsubscribe();
+                        }
+
+                        this.isSubscribed = false;
+                        this.message = 'Notifikasi dinonaktifkan.';
+                    } catch (err) {
+                        this.isError = true;
+                        this.message = 'Gagal mematikan: ' + err.message;
+                    } finally {
+                        this.isLoading = false;
                     }
                 }
             };

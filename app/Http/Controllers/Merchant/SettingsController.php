@@ -37,12 +37,15 @@ class SettingsController extends Controller
             : collect();
 
         $activeTab = $request->query('tab', 'profile');
+        $notificationPreference = $user->notificationPreference;
 
         return view('merchant.settings.index', [
             'business' => $business,
             'categories' => $categories,
             'hours' => $hours,
             'activeTab' => $activeTab,
+            'user' => $user,
+            'notificationPreference' => $notificationPreference,
         ]);
     }
 

@@ -506,6 +506,39 @@ Prior to Milestone 14, queue status synchronization relied entirely on client-si
    - The existing adaptive HTTP polling mechanism remains fully intact as an automatic fallback when WebSocket connections are disconnected, blocked by strict enterprise proxies, or offline.
    - Background tab optimization: WebSocket listeners and timers throttle gracefully when browser tabs are hidden, and refresh instantaneously upon tab visibility.
 
+## ADR-16: Email & Browser Notifications (P1-05)
+
+### Status: Approved & Implemented (Milestone 15)
+
+### Context:
+While real-time WebSockets (Milestone 14) provide instant updates for users actively viewing the website, customers waiting in line frequently lock their mobile phones or switch to other applications. Similarly, merchant staff may not constantly look at the dashboard when operating a storefront. To maintain a modern, reliable customer experience without requiring native app installations, AntreIn requires multi-channel notification support:
+1. **Background Web Push Notifications** (W3C Push API & Service Worker) for active device alerting when tabs are minimized or closed.
+2. **Transactional Email Notifications** for durable receipts and background notifications when push is unavailable or ungranted.
+
+### Decision:
+1. **Additive Multi-Channel Hierarchy:**
+   - WebSocket (M14) remains the primary instantaneous accelerator for foreground sessions.
+   - Web Push Notifications (`public/sw.js`) provide visual and auditory notifications on desktop and mobile browsers even when the tab is closed or the screen is locked.
+   - Transactional Email provides a permanent record and reliable fallback for consenting customers and merchant staff.
+2. **Customer Consent & Data Privacy (PDPA / GDPR Alignment):**
+   - Customer email intake is strictly optional and never mandatory.
+   - Explicit affirmative consent is recorded via a dedicated checkbox (`notify_email = 1`), persisting both `customer_email` and `customer_email_consented_at`.
+   - Customer email addresses are strictly shielded from public tracking views and API responses (never exposed in JSON payloads or public DOM).
+3. **VAPID Specification & Secure Push Storage:**
+   - Push notifications adhere to the W3C Push API and IETF RFC 8292 (VAPID) using ECDSA P-256 keypairs (`minishlink/web-push` v11.0).
+   - Standardized CLI generator: `php artisan webpush:vapid`.
+   - Client cryptographic secrets (`public_key` and `auth_token`) are encrypted at rest in `push_subscriptions` using Laravel's native `'encrypted'` model casts.
+   - Subscriptions are indexed by SHA-256 `endpoint_hash` to support fast lookups and prevent duplicate registrations.
+   - Dead subscriptions returning HTTP 404 (Not Found) or 410 (Gone) are automatically deleted by `WebPushService`.
+   - Customer ticket push subscriptions are automatically purged when the ticket transitions into a terminal status (`selesai`, `dilewati`, `dibatalkan`).
+4. **Idempotent Asynchronous Event Processing:**
+   - Notification dispatch is decoupled from core HTTP transactions via `SendQueueNotificationListener` implementing `Illuminate\Contracts\Queue\ShouldQueue`.
+   - The `queue_tickets.last_notified_status` column ensures strict idempotency: duplicate event firings or rapid status toggles cannot trigger duplicate customer emails or push notifications.
+5. **Granular Merchant Staff Preferences & Tenant Isolation:**
+   - Staf and owners control their alert channels independently via `user_notification_preferences` (`email_on_new_online_ticket`, `browser_on_new_online_ticket`).
+   - The merchant notification dispatcher queries only verified, active staff members of the specific `business_id`, ensuring strict cross-tenant isolation.
+   - In-store walk-in tickets do not dispatch merchant online notifications to prevent alert fatigue.
+
 ---
 
 *Authored by Senior Full-Stack Software Engineer & Technical Architect — AntreIn Project*

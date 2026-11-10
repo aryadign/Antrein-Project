@@ -44,8 +44,11 @@ class QueueTicket extends Model
         'sequence_number',
         'customer_name',
         'customer_phone',
+        'customer_email',
+        'customer_email_consented_at',
         'source',
         'status',
+        'last_notified_status',
         'access_token',
         'idempotency_key',
         'called_at',
@@ -68,6 +71,7 @@ class QueueTicket extends Model
     {
         return [
             'sequence_number' => 'integer',
+            'customer_email_consented_at' => 'datetime',
             'called_at' => 'datetime',
             'recalled_at' => 'datetime',
             'service_started_at' => 'datetime',
@@ -167,6 +171,14 @@ class QueueTicket extends Model
     public function statusHistories(): HasMany
     {
         return $this->hasMany(QueueStatusHistory::class);
+    }
+
+    /**
+     * Get the browser push subscriptions for this ticket.
+     */
+    public function pushSubscriptions(): HasMany
+    {
+        return $this->hasMany(PushSubscription::class);
     }
 }
 
