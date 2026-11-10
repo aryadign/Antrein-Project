@@ -19,7 +19,8 @@
             customerName: '{{ addslashes($ticket->customer_name) }}',
             customerPhone: '{{ $maskedPhone }}',
             counterName: '{{ $ticket->counter ? addslashes($ticket->counter->name) : '' }}',
-            estimatedWaitMinutes: {{ (int) $estimatedWaitMinutes }},
+            estimatedWaitMinutes: {{ $estimate['minutes'] !== null ? (int) $estimate['minutes'] : 'null' }},
+            estimatedWaitReason: {{ json_encode($estimate['reason']) }},
             calledAt: '{{ $ticket->called_at?->translatedFormat('H:i, d M Y') ?? '' }}',
             completedAt: '{{ $ticket->completed_at?->translatedFormat('H:i, d M Y') ?? '' }}',
             cancellationReason: '{{ addslashes($ticket->cancellation_reason ?? '') }}',
@@ -158,6 +159,28 @@
                                 <p class="text-xs text-amber-800/90 mt-1 leading-relaxed">
                                     Mohon tetap berada di area tunggu atau bersiap ketika giliran nomor Anda mendekati pemanggilan.
                                 </p>
+
+                                {{-- Historical Waiting Time Estimate (M18 / P1-10) --}}
+                                <div class="mt-3 pt-3 border-t border-amber-200/70">
+                                    <div class="flex items-start gap-2.5" x-show="estimatedWaitMinutes !== null" @if($estimate['minutes'] === null) style="display: none;" @endif>
+                                        <svg class="w-4 h-4 text-amber-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                        <p class="text-xs text-amber-900/90 leading-relaxed">
+                                            Perkiraan waktu tunggu Anda sekitar
+                                            <span class="font-extrabold text-amber-950 whitespace-nowrap" x-text="estimatedWaitMinutes !== null ? '± ' + estimatedWaitMinutes + ' menit' : ''">@if($estimate['minutes'] !== null) ± {{ $estimate['minutes'] }} menit @endif</span>
+                                            — dihitung dari riwayat pelayanan historis dan jumlah loket aktif. Angka ini hanya perkiraan, bukan janji waktu pelayanan.
+                                        </p>
+                                    </div>
+
+                                    <p class="text-xs text-amber-800/80 leading-relaxed" x-show="estimatedWaitMinutes === null" x-text="estimateFallbackMessage()" @if($estimate['minutes'] !== null) style="display: none;" @endif>
+                                        @if($estimate['minutes'] === null)
+                                            {{ $estimate['reason'] === 'no_active_counters'
+                                                ? 'Estimasi waktu tunggu tidak tersedia karena belum ada loket yang aktif.'
+                                                : 'Estimasi waktu tunggu belum tersedia karena riwayat pelayanan historis belum cukup.' }}
+                                        @endif
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -545,6 +568,7 @@
                 customerPhone: config.customerPhone,
                 counterName: config.counterName || '',
                 estimatedWaitMinutes: config.estimatedWaitMinutes,
+                estimatedWaitReason: config.estimatedWaitReason,
                 calledAt: config.calledAt,
                 completedAt: config.completedAt,
                 cancellationReason: config.cancellationReason,
@@ -604,6 +628,14 @@
 
                 isTerminalStatus() {
                     return ['selesai', 'dilewati', 'dibatalkan'].includes(this.status);
+                },
+
+                // M18 / P1-10: human-readable message when no historical estimate is available.
+                estimateFallbackMessage() {
+                    if (this.estimatedWaitReason === 'no_active_counters') {
+                        return 'Estimasi waktu tunggu tidak tersedia karena belum ada loket yang aktif.';
+                    }
+                    return 'Estimasi waktu tunggu belum tersedia — riwayat pelayanan historis belum cukup untuk memberikan perkiraan yang andal.';
                 },
 
                 getPollInterval() {
@@ -673,7 +705,8 @@
                             this.queuePosition = data.queue_position;
                             this.aheadCount = data.ahead_count ?? Math.max(0, data.queue_position - 1);
                             this.nowServing = data.now_serving || '—';
-                            this.estimatedWaitMinutes = data.estimated_wait_minutes ?? 0;
+                            this.estimatedWaitMinutes = data.estimated_wait_minutes ?? null;
+                            this.estimatedWaitReason = data.estimated_wait_reason ?? null;
                             if (data.counter_name) this.counterName = data.counter_name;
                             if (data.customer_name) this.customerName = data.customer_name;
                             if (data.customer_phone_masked) this.customerPhone = data.customer_phone_masked;

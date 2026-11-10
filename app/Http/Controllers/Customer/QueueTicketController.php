@@ -7,6 +7,7 @@ use App\Models\Business;
 use App\Models\QueueTicket;
 use App\Models\Service;
 use App\Services\QueueService;
+use App\Services\WaitingTimeEstimationService;
 use Carbon\Carbon;
 use DomainException;
 use Illuminate\Http\JsonResponse;
@@ -22,7 +23,8 @@ use Illuminate\View\View;
 class QueueTicketController extends Controller
 {
     public function __construct(
-        protected QueueService $queueService
+        protected QueueService $queueService,
+        protected WaitingTimeEstimationService $waitingTimeEstimationService
     ) {}
 
     /**
@@ -209,7 +211,7 @@ class QueueTicketController extends Controller
             session()->push('customer_ticket_ids', $ticket->id);
 
             $queuePosition = $this->queueService->calculateQueuePosition($ticket);
-            $estimatedWaitMinutes = max(0, ($queuePosition - 1) * ($service->duration_minutes ?? 15));
+            $waitEstimate = $this->waitingTimeEstimationService->estimateForTicket($ticket, $queuePosition);
 
             $maskedPhone = null;
             if ($ticket->customer_phone) {
@@ -234,7 +236,8 @@ class QueueTicketController extends Controller
                         'service_name' => $service->name,
                         'status' => $ticket->status,
                         'queue_position' => $queuePosition,
-                        'estimated_wait_minutes' => $estimatedWaitMinutes,
+                        'estimated_wait_minutes' => $waitEstimate['minutes'],
+                        'estimated_wait_reason' => $waitEstimate['reason'],
                         'tracking_url' => route('customer.queue.track', ['token' => $ticket->access_token]),
                     ],
                 ], 201);
@@ -312,7 +315,7 @@ class QueueTicketController extends Controller
                 : '***';
         }
 
-        $estimatedWaitMinutes = max(0, ($position - 1) * ($ticket->service->duration_minutes ?? 15));
+        $estimate = $this->waitingTimeEstimationService->estimateForTicket($ticket, $position);
 
         $data = [
             'ticket_id' => $ticket->id,
@@ -325,7 +328,8 @@ class QueueTicketController extends Controller
             'source' => $ticket->source,
             'queue_position' => $position,
             'ahead_count' => $aheadCount,
-            'estimated_wait_minutes' => $estimatedWaitMinutes,
+            'estimated_wait_minutes' => $estimate['minutes'],
+            'estimated_wait_reason' => $estimate['reason'],
             'service_name' => $ticket->service->name,
             'business_name' => $ticket->business->name,
             'service' => [
@@ -370,7 +374,7 @@ class QueueTicketController extends Controller
             'aheadCount' => $aheadCount,
             'servingTicket' => $servingTicket,
             'maskedPhone' => $maskedPhone,
-            'estimatedWaitMinutes' => $estimatedWaitMinutes,
+            'estimate' => $estimate,
             'isExpired' => false,
             'review' => $ticket->review,
         ]);

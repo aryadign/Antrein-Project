@@ -644,4 +644,34 @@ In service and retail UMKM operations, gathering timely feedback immediately aft
 
 ---
 
+## ADR-19: Historical Waiting Time Estimation (P1-10)
+
+### Status: Approved & Implemented (Milestone 18)
+
+### Context:
+The MVP computed the customer's estimated wait from the configured `duration_minutes` of the selected service multiplied by the number of people ahead. This ignores the business's actual operational pace (staff speed, real service durations), the number of counters serving in parallel, and produces a fabricated "0 minutes" for the next-in-line customer regardless of reality. Spesifikasi Fitur 7.6 mandates service duration as the estimation basis and explicitly forbids misleading estimates; PRD FR-CUS-04 requires a non-binding estimate on the tracking page; and Spesifikasi 11.2 (P1 backlog) requires the estimate to be derived from historical data when its quality suffices. Queue position must always take precedence over the estimate.
+
+### Decision:
+1. **Dedicated Read-Only Service:**
+   - `App\Services\WaitingTimeEstimationService` (separate from the already-large `QueueService`) is strictly read-only: it never mutates tickets, queue order, counters, quota, or the FIFO engine. Actual waiting time is defined as ticket creation → first call (`created_at → called_at`, written exactly once by `QueueService::callNext`; recalls only update `recalled_at`), deliberately distinct from M9's waiting analytics (`created_at → service_started_at`).
+2. **Historical Basis & Privacy:**
+   - Samples are the measured actual service durations (`service_started_at → completed_at`) of the business's own terminal `selesai` tickets — an upgrade of Spesifikasi 7.6's "durasi layanan sebagai dasar perkiraan" from the configured value to measured history.
+   - Tenant scoping by `business_id` (no cross-business mixing, MVP constraint: one global FIFO per UMKM per day), a 30-day window bounded in the business's local timezone then converted to the application timezone for query scoping (mirroring `MerchantReportService`), capped at the 200 most recent samples, with a non-negative duration validity filter.
+   - Only timestamp columns are selected — anonymized tickets (ADR-13) remain valid samples because masking preserves timestamps, and no customer PII ever enters the computation, the response, or logs.
+3. **Statistic — Median with Minimum Sample Threshold:**
+   - The median (not the mean) is used for outlier resistance: a single abnormally slow service must not distort the estimate. The median must be strictly positive; a zero median cannot express a drain rate.
+   - A minimum of 5 valid samples is required before any number is published; below that, a single outlier dominates the statistic and would mislead, which Spesifikasi 7.6 forbids.
+4. **Multi-Counter Aware Formula:**
+   - `minutes = ceil(effectiveAhead × medianServiceMinutes / activeCounterCount)` where `effectiveAhead = max(0, queuePosition − freeCounterCount)`.
+   - Free-counter semantics mirror `QueueService::callNext`: a counter is busy while holding a `dipanggil`/`sedang_dilayani` ticket, and a legacy active ticket without a `counter_id` blocks every counter. Inactive counters never speed up the estimate.
+5. **Honest Fallback — Never Zero Substitution:**
+   - When data quality is insufficient the estimate is `null` plus an explicit machine-readable reason: `not_waiting` (ticket no longer in `menunggu`), `insufficient_history` (< 5 valid samples or median ≤ 0), or `no_active_counters` (business cannot call any ticket). No fabricated value is ever published.
+6. **Presentation & Realtime Behavior:**
+   - The estimate renders only inside the `menunggu` status callout on the existing tracking page (`customer/track.blade.php`) — automatically hidden on every other status — as "± X menit" with an explicit "bukan janji waktu pelayanan" disclaimer plus an explanation of its basis (historical service records and active counter count). The queue position remains the primary information.
+   - Updates flow through the existing mechanisms only (Laravel Echo `ticket.{tokenHash}` listeners and the adaptive 5s/15s polling fallback) with `estimated_wait_minutes ?? null` / `estimated_wait_reason` handling; polling already stops on terminal statuses, so a stale estimate can never be shown on a terminal ticket.
+7. **Integration & Security Posture:**
+   - Integrated into `QueueTicketController::store()` and `track()` via constructor DI — no new routes, no schema changes, no new dependencies (basic statistics only). Access-token verification, rate limiting (`track` 60/min/IP, `take-queue` 30/15min/IP), and all M10/M16/Pre-M18 hardening remain untouched. JSON responses carry only the aggregate number and the reason — never other customers' historical data.
+
+---
+
 *Authored by Senior Full-Stack Software Engineer & Technical Architect — AntreIn Project*

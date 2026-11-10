@@ -80,7 +80,10 @@ class OnlineTicketCreationTest extends TestCase
 
         $this->assertEquals('A-001', $response->json('data.ticket_number'));
         $this->assertEquals(1, $response->json('data.queue_position'));
-        $this->assertEquals(0, $response->json('data.estimated_wait_minutes')); // first in line
+        // M18 / P1-10: a fresh business has no historical service data, so no
+        // estimate may be fabricated — null instead of a zero substitution.
+        $this->assertNull($response->json('data.estimated_wait_minutes'));
+        $this->assertEquals('insufficient_history', $response->json('data.estimated_wait_reason'));
 
         $this->assertDatabaseHas('queue_tickets', [
             'business_id' => $this->business->id,
