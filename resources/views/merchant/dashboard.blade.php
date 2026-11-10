@@ -85,6 +85,28 @@
 
             {{-- Primary Header Actions --}}
             <div class="flex flex-wrap items-center gap-3">
+                @if (isset($availableCounters) && $availableCounters->isNotEmpty())
+                    <form method="POST" action="{{ route('merchant.queues.select-counter') }}" class="inline-flex items-center gap-2 bg-neutral-100 rounded-lg p-1 border border-neutral-300">
+                        @csrf
+                        <label for="header_counter_select" class="text-xs font-bold text-neutral-600 pl-2 flex items-center gap-1">
+                            <svg class="w-3.5 h-3.5 text-neutral-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                            Loket:
+                        </label>
+                        <select
+                            id="header_counter_select"
+                            name="counter_id"
+                            onchange="this.form.submit()"
+                            class="text-xs font-semibold rounded-md border-neutral-300 py-1.5 pl-2.5 pr-8 bg-white text-neutral-900 focus:border-brand-500 focus:ring-brand-500 shadow-2xs"
+                        >
+                            @foreach ($availableCounters as $c)
+                                <option value="{{ $c->id }}" {{ isset($selectedCounter) && $selectedCounter && $selectedCounter->id === $c->id ? 'selected' : '' }}>
+                                    {{ $c->name }} ({{ $c->code }})
+                                </option>
+                            @endforeach
+                        </select>
+                    </form>
+                @endif
+
                 <button 
                     type="button" 
                     @click="walkInModalOpen = true"
@@ -233,6 +255,10 @@
 
                     @if ($nowServing)
                         <div class="text-center py-4">
+                            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-100 text-brand-900 text-xs font-bold mb-2">
+                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                                <span>{{ $nowServing->counter ? $nowServing->counter->name : ($selectedCounter ? $selectedCounter->name : 'Loket 1') }}</span>
+                            </div>
                             <span class="text-caption text-neutral-500 font-semibold uppercase tracking-wider block mb-1">
                                 Tiket Aktif Loket
                             </span>
@@ -288,23 +314,66 @@
                             <div class="w-12 h-12 rounded-full bg-neutral-100 text-neutral-400 mx-auto flex items-center justify-center mb-3">
                                 <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                             </div>
-                            <h4 class="text-sm font-bold text-neutral-800">Tidak Ada Antrean Aktif</h4>
+                            <h4 class="text-sm font-bold text-neutral-800">
+                                @if (isset($selectedCounter) && $selectedCounter)
+                                    {{ $selectedCounter->name }} Siap Melayani
+                                @else
+                                    Tidak Ada Antrean Aktif
+                                @endif
+                            </h4>
                             <p class="text-xs text-neutral-500 mt-1 max-w-sm mx-auto">
-                                Loket saat ini tidak sedang melayani pelanggan.
+                                @if (isset($selectedCounter) && $selectedCounter)
+                                    Loket {{ $selectedCounter->name }} saat ini dalam status standby dan siap memanggil antrean berikutnya.
+                                @else
+                                    Loket saat ini tidak sedang melayani pelanggan.
+                                @endif
                             </p>
 
                             @if ($stats['menunggu'] > 0)
                                 <form method="POST" action="{{ route('merchant.queues.call-next') }}" class="mt-4">
                                     @csrf
+                                    @if (isset($selectedCounter) && $selectedCounter)
+                                        <input type="hidden" name="counter_id" value="{{ $selectedCounter->id }}">
+                                    @endif
                                     <button type="submit" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-brand-700 text-white text-sm font-bold hover:bg-brand-800 shadow-md transition">
                                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
-                                        Panggil Antrean Berikutnya (FIFO)
+                                        Panggil Antrean Berikutnya @if(isset($selectedCounter) && $selectedCounter) ke {{ $selectedCounter->name }} @else (FIFO) @endif
                                     </button>
                                 </form>
                             @endif
                         </div>
                     @endif
                 </div>
+
+                {{-- Multi-Counter Status Overview Strip --}}
+                @if (isset($activeCountersStatus) && count($activeCountersStatus) > 1)
+                    <div class="bg-white rounded-xl border border-neutral-200 p-4 shadow-xs">
+                        <h4 class="text-xs font-bold text-neutral-600 uppercase tracking-wider mb-3">Status Operasional Seluruh Loket</h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                            @foreach ($activeCountersStatus as $cStatus)
+                                <div class="p-3 rounded-lg border {{ $cStatus['active_ticket'] ? 'border-brand-200 bg-brand-50/40' : 'border-neutral-200 bg-neutral-50/50' }} flex items-center justify-between">
+                                    <div>
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="w-2 h-2 rounded-full {{ $cStatus['active_ticket'] ? 'bg-brand-600 animate-pulse' : 'bg-emerald-500' }}"></span>
+                                            <span class="text-xs font-bold text-neutral-900">{{ $cStatus['counter_name'] }}</span>
+                                            <span class="font-mono text-[10px] text-neutral-500 bg-white px-1 py-0.5 rounded border border-neutral-200">{{ $cStatus['counter_code'] }}</span>
+                                        </div>
+                                        <div class="text-[11px] text-neutral-500 mt-1">
+                                            @if ($cStatus['active_ticket'])
+                                                Melayani: <strong class="text-neutral-900 font-mono">{{ $cStatus['active_ticket']->ticket_number }}</strong>
+                                            @else
+                                                <span class="text-emerald-700 font-medium">Standby (Siap)</span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                    @if (isset($selectedCounter) && $selectedCounter && $selectedCounter->id === $cStatus['counter_id'])
+                                        <span class="text-[10px] font-semibold bg-brand-600 text-white px-2 py-0.5 rounded-full">Loket Anda</span>
+                                    @endif
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
 
                 {{-- Active Tickets Preview (M7-04) --}}
                 <div class="bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-xs">

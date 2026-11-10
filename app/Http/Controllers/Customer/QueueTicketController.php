@@ -261,7 +261,7 @@ class QueueTicketController extends Controller
 
         /** @var QueueTicket $ticket */
         $ticket = QueueTicket::where('access_token', $token)
-            ->with(['business.category', 'business.hours', 'service'])
+            ->with(['business.category', 'business.hours', 'service', 'counter'])
             ->firstOrFail();
 
         $isExpired = $this->queueService->isTokenExpired($ticket);
@@ -321,6 +321,12 @@ class QueueTicketController extends Controller
                 'slug' => $ticket->business->slug,
             ],
             'now_serving' => $servingTicket ? $servingTicket->ticket_number : null,
+            'counter' => $ticket->counter ? [
+                'name' => $ticket->counter->name,
+                'code' => $ticket->counter->code,
+            ] : null,
+            'counter_name' => $ticket->counter?->name,
+            'counter_code' => $ticket->counter?->code,
             'called_at' => $ticket->called_at?->toIso8601String(),
             'service_started_at' => $ticket->service_started_at?->toIso8601String(),
             'completed_at' => $ticket->completed_at?->toIso8601String(),

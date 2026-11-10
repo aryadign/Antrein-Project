@@ -65,11 +65,17 @@ class DashboardController extends Controller
                 ->count(),
         ];
 
-        // Active ticket currently being called or served
-        $nowServing = $this->queueService->getCurrentServingTicket($business);
+        // User's operational counters
+        $availableCounters = $user->assignedCounters();
+        $selectedCounterId = session('merchant_active_counter_id') ?: ($availableCounters->first()?->id);
+        $selectedCounter = $availableCounters->firstWhere('id', $selectedCounterId) ?: $availableCounters->first();
+
+        // Active ticket currently being called or served on the selected counter (or overall)
+        $nowServing = $this->queueService->getCurrentServingTicket($business, $selectedCounter);
+        $activeCountersStatus = $this->queueService->getActiveCountersStatus($business);
 
         // Fetch up to 5 active tickets in FIFO order for preview (menunggu, dipanggil, sedang_dilayani)
-        $activeTickets = QueueTicket::with('service')
+        $activeTickets = QueueTicket::with(['service', 'counter'])
             ->where('business_id', $business->id)
             ->where('daily_queue_id', $dailyQueue->id)
             ->whereIn('status', [
@@ -106,6 +112,9 @@ class DashboardController extends Controller
             'hoursConfigured' => $hoursConfigured,
             'servicesConfigured' => $servicesConfigured,
             'isSetupComplete' => $isSetupComplete,
+            'availableCounters' => $availableCounters,
+            'selectedCounter' => $selectedCounter,
+            'activeCountersStatus' => $activeCountersStatus,
         ]);
     }
 }

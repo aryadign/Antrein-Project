@@ -12,6 +12,7 @@ use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\StaffInvitationController;
 use App\Http\Controllers\Customer\QueueTicketController;
+use App\Http\Controllers\Merchant\CounterManagementController;
 use App\Http\Controllers\Merchant\DashboardController;
 use App\Http\Controllers\Merchant\OnboardingController;
 use App\Http\Controllers\Merchant\QueueController;
@@ -191,7 +192,8 @@ Route::middleware(['auth', 'active'])->group(function () {
                 Route::get('/queues/qr', [QueueController::class, 'qr'])->name('queues.qr');
                 Route::get('/queues/{ticket}', [QueueController::class, 'show'])->name('queues.show');
 
-                // Queue Operations (Milestone 5 & Milestone 12)
+                // Queue Operations (Milestone 5 & Milestone 12 & Milestone 13)
+                Route::post('/queues/select-counter', [QueueOperationController::class, 'selectCounter'])->name('queues.select-counter');
                 Route::post('/queues/walk-in', [QueueOperationController::class, 'walkIn'])->name('queues.walk-in');
                 Route::post('/queues/call-next', [QueueOperationController::class, 'callNext'])->name('queues.call-next');
                 Route::post('/queues/{ticket}/recall', [QueueOperationController::class, 'recall'])->name('queues.recall');
@@ -205,6 +207,15 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::middleware('business.role:owner')->group(function () {
                 // Owner-only Queue Operation: Cancellation
                 Route::post('/queues/{ticket}/cancel', [QueueOperationController::class, 'cancel'])->name('queues.cancel');
+
+                // Counter Management (Milestone 13 - P1-03)
+                Route::get('/counters', [CounterManagementController::class, 'index'])->name('counters.index');
+                Route::post('/counters', [CounterManagementController::class, 'store'])->name('counters.store');
+                Route::put('/counters/{counter}', [CounterManagementController::class, 'update'])->name('counters.update');
+                Route::patch('/counters/{counter}/toggle-status', [CounterManagementController::class, 'toggleStatus'])->name('counters.toggle-status');
+                Route::delete('/counters/{counter}', [CounterManagementController::class, 'destroy'])->name('counters.destroy');
+                Route::post('/counters/{counter}/operators', [CounterManagementController::class, 'assignOperator'])->name('counters.assign-operator');
+                Route::delete('/counters/{counter}/operators/{membership}', [CounterManagementController::class, 'unassignOperator'])->name('counters.unassign-operator');
 
                 // Reports & Performance Analytics (Milestone 9 & Milestone 11 Exports)
                 Route::get('/reports', [ReportController::class, 'index'])->name('reports');

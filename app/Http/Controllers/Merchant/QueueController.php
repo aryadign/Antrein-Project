@@ -36,9 +36,10 @@ class QueueController extends Controller
         $selectedStatus = $request->query('status');
         $selectedService = $request->query('service_id');
         $selectedSource = $request->query('source');
+        $selectedCounter = $request->query('counter');
         $search = trim((string) $request->query('search', ''));
 
-        $query = QueueTicket::with(['service', 'statusHistories'])
+        $query = QueueTicket::with(['service', 'counter', 'statusHistories'])
             ->where('business_id', $business->id);
 
         // Date period filter
@@ -46,6 +47,15 @@ class QueueController extends Controller
             $query->whereHas('dailyQueue', function ($q) use ($selectedDate) {
                 $q->whereDate('queue_date', $selectedDate);
             });
+        }
+
+        // Counter filter
+        if ($selectedCounter) {
+            if ($selectedCounter === 'unassigned') {
+                $query->whereNull('counter_id');
+            } else {
+                $query->where('counter_id', (int) $selectedCounter);
+            }
         }
 
         // Status filter
@@ -131,11 +141,19 @@ class QueueController extends Controller
             ->orderBy('name')
             ->get();
 
+        // Counters list
+        $counters = $business->counters()->orderBy('code')->get();
+        $availableCounters = $user->assignedCounters();
+        $activeCountersStatus = $this->queueService->getActiveCountersStatus($business);
+
         return view('merchant.queues.index', [
             'tickets' => $tickets,
             'stats' => $stats,
             'nowServing' => $nowServing,
             'services' => $services,
+            'counters' => $counters,
+            'availableCounters' => $availableCounters,
+            'activeCountersStatus' => $activeCountersStatus,
             'business' => $business,
             'dailyQueue' => $dailyQueue,
             'operatingDate' => $operatingDate,
@@ -143,6 +161,7 @@ class QueueController extends Controller
             'selectedStatus' => $selectedStatus,
             'selectedService' => $selectedService,
             'selectedSource' => $selectedSource,
+            'selectedCounter' => $selectedCounter,
             'search' => $search,
         ]);
     }
@@ -162,6 +181,7 @@ class QueueController extends Controller
 
         $ticket->load([
             'service',
+            'counter',
             'dailyQueue',
             'statusHistories.actor',
             'business',

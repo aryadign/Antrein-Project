@@ -41,6 +41,28 @@
             </div>
 
             <div class="flex flex-wrap items-center gap-3">
+                @if (isset($availableCounters) && $availableCounters->isNotEmpty())
+                    <form method="POST" action="{{ route('merchant.queues.select-counter') }}" class="inline-flex items-center gap-2 bg-neutral-100 rounded-lg p-1 border border-neutral-300">
+                        @csrf
+                        <label for="queues_header_counter_select" class="text-xs font-bold text-neutral-600 pl-2 flex items-center gap-1">
+                            <svg class="w-3.5 h-3.5 text-neutral-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                            Loket:
+                        </label>
+                        <select
+                            id="queues_header_counter_select"
+                            name="counter_id"
+                            onchange="this.form.submit()"
+                            class="text-xs font-semibold rounded-md border-neutral-300 py-1.5 pl-2.5 pr-8 bg-white text-neutral-900 focus:border-brand-500 focus:ring-brand-500 shadow-2xs"
+                        >
+                            @foreach ($availableCounters as $c)
+                                <option value="{{ $c->id }}" {{ isset($selectedCounter) && $selectedCounter && $selectedCounter->id === $c->id ? 'selected' : '' }}>
+                                    {{ $c->name }} ({{ $c->code }})
+                                </option>
+                            @endforeach
+                        </select>
+                    </form>
+                @endif
+
                 <button 
                     type="button" 
                     @click="walkInModalOpen = true"
@@ -52,6 +74,9 @@
 
                 <form method="POST" action="{{ route('merchant.queues.call-next') }}" x-data="{ submitting: false }" @submit="submitting = true">
                     @csrf
+                    @if (isset($selectedCounter) && $selectedCounter)
+                        <input type="hidden" name="counter_id" value="{{ $selectedCounter->id }}">
+                    @endif
                     <button 
                         type="submit" 
                         :disabled="submitting || {{ $nowServing ? 'true' : 'false' }} || {{ $stats['menunggu'] === 0 ? 'true' : 'false' }}"
@@ -59,7 +84,7 @@
                         title="{{ $nowServing ? 'Selesaikan atau lewati tiket aktif terlebih dahulu' : ($stats['menunggu'] === 0 ? 'Tidak ada tiket menunggu' : 'Panggil nomor antrean berikutnya') }}"
                     >
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
-                        <span>Panggil Berikutnya</span>
+                        <span>Panggil Berikutnya @if(isset($selectedCounter) && $selectedCounter) ke {{ $selectedCounter->name }} @endif</span>
                     </button>
                 </form>
             </div>
@@ -87,6 +112,10 @@
 
             @if ($nowServing)
                 <div class="py-4 text-center">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-100 text-brand-900 text-xs font-bold mb-2">
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                        <span>{{ $nowServing->counter ? $nowServing->counter->name : ($selectedCounter ? $selectedCounter->name : 'Loket 1') }}</span>
+                    </div>
                     <span class="text-caption text-neutral-500 font-semibold uppercase tracking-wider block mb-1">
                         Nomor Antrean Dipanggil
                     </span>
@@ -225,7 +254,7 @@
 
         {{-- Search & Multi-Filter Bar (M7-11, M7-12) --}}
         <div class="bg-white rounded-xl border border-neutral-200 p-4 shadow-xs">
-            <form method="GET" action="{{ route('merchant.queues') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
+            <form method="GET" action="{{ route('merchant.queues') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 items-end">
                 {{-- Search Box --}}
                 <div class="lg:col-span-2">
                     <label class="block text-caption font-semibold text-neutral-700 mb-1">Cari Nomor / Nama</label>
@@ -239,6 +268,21 @@
                         >
                         <svg class="w-4 h-4 text-neutral-400 absolute left-3 top-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                     </div>
+                </div>
+
+                {{-- Counter Filter --}}
+                <div>
+                    <label class="block text-caption font-semibold text-neutral-700 mb-1">Loket</label>
+                    <select name="counter_id" class="w-full rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500">
+                        <option value="">Semua Loket</option>
+                        @if (isset($counters))
+                            @foreach ($counters as $cnt)
+                                <option value="{{ $cnt->id }}" {{ isset($selectedCounterId) && $selectedCounterId == $cnt->id ? 'selected' : '' }}>
+                                    {{ $cnt->name }}
+                                </option>
+                            @endforeach
+                        @endif
+                    </select>
                 </div>
 
                 {{-- Service Filter --}}
@@ -256,11 +300,11 @@
 
                 {{-- Source Filter --}}
                 <div>
-                    <label class="block text-caption font-semibold text-neutral-700 mb-1">Sumber Antrean</label>
+                    <label class="block text-caption font-semibold text-neutral-700 mb-1">Sumber</label>
                     <select name="source" class="w-full rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500">
                         <option value="">Semua Sumber</option>
-                        <option value="online" {{ $selectedSource === 'online' ? 'selected' : '' }}>Online (Customer Page)</option>
-                        <option value="walk_in" {{ $selectedSource === 'walk_in' ? 'selected' : '' }}>Walk-in (Manual Operator)</option>
+                        <option value="online" {{ $selectedSource === 'online' ? 'selected' : '' }}>Online</option>
+                        <option value="walk_in" {{ $selectedSource === 'walk_in' ? 'selected' : '' }}>Walk-in</option>
                     </select>
                 </div>
 
@@ -268,13 +312,13 @@
                 <div>
                     <label class="block text-caption font-semibold text-neutral-700 mb-1">Periode Tanggal</label>
                     <select name="date" class="w-full rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500">
-                        <option value="{{ $operatingDate }}" {{ $selectedDate === $operatingDate ? 'selected' : '' }}>Hari Ini ({{ $operatingDate }})</option>
-                        <option value="all" {{ $selectedDate === 'all' ? 'selected' : '' }}>Semua Riwayat (Arsip)</option>
+                        <option value="{{ $operatingDate }}" {{ $selectedDate === $operatingDate ? 'selected' : '' }}>Hari Ini</option>
+                        <option value="all" {{ $selectedDate === 'all' ? 'selected' : '' }}>Semua Riwayat</option>
                     </select>
                 </div>
 
                 {{-- Action Filter Buttons --}}
-                <div class="sm:col-span-2 lg:col-span-5 flex items-center justify-between pt-2 border-t border-neutral-100">
+                <div class="sm:col-span-2 lg:col-span-6 flex items-center justify-between pt-2 border-t border-neutral-100">
                     <div class="flex items-center gap-2">
                         <button type="submit" class="px-4 py-2 rounded-lg bg-brand-700 text-white text-xs font-bold hover:bg-brand-800 transition shadow-xs">
                             Terapkan Filter
@@ -335,9 +379,16 @@
                             @foreach ($tickets as $t)
                                 <tr class="hover:bg-neutral-50/80 transition {{ in_array($t->status, ['dipanggil', 'sedang_dilayani']) ? 'bg-brand-50/30' : '' }}">
                                     <td class="py-3.5 px-4">
-                                        <a href="{{ route('merchant.queues.show', $t) }}" class="font-bold text-neutral-950 hover:text-brand-700 tabular-nums">
-                                            {{ $t->ticket_number }}
-                                        </a>
+                                        <div class="flex items-center gap-1.5">
+                                            <a href="{{ route('merchant.queues.show', $t) }}" class="font-bold text-neutral-950 hover:text-brand-700 tabular-nums">
+                                                {{ $t->ticket_number }}
+                                            </a>
+                                            @if ($t->counter)
+                                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-neutral-100 text-neutral-700 border border-neutral-200" title="Dilayani di {{ $t->counter->name }}">
+                                                    {{ $t->counter->name }}
+                                                </span>
+                                            @endif
+                                        </div>
                                     </td>
                                     <td class="py-3.5 px-4">
                                         <div class="font-medium text-neutral-900">{{ $t->customer_name }}</div>
@@ -414,6 +465,11 @@
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-2">
                                     <span class="text-lg font-bold text-neutral-950 tabular-nums">{{ $t->ticket_number }}</span>
+                                    @if ($t->counter)
+                                        <span class="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-neutral-100 text-neutral-700 border border-neutral-200">
+                                            {{ $t->counter->name }}
+                                        </span>
+                                    @endif
                                     <span class="text-[11px] px-2 py-0.5 rounded font-medium {{ $t->source === 'online' ? 'bg-blue-50 text-blue-700' : 'bg-neutral-100 text-neutral-700' }}">
                                         {{ $t->source === 'online' ? 'Online' : 'Walk-in' }}
                                     </span>

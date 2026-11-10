@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Business;
+use App\Models\BusinessCounter;
 use App\Models\DailyQueue;
 use App\Models\QueueStatusHistory;
 use App\Models\QueueTicket;
@@ -301,34 +302,76 @@ class QueueService
 
     /**
      * Call the next waiting ticket according to strict FIFO sequence order.
-     * Enforces the Single Active Operator rule: cannot call if a ticket is already called or in-service.
+     * Enforces the Single Active Ticket Per Counter rule (M13):
+     * Multiple counters can serve tickets in parallel, but a single counter cannot have multiple active tickets.
      *
      * @param  Business  $business
      * @param  User  $operator
+     * @param  BusinessCounter|null  $counter
      * @return QueueTicket
      *
      * @throws DomainException
      */
-    public function callNext(Business $business, User $operator): QueueTicket
+    public function callNext(Business $business, User $operator, ?BusinessCounter $counter = null): QueueTicket
     {
-        return DB::transaction(function () use ($business, $operator) {
+        // 1. Resolve counter if not explicitly provided
+        if ($counter === null) {
+            $counter = $operator->assignedCounters()->first();
+            if (! $counter) {
+                $counter = $business->activeCounters()->first();
+            }
+        }
+
+        if (! $counter) {
+            throw new DomainException('Tidak ada loket aktif yang tersedia untuk memanggil antrean.');
+        }
+
+        // 2. Validate counter belongs to this business
+        if ($counter->business_id !== $business->id) {
+            throw new DomainException('Loket tidak terdaftar untuk unit usaha ini.');
+        }
+
+        // 3. Validate counter is active
+        if (! $counter->is_active) {
+            throw new DomainException(sprintf('Loket %s sedang nonaktif dan tidak dapat memanggil antrean baru.', $counter->name));
+        }
+
+        // 4. Validate operator authorization
+        if (! $operator->canOperateCounter($counter)) {
+            throw new DomainException(sprintf('Anda tidak memiliki hak otorisasi untuk mengoperasikan %s.', $counter->name));
+        }
+
+        return DB::transaction(function () use ($business, $operator, $counter) {
             $dailyQueue = $this->getOrCreateDailyQueue($business);
 
             // Lock the daily queue to serialize operator call actions
             DailyQueue::where('id', $dailyQueue->id)->lockForUpdate()->first();
 
-            // Single Active Operator Rule: Check if a ticket is currently 'dipanggil' or 'sedang_dilayani'
+            // Single Active Ticket Per Counter Rule (M13): Check if this counter currently has an active ticket.
+            // Also catches legacy active tickets without an assigned counter (counter_id IS NULL).
             $hasActiveServingTicket = QueueTicket::where('business_id', $business->id)
-                ->where('daily_queue_id', $dailyQueue->id)
+                ->where(function ($query) use ($counter) {
+                    $query->where('counter_id', $counter->id)
+                        ->orWhereNull('counter_id');
+                })
                 ->whereIn('status', [QueueTicket::STATUS_DIPANGGIL, QueueTicket::STATUS_SEDANG_DILAYANI])
                 ->lockForUpdate()
-                ->exists();
+                ->first();
 
             if ($hasActiveServingTicket) {
-                throw new DomainException('Tidak dapat memanggil antrean berikutnya karena masih terdapat tiket yang sedang dipanggil atau sedang dilayani. Selesaikan, lewati, atau batalkan tiket aktif terlebih dahulu.');
+                if ($hasActiveServingTicket->counter_id === null) {
+                    $hasActiveServingTicket->counter_id = $counter->id;
+                    $hasActiveServingTicket->save();
+                }
+
+                throw new DomainException(sprintf(
+                    'Tidak dapat memanggil antrean berikutnya. %s masih memiliki antrean yang sedang dipanggil atau sedang dilayani (Nomor %s). Selesaikan, lewati, atau batalkan antrean aktif terlebih dahulu.',
+                    $counter->name,
+                    $hasActiveServingTicket->ticket_number
+                ));
             }
 
-            // Retrieve the oldest waiting ticket by sequence_number
+            // Retrieve the oldest waiting ticket by sequence_number from the unified global FIFO
             /** @var QueueTicket|null $nextTicket */
             $nextTicket = QueueTicket::where('business_id', $business->id)
                 ->where('daily_queue_id', $dailyQueue->id)
@@ -345,6 +388,7 @@ class QueueService
             $nextTicket->update([
                 'status' => QueueTicket::STATUS_DIPANGGIL,
                 'called_at' => $now,
+                'counter_id' => $counter->id,
             ]);
 
             QueueStatusHistory::create([
@@ -354,7 +398,7 @@ class QueueService
                 'to_status' => QueueTicket::STATUS_DIPANGGIL,
                 'actor_type' => QueueStatusHistory::ACTOR_MERCHANT,
                 'actor_id' => $operator->id,
-                'note' => 'Memanggil nomor antrean berikutnya (FIFO)',
+                'note' => sprintf('Memanggil nomor antrean di %s (FIFO)', $counter->name),
                 'created_at' => $now,
             ]);
 
@@ -366,16 +410,27 @@ class QueueService
      * Re-announce / recall a ticket that is currently in 'dipanggil' status.
      * Appends an immutable audit event without changing queue sequence or creating new tickets.
      */
-    public function recallTicket(QueueTicket $ticket, User $operator): QueueTicket
+    public function recallTicket(QueueTicket $ticket, User $operator, ?BusinessCounter $counter = null): QueueTicket
     {
         if ($ticket->status !== QueueTicket::STATUS_DIPANGGIL) {
             throw new DomainException('Panggilan ulang hanya dapat dilakukan untuk tiket yang sedang berstatus Dipanggil.');
         }
 
-        return DB::transaction(function () use ($ticket, $operator) {
+        $ticketCounter = $ticket->counter;
+        if ($counter !== null && $ticket->counter_id !== null && $ticket->counter_id !== $counter->id) {
+            throw new DomainException('Tiket ini ditugaskan pada loket yang berbeda.');
+        }
+
+        $effectiveCounter = $counter ?? $ticketCounter;
+        if ($effectiveCounter && ! $operator->canOperateCounter($effectiveCounter)) {
+            throw new DomainException('Anda tidak memiliki hak otorisasi untuk mengoperasikan tiket pada loket ini.');
+        }
+
+        return DB::transaction(function () use ($ticket, $operator, $effectiveCounter) {
             $now = now();
             $ticket->update(['recalled_at' => $now]);
 
+            $counterNote = $effectiveCounter ? ' di '.$effectiveCounter->name : '';
             QueueStatusHistory::create([
                 'queue_ticket_id' => $ticket->id,
                 'event_type' => QueueStatusHistory::EVENT_TICKET_RECALLED,
@@ -383,7 +438,7 @@ class QueueService
                 'to_status' => QueueTicket::STATUS_DIPANGGIL,
                 'actor_type' => QueueStatusHistory::ACTOR_MERCHANT,
                 'actor_id' => $operator->id,
-                'note' => 'Panggilan ulang tiket antrean oleh operator',
+                'note' => sprintf('Panggilan ulang tiket antrean%s oleh operator', $counterNote),
                 'created_at' => $now,
             ]);
 
@@ -394,19 +449,30 @@ class QueueService
     /**
      * Transition ticket lifecycle from 'dipanggil' to 'sedang_dilayani'.
      */
-    public function startService(QueueTicket $ticket, User $operator): QueueTicket
+    public function startService(QueueTicket $ticket, User $operator, ?BusinessCounter $counter = null): QueueTicket
     {
         if ($ticket->status !== QueueTicket::STATUS_DIPANGGIL) {
             throw new DomainException('Pelayanan hanya dapat dimulai untuk tiket yang sedang berstatus Dipanggil.');
         }
 
-        return DB::transaction(function () use ($ticket, $operator) {
+        $ticketCounter = $ticket->counter;
+        if ($counter !== null && $ticket->counter_id !== null && $ticket->counter_id !== $counter->id) {
+            throw new DomainException('Tiket ini ditugaskan pada loket yang berbeda.');
+        }
+
+        $effectiveCounter = $counter ?? $ticketCounter;
+        if ($effectiveCounter && ! $operator->canOperateCounter($effectiveCounter)) {
+            throw new DomainException('Anda tidak memiliki hak otorisasi untuk mengoperasikan tiket pada loket ini.');
+        }
+
+        return DB::transaction(function () use ($ticket, $operator, $effectiveCounter) {
             $now = now();
             $ticket->update([
                 'status' => QueueTicket::STATUS_SEDANG_DILAYANI,
                 'service_started_at' => $now,
             ]);
 
+            $counterNote = $effectiveCounter ? ' di '.$effectiveCounter->name : '';
             QueueStatusHistory::create([
                 'queue_ticket_id' => $ticket->id,
                 'event_type' => QueueStatusHistory::EVENT_STATUS_CHANGED,
@@ -414,7 +480,7 @@ class QueueService
                 'to_status' => QueueTicket::STATUS_SEDANG_DILAYANI,
                 'actor_type' => QueueStatusHistory::ACTOR_MERCHANT,
                 'actor_id' => $operator->id,
-                'note' => 'Memulai proses pelayanan pelanggan',
+                'note' => sprintf('Memulai proses pelayanan pelanggan%s', $counterNote),
                 'created_at' => $now,
             ]);
 
@@ -425,19 +491,30 @@ class QueueService
     /**
      * Transition ticket lifecycle from 'sedang_dilayani' to terminal 'selesai'.
      */
-    public function completeTicket(QueueTicket $ticket, User $operator, ?string $note = null): QueueTicket
+    public function completeTicket(QueueTicket $ticket, User $operator, ?string $note = null, ?BusinessCounter $counter = null): QueueTicket
     {
         if ($ticket->status !== QueueTicket::STATUS_SEDANG_DILAYANI) {
             throw new DomainException('Penyelesaian pelayanan hanya dapat dilakukan untuk tiket yang berstatus Sedang Dilayani.');
         }
 
-        return DB::transaction(function () use ($ticket, $operator, $note) {
+        $ticketCounter = $ticket->counter;
+        if ($counter !== null && $ticket->counter_id !== null && $ticket->counter_id !== $counter->id) {
+            throw new DomainException('Tiket ini ditugaskan pada loket yang berbeda.');
+        }
+
+        $effectiveCounter = $counter ?? $ticketCounter;
+        if ($effectiveCounter && ! $operator->canOperateCounter($effectiveCounter)) {
+            throw new DomainException('Anda tidak memiliki hak otorisasi untuk mengoperasikan tiket pada loket ini.');
+        }
+
+        return DB::transaction(function () use ($ticket, $operator, $note, $effectiveCounter) {
             $now = now();
             $ticket->update([
                 'status' => QueueTicket::STATUS_SELESAI,
                 'completed_at' => $now,
             ]);
 
+            $counterNote = $effectiveCounter ? ' di '.$effectiveCounter->name : '';
             QueueStatusHistory::create([
                 'queue_ticket_id' => $ticket->id,
                 'event_type' => QueueStatusHistory::EVENT_STATUS_CHANGED,
@@ -445,7 +522,7 @@ class QueueService
                 'to_status' => QueueTicket::STATUS_SELESAI,
                 'actor_type' => QueueStatusHistory::ACTOR_MERCHANT,
                 'actor_id' => $operator->id,
-                'note' => $note ?: 'Pelayanan pelanggan selesai',
+                'note' => $note ?: sprintf('Pelayanan pelanggan selesai%s', $counterNote),
                 'created_at' => $now,
             ]);
 
@@ -457,13 +534,23 @@ class QueueService
      * Skip an active ticket from 'menunggu' or 'dipanggil' to terminal 'dilewati'.
      * Skipped tickets continue to consume daily service quota.
      */
-    public function skipTicket(QueueTicket $ticket, User $operator, ?string $reason = null): QueueTicket
+    public function skipTicket(QueueTicket $ticket, User $operator, ?string $reason = null, ?BusinessCounter $counter = null): QueueTicket
     {
         if (! in_array($ticket->status, [QueueTicket::STATUS_MENUNGGU, QueueTicket::STATUS_DIPANGGIL], true)) {
             throw new DomainException('Hanya tiket dengan status Menunggu atau Dipanggil yang dapat dilewati.');
         }
 
-        return DB::transaction(function () use ($ticket, $operator, $reason) {
+        $ticketCounter = $ticket->counter;
+        if ($counter !== null && $ticket->counter_id !== null && $ticket->counter_id !== $counter->id) {
+            throw new DomainException('Tiket ini ditugaskan pada loket yang berbeda.');
+        }
+
+        $effectiveCounter = $counter ?? $ticketCounter;
+        if ($effectiveCounter && ! $operator->canOperateCounter($effectiveCounter)) {
+            throw new DomainException('Anda tidak memiliki hak otorisasi untuk mengoperasikan tiket pada loket ini.');
+        }
+
+        return DB::transaction(function () use ($ticket, $operator, $reason, $effectiveCounter) {
             $previousStatus = $ticket->status;
             $now = now();
 
@@ -472,6 +559,7 @@ class QueueService
                 'skipped_at' => $now,
             ]);
 
+            $counterNote = $effectiveCounter ? ' di '.$effectiveCounter->name : '';
             QueueStatusHistory::create([
                 'queue_ticket_id' => $ticket->id,
                 'event_type' => QueueStatusHistory::EVENT_TICKET_SKIPPED,
@@ -479,7 +567,7 @@ class QueueService
                 'to_status' => QueueTicket::STATUS_DILEWATI,
                 'actor_type' => QueueStatusHistory::ACTOR_MERCHANT,
                 'actor_id' => $operator->id,
-                'note' => $reason ?: 'Nomor antrean dilewati oleh operator',
+                'note' => $reason ?: sprintf('Nomor antrean dilewati oleh operator%s', $counterNote),
                 'created_at' => $now,
             ]);
 
@@ -546,16 +634,34 @@ class QueueService
 
     /**
      * Get the ticket currently being called or served for today's session.
+     * Optionally scoped to a specific counter.
      */
-    public function getCurrentServingTicket(Business $business): ?QueueTicket
+    public function getCurrentServingTicket(Business $business, ?BusinessCounter $counter = null): ?QueueTicket
     {
         $dailyQueue = $this->getOrCreateDailyQueue($business);
 
-        return QueueTicket::where('business_id', $business->id)
+        $query = QueueTicket::where('business_id', $business->id)
             ->where('daily_queue_id', $dailyQueue->id)
-            ->whereIn('status', [QueueTicket::STATUS_DIPANGGIL, QueueTicket::STATUS_SEDANG_DILAYANI])
-            ->orderBy('called_at', 'desc')
-            ->first();
+            ->whereIn('status', [QueueTicket::STATUS_DIPANGGIL, QueueTicket::STATUS_SEDANG_DILAYANI]);
+
+        if ($counter !== null) {
+            $query->where('counter_id', $counter->id);
+        }
+
+        return $query->orderBy('called_at', 'desc')->first();
+    }
+
+    /**
+     * Get all active counters for a business along with their currently active serving ticket.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, BusinessCounter>
+     */
+    public function getActiveCountersStatus(Business $business)
+    {
+        return $business->activeCounters()
+            ->with(['activeTicket.service', 'assignedMemberships.user'])
+            ->orderBy('code', 'asc')
+            ->get();
     }
 
     /**
