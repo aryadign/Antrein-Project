@@ -372,6 +372,10 @@ erDiagram
         string timezone "Asia/Makassar (Bali default), Asia/Jakarta, Asia/Jayapura"
         enum status "buka, tutup, jeda"
         boolean is_suspended
+        boolean is_display_enabled "P1-08: Public TV display"
+        string display_token "P1-08: Cryptographic credential"
+        string display_token_hash UK "P1-08: SHA-256 hash"
+        timestamp display_token_created_at "P1-08: Rotation timestamp"
         timestamp created_at
         timestamp updated_at
         timestamp deleted_at "soft delete"
@@ -560,6 +564,10 @@ Stores core business profile, operational status, timezone, and public identifie
 | `timezone` | `VARCHAR(50)` | No | `'Asia/Makassar'` | — | Merchant local timezone: `Asia/Makassar` (WITA - Bali default), `Asia/Jakarta` (WIB), `Asia/Jayapura` (WIT). |
 | `status` | `ENUM('buka', 'tutup', 'jeda')`| No | `'tutup'` | Index (`idx_businesses_status`) | Manual operational switch. `buka` accepts new online tickets; `tutup`/`jeda` blocks new online tickets. |
 | `is_suspended` | `BOOLEAN` | No | `FALSE` | — | Admin platform suspension flag. Suspended merchants cannot generate new tickets. |
+| `is_display_enabled` | `BOOLEAN` | No | `FALSE` | — | P1-08: Public TV/monitor queue display toggle. |
+| `display_token` | `VARCHAR(100)` | Yes | `NULL` | — | P1-08: 48-char cryptographic display token. |
+| `display_token_hash` | `VARCHAR(64)` | Yes | `NULL` | Unique (`uq_businesses_display_hash`) | P1-08: SHA-256 token hash for constant-time read-only lookup. |
+| `display_token_created_at` | `TIMESTAMP` | Yes | `NULL` | — | P1-08: Timestamp of last display token generation/rotation. |
 | `created_at` | `TIMESTAMP` | Yes | `NULL` | — | Creation timestamp. |
 | `updated_at` | `TIMESTAMP` | Yes | `NULL` | — | Last modification timestamp. |
 | `deleted_at` | `TIMESTAMP` | Yes | `NULL` | Index (`idx_businesses_deleted`) | Soft delete timestamp preserving historical references. |

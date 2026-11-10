@@ -539,6 +539,53 @@ While real-time WebSockets (Milestone 14) provide instant updates for users acti
    - The merchant notification dispatcher queries only verified, active staff members of the specific `business_id`, ensuring strict cross-tenant isolation.
    - In-store walk-in tickets do not dispatch merchant online notifications to prevent alert fatigue.
 
+5. **Granular Merchant Staff Preferences & Tenant Isolation:**
+   - Staf and owners control their alert channels independently via `user_notification_preferences` (`email_on_new_online_ticket`, `browser_on_new_online_ticket`).
+   - The merchant notification dispatcher queries only verified, active staff members of the specific `business_id`, ensuring strict cross-tenant isolation.
+   - In-store walk-in tickets do not dispatch merchant online notifications to prevent alert fatigue.
+
+## ADR-17: Public Queue Display / TV Queue Monitor (P1-08)
+
+### Status: Approved & Implemented (Milestone 16)
+
+### Context:
+In physical UMKM waiting rooms (e.g., clinics, salons, barbershops, payment counters), visitors and waiting customers frequently look up at a wall-mounted Smart TV, monitor, or shared counter screen. To eliminate physical overcrowding at counter desks and prevent missed calls, AntreIn requires a dedicated, full-screen public queue display view that dynamically reflects active queue calls in real-time without requiring merchant login or exposing private customer information.
+
+### Decision:
+1. **Cryptographic Display Credential Architecture:**
+   - Display links are protected by high-entropy, 48-character cryptographically secure random tokens (`bin2hex(random_bytes(24))`).
+   - Stored in hashed format (`display_token_hash = hash('sha256', $token)`) on `businesses` for fast, constant-time database lookups without leaking raw credentials in database dumps or query logs.
+   - Owner-only lifecycle management (`business.role:owner`):
+     - **Activation/Deactivation:** Instantly toggles display visibility.
+     - **Token Rotation:** Generates a new credential and immediately invalidates the old link.
+     - **Revocation:** Disables the display and clears the token hash completely.
+   - Operator and Admin access restrictions: Operators cannot manage or revoke display settings; Admins follow standard read-only monitoring.
+2. **Public Read-Only API & Zero-PII Policy:**
+   - Endpoints: `GET /display/{token}` (HTML TV mode) and `GET /display/{token}/data` (JSON API).
+   - Protected with HTTP headers: `Cache-Control: no-store, no-cache, must-revalidate, max-age=0` to ensure revoked links or cached queue numbers are never served from browser caches or intermediate proxies.
+   - Strict Zero-PII Sanitization: The display payload completely excludes customer full names, phone numbers, email addresses, customer tracking access tokens, and internal user/database IDs. Only the ticket number (e.g. `A-001`), service name, counter name/code, status label, and call time are served.
+3. **Multi-Counter Responsive Layout & TV Mode:**
+   - Designed desktop-first and optimized for 1920×1080 (Full HD TV), 1600×900, 1366×768, and tablets.
+   - High-contrast, anti-glare dark slate aesthetic (`bg-slate-950`) with prominent large typography (`text-6xl sm:text-7xl lg:text-8xl font-black font-mono`).
+   - Adaptive CSS grid accommodates 1, 2, 3, or 4+ active counters simultaneously.
+   - Clean state differentiation:
+     - `DIPANGGIL`: Pulsing amber card with call icon.
+     - `SEDANG_DILAYANI`: Solid emerald card.
+     - Idle / Empty: Standby neutral card (`— Belum ada panggilan`).
+   - Interactive Fullscreen API toggle allows operators to mount the display seamlessly on Smart TVs.
+4. **Built-in Web Audio API Chime Synthesizer:**
+   - Integrates a self-contained double-tone bell chime (523.25 Hz [C5] and 783.99 Hz [G5]) synthesized directly via standard browser `AudioContext`.
+   - Requires zero external audio MP3 files, eliminating CDN latency, CORS errors, or missing asset failures.
+   - Chimes automatically whenever a counter initiates a new call (`status === 'dipanggil'`). Includes a persistent Mute/Unmute control for staff convenience.
+5. **Real-Time WebSocket Integration & Public Hash Channel:**
+   - Dispatches `PublicQueueDisplayUpdated` event (`ShouldBroadcastNow`, `ShouldDispatchAfterCommit`) to public channel `display.{tokenHash}`.
+   - Listens to ticket creation, status changes, counter assignments, and counter status transitions via `BroadcastToPublicDisplayListener`.
+   - Payload contains zero PII (only event action and timestamp), prompting the display client to re-fetch the verified read-only endpoint.
+   - Transaction Safety: Events are only broadcast after database transactions commit.
+6. **Adaptive Polling Fallback & Resilience:**
+   - Operates a 10-second background polling cycle as an automatic failover when WebSocket connections disconnect or drop.
+   - Listens to `online` and `window.focus` events to immediately recover and synchronize state when network connectivity is restored.
+
 ---
 
 *Authored by Senior Full-Stack Software Engineer & Technical Architect — AntreIn Project*

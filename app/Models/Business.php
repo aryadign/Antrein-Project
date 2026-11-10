@@ -35,6 +35,9 @@ class Business extends Model
         'timezone',
         'status',
         'is_suspended',
+        'is_display_enabled',
+        'display_token_hash',
+        'display_token_created_at',
     ];
 
     /**
@@ -46,6 +49,8 @@ class Business extends Model
     {
         return [
             'is_suspended' => 'boolean',
+            'is_display_enabled' => 'boolean',
+            'display_token_created_at' => 'datetime',
         ];
     }
 
@@ -312,6 +317,54 @@ class Business extends Model
             ->where('user_id', $user->id)
             ->where('is_active', true)
             ->exists();
+    }
+
+    /**
+     * Determine whether the public display is active and accessible.
+     */
+    public function isDisplayActive(): bool
+    {
+        return (bool) $this->is_display_enabled && ! $this->is_suspended && ! empty($this->display_token_hash);
+    }
+
+    /**
+     * Generate a fresh cryptographic display token and update hash.
+     * The raw token is returned for one-time disclosure to the merchant and NEVER stored in the database.
+     */
+    public function generateDisplayToken(): string
+    {
+        $token = bin2hex(random_bytes(24));
+        $this->forceFill([
+            'is_display_enabled' => true,
+            'display_token_hash' => hash('sha256', $token),
+            'display_token_created_at' => now(),
+        ])->save();
+
+        return $token;
+    }
+
+    /**
+     * Revoke display access.
+     */
+    public function revokeDisplayAccess(): void
+    {
+        $this->forceFill([
+            'is_display_enabled' => false,
+            'display_token_hash' => null,
+            'display_token_created_at' => null,
+        ])->save();
+    }
+
+    /**
+     * Get the public display URL given a raw token.
+     */
+    public function getDisplayUrl(?string $token = null): ?string
+    {
+        if (! $token) {
+            return null;
+        }
+
+        return route('display.show', ['token' => $token]);
     }
 }
 

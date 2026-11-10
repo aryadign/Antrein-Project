@@ -14,8 +14,10 @@ use App\Http\Controllers\Auth\StaffInvitationController;
 use App\Http\Controllers\Broadcasting\TicketBroadcastAuthController;
 use App\Http\Controllers\Customer\CustomerPushSubscriptionController;
 use App\Http\Controllers\Customer\QueueTicketController;
+use App\Http\Controllers\Display\PublicQueueDisplayController;
 use App\Http\Controllers\Merchant\CounterManagementController;
 use App\Http\Controllers\Merchant\DashboardController;
+use App\Http\Controllers\Merchant\DisplayManagementController;
 use App\Http\Controllers\Merchant\NotificationPreferenceController;
 use App\Http\Controllers\Merchant\OnboardingController;
 use App\Http\Controllers\Merchant\QueueController;
@@ -79,6 +81,10 @@ Route::delete('/push-subscriptions/customer', [CustomerPushSubscriptionControlle
 Route::post('/api/push-subscriptions/customer', [CustomerPushSubscriptionController::class, 'store']);
 Route::delete('/api/push-subscriptions/customer', [CustomerPushSubscriptionController::class, 'destroy']);
 Route::post('/broadcasting/auth/ticket', [TicketBroadcastAuthController::class, 'authenticate'])->name('broadcasting.auth.ticket');
+
+// Public Queue TV/Monitor Display Routes (Milestone 16 - P1-08)
+Route::get('/display/{token}', [PublicQueueDisplayController::class, 'show'])->name('display.show');
+Route::get('/display/{token}/data', [PublicQueueDisplayController::class, 'data'])->name('display.data');
 
 // Design System & Layout Preview Testbed (Milestone 2)
 Route::get('/design-system', function () {
@@ -256,6 +262,12 @@ Route::middleware(['auth', 'active'])->group(function () {
                 Route::delete('/staff/invitations/{invitation}', [StaffManagementController::class, 'revokeInvitation'])->name('staff.invitations.revoke');
                 Route::patch('/staff/{membership}/toggle-status', [StaffManagementController::class, 'toggleStatus'])->name('staff.toggle-status');
                 Route::delete('/staff/{membership}', [StaffManagementController::class, 'destroy'])->name('staff.destroy');
+
+                // Public Queue Display Management (Milestone 16 - P1-08)
+                Route::get('/display', [DisplayManagementController::class, 'index'])->name('display.index');
+                Route::post('/display/toggle', [DisplayManagementController::class, 'toggle'])->name('display.toggle');
+                Route::post('/display/generate', [DisplayManagementController::class, 'generate'])->name('display.generate');
+                Route::delete('/display/revoke', [DisplayManagementController::class, 'revoke'])->name('display.revoke');
             });
         });
     });

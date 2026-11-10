@@ -908,7 +908,49 @@ Fokus utama: Implementasi pembaruan antrean real-time berbasis WebSocket menggun
 
 ---
 
-# 18. Milestone P1 — Pengembangan setelah MVP
+# 18. Milestone 16 — Public Queue Display (P1-08)
+
+## 18.1 Skema Database & Model Kredensial Display (P1-08)
+
+- [x] `M16-01` Buat migrasi penambahan pengaturan display pada tabel `businesses`: `is_display_enabled`, `display_token`, `display_token_hash` (unik SHA-256), dan `display_token_created_at`.
+- [x] `M16-02` Perbarui model `Business` dengan fillable, casting, serta method helper `isDisplayActive()`, `generateDisplayToken()`, `revokeDisplayAccess()`, dan `getDisplayUrl()`.
+
+## 18.2 Display Service & Backend Read-Only API (P1-08)
+
+- [x] `M16-03` Buat `DisplayService` untuk menyelesaikan unit usaha via `display_token_hash` dan memformat data publik tersanitasi bebas PII (tanpa nama pelanggan, tanpa nomor telepon, tanpa email, tanpa token privat).
+- [x] `M16-04` Implementasikan eager loading relasi `activeCounters.activeTicket.service` guna mengeliminasi problem N+1 queries.
+- [x] `M16-05` Implementasikan `PublicQueueDisplayController` dengan route `GET /display/{token}` (HTML TV mode) dan `GET /display/{token}/data` (JSON API) dengan proteksi `Cache-Control: no-store, no-cache, must-revalidate, max-age=0`.
+
+## 18.3 Integrasi Real-Time Reverb & Broadcasting (P1-08)
+
+- [x] `M16-06` Buat public broadcast event `PublicQueueDisplayUpdated` (`display.{tokenHash}`) yang mengimplementasikan `ShouldBroadcastNow` dan `ShouldDispatchAfterCommit` dengan payload minimal bebas PII.
+- [x] `M16-07` Buat listener `BroadcastToPublicDisplayListener` yang mendengarkan `QueueTicketCreated`, `QueueTicketStatusChanged`, `QueueTicketCounterAssigned`, dan `CounterStatusChanged`, memicu siaran ke channel display publik secara aman.
+- [x] `M16-08` Daftarkan listener pada `AppServiceProvider`.
+
+## 18.4 Tampilan Layar TV, Fullscreen & Audio Chime (P1-08)
+
+- [x] `M16-09` Buat view publik `display/show.blade.php` dengan tema kontras tinggi elegan (TV mode), jam digital dan tanggal lokal timezone usaha, jam realtime, kartu loket adaptif (1, 2, 3, 4+ loket), dan status eksplisit (`DIPANGGIL`, `DILAYANI`, `STANDBY`).
+- [x] `M16-10` Tambahkan audio chime synthesizer bawaan via Web Audio API (`AudioContext`) tanpa dependensi aset file eksternal beserta tombol mute/unmute.
+- [x] `M16-11` Tambahkan dukungan Fullscreen API dengan tombol interaktif layar penuh dan keluar layar penuh.
+- [x] `M16-12` Implementasikan sinkronisasi ganda: WebSocket real-time via Laravel Echo dan adaptive polling fallback (10 detik) saat koneksi terputus.
+
+## 18.5 Manajemen Display Merchant (Owner-Only) (P1-08)
+
+- [x] `M16-13` Implementasikan `DisplayManagementController` (`GET /umkm/display`, `POST /umkm/display/toggle`, `POST /umkm/display/generate`, `DELETE /umkm/display/revoke`) yang diproteksi khusus peran Owner (`business.role:owner`).
+- [x] `M16-14` Buat antarmuka `merchant/display/index.blade.php` dengan display overview, penyalinan tautan, pratinjau live data, aktivasi/nonaktivasi, rotasi token, dan pencabutan akses.
+- [x] `M16-15` Integrasikan navigasi "Layar TV" pada sidebar pemilik dan tab pengaturan usaha.
+
+## 18.6 Pengujian Komprehensif & Verifikasi (P1-08)
+
+- [x] `M16-16` Buat test suite komprehensif `tests/Feature/Display/DisplayManagementTest.php` dan `tests/Feature/Display/PublicQueueDisplayTest.php` (31 tests, 115 assertions) mencakup otorisasi owner/operator, rotasi token, pencabutan token, penolakan token invalid, privasi PII, multi-loket simultan, siaran real-time, dan pembersihan status.
+- [x] `M16-17` Jalankan seluruh regression test suite proyek (356 automated tests, 2.342 assertions) dengan kelulusan 100%.
+- [x] `M16-18` Kompilasi aset Vite frontend via `npm run build` berhasil.
+
+**Exit Gate 16:** Fitur Public Queue Display (Layar TV Antrean) terimplementasi penuh dengan dukungan multi-loket real-time Reverb, fallback polling andal, audio chime bawaan, manajemen owner aman berbasis rotasi token kriptografis, dan seluruh 356 tests lulus 100%.
+
+---
+
+# 19. Milestone P1 — Pengembangan setelah MVP
 
 Jangan mulai sebelum MVP selesai dan mendapat persetujuan.
 
@@ -919,7 +961,7 @@ Jangan mulai sebelum MVP selesai dan mendapat persetujuan.
 - [x] `P1-05` Notifikasi email/browser sesuai kanal yang dipilih.
 - [x] `P1-06` Ekspor CSV.
 - [x] `P1-07` Ekspor PDF.
-- [ ] `P1-08` Display antrean publik.
+- [x] `P1-08` Display antrean publik.
 - [ ] `P1-09` Ulasan pelanggan.
 - [ ] `P1-10` Estimasi waktu tunggu berbasis data historis jika kualitas data mencukupi.
 

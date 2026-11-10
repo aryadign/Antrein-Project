@@ -216,6 +216,32 @@ Kunci publik dan privat akan otomatis diperbarui pada berkas `.env` aplikasi And
 
 ---
 
+## 📺 Layar Antrean Publik / TV Queue Monitor (P1-08)
+
+AntreIn menyediakan antarmuka khusus layar monitor TV ruang tunggu yang dapat dipasang pada Smart TV, monitor dinding, atau layar pelanggan tanpa memerlukan proses login:
+
+1. **Desain Layar Lebar & Anti-Silau (TV Optimized):**
+   - Tampilan kontras tinggi bertema gelap (`bg-slate-950`) dengan tipografi ekstra besar (`text-8xl tabular-nums`) yang mudah dibaca dari jarak jauh.
+   - Dilengkapi jam digital presisi sesuai zona waktu unit usaha (WITA/WIB/WIT), branding usaha, dan status koneksi live.
+   - Mendukung **Mode Layar Penuh (Fullscreen API)** dengan satu klik tombol interaktif.
+2. **Tampilan Multi-Loket Simultan:**
+   - Menampilkan seluruh loket aktif secara berdampingan dalam grid adaptif (1, 2, 3, hingga 4+ loket).
+   - Memperlihatkan nomor antrean yang sedang **Dipanggil** (dengan animasi badge amber berpendar) atau **Sedang Dilayani** (badge emerald).
+   - Loket tanpa antrean aktif menampilkan status *Standby* bersih tanpa merusak tata letak loket lain.
+3. **Audio Chime Synthesizer Bawaan (Web Audio API):**
+   - Menghasilkan nada dering lonceng dua nada ganda (C5 - G5) secara sintesis native via peramban (`AudioContext`).
+   - Berfungsi 100% offline tanpa membutuhkan berkas audio MP3 eksternal, bebas masalah CORS atau kegagalan jaringan.
+   - Berbunyi otomatis saat ada panggilan nomor baru di loket, dilengkapi kontrol mute/unmute.
+4. **Pembaruan Real-Time & Ketahanan Jaringan:**
+   - Terhubung seketika via Laravel Reverb pada channel publik berbasis hash token (`display.{tokenHash}`).
+   - *Fallback Polling:* Memperbarui data otomatis setiap 10 detik apabila koneksi WebSocket terputus.
+5. **Kredensial Kriptografis & Keamanan Privasi (Zero PII):**
+   - Tautan publik diproteksi token acak 48 karakter berentropi tinggi (`display_token_hash` SHA-256).
+   - Pemilik usaha (*Owner*) dapat mengaktifkan, menyalin, melihat pratinjau live data, merotasi (*regenerate*), atau mencabut (*revoke*) tautan display kapan saja melalui menu **Layar TV** (`/umkm/display`).
+   - Endpoint read-only (`GET /display/{token}/data`) diproteksi `Cache-Control: no-store` dan menjamin **Zero PII** (nama, nomor telepon, email, dan token privat pelanggan tidak pernah dikirimkan).
+
+---
+
 ## 💾 Prosedur Backup & Restore Database
 
 ### 1. Pencadangan (*Backup*) Harian Database MySQL
