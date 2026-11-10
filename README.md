@@ -164,6 +164,29 @@ AntreIn mendukung pelayanan antrean multi-loket secara paralel untuk UMKM dengan
 
 ---
 
+## ⚡ Pembaruan Real-Time dengan Laravel Reverb & WebSocket (P1-04)
+
+AntreIn mengintegrasikan WebSocket server berkinerja tinggi menggunakan **Laravel Reverb** untuk pembaruan status antrean seketika:
+
+1. **Sinkronisasi Instan:**
+   - **Pelanggan:** Status tiket (`dipanggil`, `sedang_dilayani`, `selesai`, `dilewati`) dan penugasan loket terbarui seketika tanpa jeda polling.
+   - **Meja Operasional & Dashboard UMKM:** Notifikasi toast real-time saat ada tiket baru mendaftar atau status loket berubah.
+2. **Arsitektur Event Transaksional (`ShouldDispatchAfterCommit`):** Seluruh broadcast event hanya dikirim setelah transaksi database MySQL selesai di-commit (`ACID`), mencegah sinyal palsu akibat transaksi yang di-rollback.
+3. **Keamanan & Privasi Data:**
+   - Channel privat staf (`private-business.{businessId}` dan `private-counter.{counterId}`) diproteksi via otorisasi saluran Laravel.
+   - Channel pelacakan tiket tamu (`private-ticket.{tokenHash}`) diotorisasi via endpoint khusus `POST /broadcasting/auth/ticket` menggunakan validasi hash token (SHA-256) dan rate-limiting ketat (60 req/menit/IP).
+   - Payload broadcast bebas dari data sensitif pelanggan (nomor HP dan token rahasia tidak pernah disiarkan).
+4. **Ketahanan Koneksi (*Resilience & Adaptive Fallback*):** Jika koneksi WebSocket terputus, sistem secara otomatis beralih ke *adaptive HTTP polling* (5–15 detik) sehingga pelanggan dan merchant tidak pernah kehilangan pembaruan antrean.
+
+### Menjalankan Server WebSocket Reverb:
+Untuk mode pengembangan atau lokal:
+```bash
+php artisan reverb:start
+```
+Secara default Reverb berjalan pada port `8080` (dapat dikonfigurasi melalui variabel `REVERB_PORT` di `.env`).
+
+---
+
 ## 💾 Prosedur Backup & Restore Database
 
 ### 1. Pencadangan (*Backup*) Harian Database MySQL

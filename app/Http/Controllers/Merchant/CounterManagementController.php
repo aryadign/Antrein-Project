@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Merchant;
 
+use App\Events\CounterStatusChanged;
 use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\Business;
@@ -182,6 +183,8 @@ class CounterManagementController extends Controller
 
         $newStatus = ! $counter->is_active;
         $counter->update(['is_active' => $newStatus]);
+
+        event(new CounterStatusChanged($counter));
 
         $statusLabel = $newStatus ? 'diaktifkan' : 'dinonaktifkan';
         ActivityLog::log(

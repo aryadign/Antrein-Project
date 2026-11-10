@@ -822,14 +822,58 @@ Sumber visual: `AntreIn-design.md`. Jangan membuat palette atau skala baru tanpa
 
 ---
 
-# 16. Milestone P1 — Pengembangan setelah MVP
+# 16. Milestone 14 — Real-time Queue Updates with Laravel Reverb & WebSocket (P1-04)
+
+Fokus utama: Implementasi pembaruan antrean real-time berbasis WebSocket menggunakan Laravel Reverb (`P1-04`), saluran broadcast terenkripsi dan terotorisasi, event broadcasting transaksional (`ShouldDispatchAfterCommit`), integrasi frontend Laravel Echo & Pusher-js, dan fallback adaptif.
+
+## 16.1 Arsitektur Broadcasting & Konfigurasi Server (P1-04)
+
+- [x] `M14-01` Instal dan konfigurasikan `laravel/reverb` v1.12 dan `pusher/pusher-php-server` pada backend PHP.
+- [x] `M14-02` Instal pustaka klien WebSocket frontend `laravel-echo` dan `pusher-js` melalui NPM.
+- [x] `M14-03` Terbitkan dan sesuaikan file konfigurasi `config/reverb.php` dan perbarui driver `config/broadcasting.php` dengan koneksi `reverb`.
+- [x] `M14-04` Konfigurasikan variabel environment Reverb (`REVERB_APP_KEY`, `REVERB_APP_SECRET`, `REVERB_APP_ID`, `REVERB_HOST`, `REVERB_PORT`, `REVERB_SCHEME`) pada `.env` dan `.env.example`.
+- [x] `M14-05` Pastikan `phpunit.xml` menggunakan `BROADCAST_CONNECTION=null` agar unit dan feature tests terisolasi tanpa memerlukan daemon Reverb aktif.
+
+## 16.2 Event Broadcasting Transaksional & Payload Sanitization (P1-04)
+
+- [x] `M14-06` Implementasikan event `QueueTicketCreated` dengan kontrak `ShouldBroadcastNow` dan `ShouldDispatchAfterCommit` pada private channel `business.{businessId}`.
+- [x] `M14-07` Implementasikan event `QueueTicketStatusChanged` pada private channel `business.{businessId}` dan customer ticket channel `ticket.{tokenHash}`.
+- [x] `M14-08` Implementasikan event `QueueTicketCounterAssigned` pada private channel `business.{businessId}`, `counter.{counterId}`, dan `ticket.{tokenHash}`.
+- [x] `M14-09` Implementasikan event `CounterStatusChanged` pada private channel `business.{businessId}` dan `counter.{counterId}`.
+- [x] `M14-10` Jamin payload data event tersanitasi: tidak ada nomor telepon pelanggan terbuka, tidak ada data PII mentah, dan tidak ada access token mentah dalam payload broadcast.
+
+## 16.3 Otorisasi Saluran & Endpoint Autentikasi Pelanggan (P1-04)
+
+- [x] `M14-11` Daftarkan otorisasi channel `business.{businessId}` pada `routes/channels.php` khusus untuk admin platform serta merchant owner/operator aktif dari unit usaha tersebut.
+- [x] `M14-12` Daftarkan otorisasi channel `counter.{counterId}` khusus untuk staf/owner yang memiliki izin operasional loket bersangkutan.
+- [x] `M14-13` Implementasikan controller otorisasi broadcast tiket tamu `TicketBroadcastAuthController` pada rute `POST /broadcasting/auth/ticket` dengan rate limiting (60 req/min/IP), validasi kesesuaian SHA-256 token hash, dan penandatanganan payload HMAC/Pusher.
+
+## 16.4 Integrasi Domain Queue & Frontend Echo (P1-04)
+
+- [x] `M14-14` Pasang event dispatching pada seluruh siklus antrean di `QueueService`: `generateOnlineTicket`, `generateWalkInTicket`, `callNext`, `recallTicket`, `startService`, `completeTicket`, `skipTicket`, dan `cancelTicket`.
+- [x] `M14-15` Pasang event dispatching `CounterStatusChanged` pada perubahan status loket di `CounterManagementController::toggleStatus`.
+- [x] `M14-16` Konfigurasikan klien `window.Echo` pada `resources/js/echo.js` dengan authorizer pintar yang membedakan saluran privat staf (`/broadcasting/auth`) dan saluran tiket tamu (`/broadcasting/auth/ticket`).
+- [x] `M14-17` Perbarui halaman pelacakan pelanggan `customer/track.blade.php`: langganan real-time via Echo ke `ticket.{tokenHash}`, pembaruan status dan loket instan, dengan tetap mempertahankan adaptive polling sebagai fallback andal saat offline/diskoneksi.
+- [x] `M14-18` Perbarui dashboard UMKM `merchant/dashboard.blade.php` dan meja antrean `merchant/queues/index.blade.php` dengan notifikasi real-time toast dan pemantauan event loket.
+
+## 16.5 Pengujian, Verifikasi, & Aset (P1-04)
+
+- [x] `M14-19` Buat test suite komprehensif `tests/Feature/Broadcasting/RealtimeQueueUpdatesTest.php` mencakup 13 pengujian spesifik untuk konfigurasi, kontrak, payload, sanitasi, otorisasi token hash tamu, otorisasi saluran staf, dan integrasi siklus hidup antrean.
+- [x] `M14-20` Jalankan seluruh regression test suite (315 automated tests) dengan tingkat kelulusan 100% tanpa regresi.
+- [x] `M14-21` Kompilasi aset frontend via `npm run build` berhasil tanpa warning/error.
+
+**Exit Gate 14:** Arsitektur real-time broadcasting Laravel Reverb terpasang sempurna, seluruh event tersanitasi dan aman terhadap transaksi database, saluran tamu dan staf terotorisasi dengan presisi, halaman customer dan merchant merespons pembaruan status antrean secara instan, dan seluruh 315 tests lulus 100%.
+
+---
+
+# 17. Milestone P1 — Pengembangan setelah MVP
 
 Jangan mulai sebelum MVP selesai dan mendapat persetujuan.
 
 - [x] `P1-01` Multi-staf dan relasi banyak user ke business.
 - [x] `P1-02` Role dan permission operator/staf.
 - [x] `P1-03` Multi-loket dan penugasan antrean.
-- [ ] `P1-04` Laravel Reverb/WebSocket untuk update status real-time.
+- [x] `P1-04` Laravel Reverb/WebSocket untuk update status real-time.
 - [ ] `P1-05` Notifikasi email/browser sesuai kanal yang dipilih.
 - [x] `P1-06` Ekspor CSV.
 - [x] `P1-07` Ekspor PDF.
@@ -837,7 +881,7 @@ Jangan mulai sebelum MVP selesai dan mendapat persetujuan.
 - [ ] `P1-09` Ulasan pelanggan.
 - [ ] `P1-10` Estimasi waktu tunggu berbasis data historis jika kualitas data mencukupi.
 
-# 17. Milestone P2 — Pengembangan lanjutan
+# 18. Milestone P2 — Pengembangan lanjutan
 
 - [ ] `P2-01` Multi-cabang.
 - [ ] `P2-02` Integrasi WhatsApp API.
