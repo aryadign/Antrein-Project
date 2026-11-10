@@ -9,10 +9,13 @@ use Illuminate\Support\Facades\Log;
 use Minishlink\WebPush\MessageSentReport;
 use Minishlink\WebPush\Subscription;
 use Minishlink\WebPush\WebPush;
+use RuntimeException;
 
 class WebPushService
 {
     protected ?WebPush $webPush = null;
+
+    protected bool $missingVapidWarningLogged = false;
 
     public function __construct()
     {
@@ -70,6 +73,14 @@ class WebPushService
     }
 
     /**
+     * Determine whether VAPID keys are configured for web push delivery.
+     */
+    public function isVapidConfigured(): bool
+    {
+        return ! empty(config('webpush.vapid.public_key')) && ! empty(config('webpush.vapid.private_key'));
+    }
+
+    /**
      * Send a web push notification to a specific subscription.
      *
      * @param  PushSubscription  $subscription
@@ -79,6 +90,21 @@ class WebPushService
     public function send(PushSubscription $subscription, array $payload): bool
     {
         if (! $this->webPush) {
+            if (app()->isProduction()) {
+                // Security Review (Pre-M18 P0-03): fail fast when the push
+                // feature is used in production without VAPID credentials.
+                // The message never reveals any secret values.
+                throw new RuntimeException(
+                    'Web Push VAPID keys are not configured. Run "php artisan webpush:vapid" and set '
+                    .'VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY in the environment before using push notifications.'
+                );
+            }
+
+            if (! $this->missingVapidWarningLogged) {
+                $this->missingVapidWarningLogged = true;
+                Log::warning('Web push notification skipped: VAPID keys are not configured. Run "php artisan webpush:vapid" to generate them.');
+            }
+
             return false;
         }
 

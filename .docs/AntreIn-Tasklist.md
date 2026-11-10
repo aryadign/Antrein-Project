@@ -983,6 +983,38 @@ Fokus utama: Implementasi pembaruan antrean real-time berbasis WebSocket menggun
 
 **Exit Gate 17:** Fitur Customer Reviews & Feedback (`P1-09`) terimplementasi penuh dengan skema database unik, penegakan siklus hidup selesai, anti-XSS, rate limiting, visualisasi analitik merchant, dan seluruh 373 automated tests lulus 100%.
 
+## 19.5 Pre-M18 Security Hardening — Remediasi Audit Keamanan & Privasi
+
+Remediasi temuan audit keamanan/privasi pra-M18 pada branch `fix/pre-m18-security-hardening` (basis: develop setelah merge M17). Di luar scope: M18, re-hash access token, refactor `QueueService`, konsolidasi layout, migrasi FormRequest/Policy, penghapusan Livewire, i18n, serta perubahan non-hardening UI/UX lainnya.
+
+### P0 — Keamanan & Privasi (Wajib)
+
+- [x] `SEC-P0-01` Implementasikan `php artisan queues:anonymize-pii` sesuai ADR-13: tiket terminal melewati `QUEUE_PII_RETENTION_DAYS` (default 30) dianonimisasi (nama → `Pelanggan #{ticket}`, telepon → maskir `0812****0000` dengan proteksi nilai pendek, `notes` → NULL); idempoten, chunk 200 dengan transaksi per-chunk, opsi `--dry-run`, tanpa PII di log, tanpa menyentuh tiket aktif, nomor tiket, relasi, atau metrik analitik.
+- [x] `SEC-P0-02` Daftarkan jadwal `Schedule::command('queues:anonymize-pii')->daily()->withoutOverlapping()` pada `routes/console.php`; deployment produksi memerlukan scheduler runner (cron per menit `schedule:run` atau proses panjang `schedule:work`).
+- [x] `SEC-P0-03` Tambahkan guard environment production pada `DevelopmentMerchantSeeder` (mirror pola `AdminUserSeeder`): akun demo development tidak pernah dibuat di production.
+- [x] `SEC-P0-04` Hapus fallback kunci VAPID yang di-hardcode dari `config/webpush.php` — kunci hanya dibaca dari environment tanpa nilai default; `.env.example` hanya berisi placeholder kosong.
+- [x] `SEC-P0-05` Implementasikan `WebPushService::isVapidConfigured()` dengan fail-fast produksi (RuntimeException berisi instruksi `php artisan webpush:vapid`, tanpa membocorkan nilai kunci) dan degradasi graceful non-produksi (warning log sekali per instance; push nonaktif tanpa merusak halaman/email).
+- [x] `SEC-P0-06` Guard UI push pada kedua view: kotak push customer (`customer/track.blade.php`) dan kartu langganan merchant (`merchant/settings/index.blade.php`) hanya dirender saat kunci VAPID terkonfigurasi, dengan kartu instruksi konfigurasi sebagai pengganti; guard `vapidConfigured` pada fungsi `subscribe()` JS.
+- [x] `SEC-P0-07` Perbaiki `php artisan webpush:vapid` di Windows: fallback pembuatan kunci EC P-256 dengan konfigurasi OpenSSL eksplisit (deteksi openssl.cnf dari `php.ini`/`PHP_BINARY`), mendukung koordinat hex (PHP <8.4) dan biner (PHP >=8.4), divalidasi via `VAPID::validate`.
+
+### P1 — Dokumentasi & Konfigurasi
+
+- [x] `SEC-P1-01` Hapus route duplikat `/api/push-subscriptions/customer` (POST/DELETE) di `routes/web.php` — nol konsumen terverifikasi; route kanonik bernama `customer.push.subscribe`/`customer.push.unsubscribe` tetap utuh.
+- [x] `SEC-P1-02` Konversi test integrasi MySQL (`MySqlQueueConcurrencyTest`, `MySqlReferentialIntegrityTest`) ke konfigurasi `DB_TEST_*` env-driven: skip eksplisit saat tidak dikonfigurasi, guard nama database wajib mengandung "test", rollback transaksi tetap terjaga; tidak pernah default ke database aplikasi/produksi.
+- [x] `SEC-P1-03` Jadikan `allowed_origins` Reverb env-driven (`REVERB_ALLOWED_ORIGINS`, dipisah koma): wildcard hanya untuk kenyamanan dev lokal; produksi menolak wildcard secara fail-fast di `AppServiceProvider::boot()`; tanpa domain hardcode di source.
+- [x] `SEC-P1-04` Sinkronkan README: Laravel 13 (PHP 8.3+), dokumentasi opt-in test MySQL, jadwal scheduler anonymization + kebutuhan scheduler runner di deployment, serta konfigurasi VAPID dan `REVERB_ALLOWED_ORIGINS`.
+- [x] `SEC-P1-05` Sinkronkan ERD: skema `businesses.display_token` hash-only dengan konteks historis migrasi `2026_01_01_000018` yang menghapus kolom plaintext.
+- [x] `SEC-P1-06` Perbarui ADR-13 (status implementasi + catatan implementasi) dan ADR-16 (penanganan kunci VAPID hasil hardening).
+- [x] `SEC-P1-07` Tambahkan placeholder `.env.example`: `DB_TEST_*`, `REVERB_ALLOWED_ORIGINS`, serta komentar VAPID dan retensi PII.
+
+### Pengujian & Verifikasi
+
+- [x] `SEC-VERIFY-01` Test suite baru hijau: `AnonymizeQueuePiiCommandTest` (10 tests, 51 assertions), `DevelopmentMerchantSeederTest` (4 tests, 14 assertions), `VapidKeySecurityTest` (10 tests, 21 assertions), `ReverbOriginSecurityTest` (5 tests, 6 assertions).
+- [x] `SEC-VERIFY-02` Test integrasi MySQL diverifikasi dua jalur: tanpa `DB_TEST_*` → 5 skipped dengan alasan eksplisit; dengan `DB_TEST_DATABASE=antrein_test` (database khusus lokal) → 5 passed, 13 assertions, dengan rollback cleanup.
+- [x] `SEC-VERIFY-03` Regression test suite lengkap (`php artisan test`: 402 tests, 397 passed, 5 skipped opt-in MySQL, 2.478 assertions, 0 failure) dan build frontend (`npm run build`) lulus; verifikasi `route:list` (route duplikat hilang), `schedule:list`, config-cache compatibility, `git diff --check`, serta scan bebas secret/kunci VAPID di source.
+
+**Catatan:** Laporan remediasi lengkap (temuan, perubahan, file, hasil test per temuan) disampaikan terpisah. Milestone M18 belum dimulai.
+
 ---
 
 # 20. Milestone P1 — Pengembangan setelah MVP

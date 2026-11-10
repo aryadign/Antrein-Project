@@ -183,13 +183,19 @@ Key validated architecture and scope locks:
 
 ### ADR-13: 30-Day Customer PII Anonymization Policy & Operator Notes Scrubbing
 - **Decision:** Permanently retain operational transaction data for analytics while enforcing an automated 30-day anonymization window for all customer personal data, including operator desk notes.
+- **Status:** Approved & Implemented (Pre-M18 Security Hardening)
 - **Specification:**
   - **Operational Transaction Metrics (Permanent):** `ticket_number`, `sequence_number`, service reference, timestamps (`created_at`, `called_at`, `service_started_at`, `completed_at`, `skipped_at`, `cancelled_at`), and status are retained indefinitely for business reporting and platform analytics.
-  - **Customer PII Fields (30-Day Window):** For all tickets older than 30 days (`created_at < NOW() - INTERVAL 30 DAY`), an automated scheduled task (`php artisan queues:anonymize-pii`) runs nightly at 02:00:
-    - `customer_phone`: Masked irreversibly to `0812****0000` (retains network prefix for telecom analytics, clears subscriber digits).
+  - **Customer PII Fields (30-Day Window):** For all *terminal* tickets older than the retention window (`created_at < NOW() - INTERVAL N DAY`, where `N` is configurable via `QUEUE_PII_RETENTION_DAYS`, default 30), an automated scheduled task (`php artisan queues:anonymize-pii`) runs once per day via the Laravel scheduler (`Schedule::daily()` guarded by `withoutOverlapping()`):
+    - `customer_phone`: Masked irreversibly to `0812****0000` (retains network prefix for telecom analytics, clears subscriber digits; values shorter than 5 characters are fully masked to `****`; NULL stays NULL).
     - `customer_name`: Replaced with anonymized placeholder `'Pelanggan #' || ticket_number` (e.g. `Pelanggan #A-012`).
     - `notes`: **Completely scrubbed / nullified** (`notes = NULL`), ensuring that free-form operator notes (e.g. vehicle license plates, doctor diagnosis comments, customer requests) do not violate UU PDP privacy rules after the operational window.
     - Public tracking tokens for terminal tickets expire 24 hours after completion/skip/cancellation, returning HTTP 404 or generic expired page.
+- **Implementation Notes (Pre-M18 Security Hardening):**
+  - Only terminal tickets (`selesai`, `dilewati`, `dibatalkan`) past the retention window are eligible — active tickets are never touched.
+  - The command is idempotent (re-runs are no-ops on already-anonymized rows), processes tickets in chunks of 200 inside per-chunk database transactions, skips model events, and never writes customer PII to application logs.
+  - A `--dry-run` flag reports the eligible ticket count without modifying the database.
+  - The schedule requires an external scheduler runner in the deployment environment (a per-minute cron invoking `php artisan schedule:run`, or a long-running `php artisan schedule:work` process) — the registration alone does not execute the task.
 
 ---
 
@@ -545,6 +551,7 @@ While real-time WebSockets (Milestone 14) provide instant updates for users acti
 3. **VAPID Specification & Secure Push Storage:**
    - Push notifications adhere to the W3C Push API and IETF RFC 8292 (VAPID) using ECDSA P-256 keypairs (`minishlink/web-push` v11.0).
    - Standardized CLI generator: `php artisan webpush:vapid`.
+   - **VAPID Key Handling (Pre-M18 Security Hardening):** VAPID keys are read strictly from the environment (`VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY`) — no fallback key material exists in source control. Without configured keys, non-production environments degrade gracefully (push delivery is silently disabled while pages and email notifications continue to work), whereas production fails fast with an instructional error referencing `php artisan webpush:vapid` whenever a push send is attempted.
    - Client cryptographic secrets (`public_key` and `auth_token`) are encrypted at rest in `push_subscriptions` using Laravel's native `'encrypted'` model casts.
    - Subscriptions are indexed by SHA-256 `endpoint_hash` to support fast lookups and prevent duplicate registrations.
    - Dead subscriptions returning HTTP 404 (Not Found) or 410 (Gone) are automatically deleted by `WebPushService`.
@@ -552,11 +559,6 @@ While real-time WebSockets (Milestone 14) provide instant updates for users acti
 4. **Idempotent Asynchronous Event Processing:**
    - Notification dispatch is decoupled from core HTTP transactions via `SendQueueNotificationListener` implementing `Illuminate\Contracts\Queue\ShouldQueue`.
    - The `queue_tickets.last_notified_status` column ensures strict idempotency: duplicate event firings or rapid status toggles cannot trigger duplicate customer emails or push notifications.
-5. **Granular Merchant Staff Preferences & Tenant Isolation:**
-   - Staf and owners control their alert channels independently via `user_notification_preferences` (`email_on_new_online_ticket`, `browser_on_new_online_ticket`).
-   - The merchant notification dispatcher queries only verified, active staff members of the specific `business_id`, ensuring strict cross-tenant isolation.
-   - In-store walk-in tickets do not dispatch merchant online notifications to prevent alert fatigue.
-
 5. **Granular Merchant Staff Preferences & Tenant Isolation:**
    - Staf and owners control their alert channels independently via `user_notification_preferences` (`email_on_new_online_ticket`, `browser_on_new_online_ticket`).
    - The merchant notification dispatcher queries only verified, active staff members of the specific `business_id`, ensuring strict cross-tenant isolation.

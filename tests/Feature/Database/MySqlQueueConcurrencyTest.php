@@ -18,19 +18,49 @@ use Tests\TestCase;
 class MySqlQueueConcurrencyTest extends TestCase
 {
     /**
-     * Set up MySQL connection configuration explicitly for InnoDB concurrency testing.
+     * Set up the opt-in MySQL test connection for InnoDB concurrency testing.
      */
     protected function setUp(): void
     {
         parent::setUp();
 
+        $this->configureDedicatedMySqlTestConnection();
+    }
+
+    /**
+     * Configure the dedicated MySQL test connection from DB_TEST_* variables.
+     *
+     * Security Review (Pre-M18 P1): these integration tests never fall back to
+     * the application database. They are strictly opt-in via DB_TEST_* variables
+     * and refuse to run against a schema that does not look like a test database.
+     */
+    protected function configureDedicatedMySqlTestConnection(): void
+    {
+        $database = (string) env('DB_TEST_DATABASE', '');
+
+        if ($database === '') {
+            $this->markTestSkipped(
+                'MySQL integration test skipped: DB_TEST_DATABASE is not configured. Set the '
+                .'DB_TEST_HOST / DB_TEST_PORT / DB_TEST_DATABASE / DB_TEST_USERNAME / DB_TEST_PASSWORD '
+                .'environment variables to a dedicated MySQL test database to run this suite.'
+            );
+        }
+
+        if (! str_contains(strtolower($database), 'test')) {
+            $this->markTestSkipped(
+                'MySQL integration test skipped for safety: database "'.$database.'" does not look like '
+                .'a dedicated test database (the name must contain "test"). The suite refuses to run '
+                .'against application data.'
+            );
+        }
+
         config([
             'database.connections.mysql.url' => null,
-            'database.connections.mysql.host' => '127.0.0.1',
-            'database.connections.mysql.port' => '3306',
-            'database.connections.mysql.database' => 'antrein',
-            'database.connections.mysql.username' => 'root',
-            'database.connections.mysql.password' => '',
+            'database.connections.mysql.host' => env('DB_TEST_HOST', '127.0.0.1'),
+            'database.connections.mysql.port' => env('DB_TEST_PORT', '3306'),
+            'database.connections.mysql.database' => $database,
+            'database.connections.mysql.username' => env('DB_TEST_USERNAME', 'root'),
+            'database.connections.mysql.password' => env('DB_TEST_PASSWORD', ''),
         ]);
 
         DB::purge('mysql');

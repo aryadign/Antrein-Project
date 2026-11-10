@@ -17,6 +17,14 @@ class DevelopmentMerchantSeeder extends Seeder
      */
     public function run(): void
     {
+        // Security Review (Pre-M18 P0-02): the demo merchant account must never
+        // be created in production environments (mirrors AdminUserSeeder guard).
+        if (app()->isProduction()) {
+            $this->command?->warn('DevelopmentMerchantSeeder: environment production terdeteksi. Akun demo development dilewati demi keamanan.');
+
+            return;
+        }
+
         // 1. Create Demo Merchant User
         $merchantUser = User::firstOrCreate(
             ['email' => 'owner@garasi.id'],

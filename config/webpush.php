@@ -14,8 +14,11 @@ return [
     */
 
     'vapid' => [
-        'public_key' => env('VAPID_PUBLIC_KEY', 'BCd0k9zLqP7wN3mK8vT2xR5yJ4hG6fD1sA9bC8eF7gH6jK5lM4nO3pQ2rS1tU0vW9xY8z_A7bC6dE5fG4hI3jK2l'),
-        'private_key' => env('VAPID_PRIVATE_KEY', 'xY9zA8bC7dE6fG5hI4jK3lM2nO1pQ0rS9tU8vW7xY6z'),
+        // Security Review (Pre-M18 P0-03): VAPID keys are read from the
+        // environment only. Never add fallback values here — generate a key
+        // pair with `php artisan webpush:vapid` and set it in `.env`.
+        'public_key' => env('VAPID_PUBLIC_KEY'),
+        'private_key' => env('VAPID_PRIVATE_KEY'),
         'subject' => env('VAPID_SUBJECT', 'mailto:support@antrein.id'),
     ],
 

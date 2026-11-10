@@ -588,6 +588,8 @@
                 </x-card>
 
                 {{-- Device Push Subscription Management --}}
+                {{-- Hidden until VAPID keys are configured on the server (Pre-M18 P0-03) --}}
+                @if (! empty(config('webpush.vapid.public_key')))
                 <x-card padding="lg">
                     <div class="space-y-4">
                         <div class="flex items-start justify-between gap-4">
@@ -653,6 +655,18 @@
                         </div>
                     </div>
                 </x-card>
+                @else
+                <x-card padding="lg">
+                    <div class="p-4 rounded-xl bg-neutral-50 border border-neutral-200 text-xs text-neutral-600">
+                        <p class="font-semibold text-neutral-800">Notifikasi Peramban Belum Tersedia</p>
+                        <p class="mt-0.5">
+                            Fitur web push belum dikonfigurasi pada server ini. Jalankan
+                            <code class="px-1 py-0.5 rounded bg-neutral-200 text-neutral-700">php artisan webpush:vapid</code>
+                            lalu atur <code>VAPID_PUBLIC_KEY</code> / <code>VAPID_PRIVATE_KEY</code> pada environment aplikasi untuk mengaktifkan notifikasi peramban. Preferensi email tetap berfungsi normal.
+                        </p>
+                    </div>
+                </x-card>
+                @endif
             </div>
 
             @push('scripts')
@@ -671,6 +685,7 @@
                 function merchantPushManager(config) {
                     return {
                         vapidPublicKey: config.vapidPublicKey,
+                        vapidConfigured: (config.vapidPublicKey || '').length > 0,
                         subscribeUrl: config.subscribeUrl,
                         unsubscribeUrl: config.unsubscribeUrl,
                         csrfToken: config.csrfToken,
@@ -693,7 +708,7 @@
                         },
 
                         async subscribe() {
-                            if (!this.isSupported) return;
+                            if (!this.isSupported || !this.vapidConfigured) return;
                             this.isLoading = true;
                             this.message = '';
                             this.isError = false;

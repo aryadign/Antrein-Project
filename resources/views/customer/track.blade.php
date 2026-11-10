@@ -448,6 +448,8 @@
                 </div>
 
                 {{-- Web Push Notifications Box (Milestone 15 - P1-05) --}}
+                {{-- Hidden until VAPID keys are configured on the server (Pre-M18 P0-03) --}}
+                @if (! empty(config('webpush.vapid.public_key')))
                 <div
                     x-show="!isTerminalStatus()"
                     class="mt-6 pt-5 border-t border-neutral-200"
@@ -508,6 +510,7 @@
                         </div>
                     </div>
                 </div>
+                @endif
             </x-card>
 
             {{-- Footer link back to merchant --}}
@@ -710,6 +713,7 @@
             return {
                 token: config.token,
                 vapidPublicKey: config.vapidPublicKey,
+                vapidConfigured: (config.vapidPublicKey || '').length > 0,
                 subscribeUrl: config.subscribeUrl,
                 unsubscribeUrl: config.unsubscribeUrl,
                 isSupported: ('serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window),
@@ -731,7 +735,7 @@
                 },
 
                 async subscribe() {
-                    if (!this.isSupported) return;
+                    if (!this.isSupported || !this.vapidConfigured) return;
                     this.isLoading = true;
                     this.message = '';
                     this.isError = false;
