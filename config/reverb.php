@@ -82,7 +82,12 @@ return [
                     'scheme' => env('REVERB_SCHEME', 'https'),
                     'useTLS' => env('REVERB_SCHEME', 'https') === 'https',
                 ],
-                'allowed_origins' => ['*'],
+                // Security Review (Pre-M18 P1): WebSocket origins are driven by
+                // the environment only — no domains are hardcoded in source.
+                // Local development conveniently defaults to a wildcard, while
+                // production must define REVERB_ALLOWED_ORIGINS explicitly
+                // (wildcards are rejected fail-fast in AppServiceProvider).
+                'allowed_origins' => array_values(array_filter(array_map('trim', explode(',', (string) env('REVERB_ALLOWED_ORIGINS', '*'))))),
                 'ping_interval' => env('REVERB_APP_PING_INTERVAL', 60),
                 'activity_timeout' => env('REVERB_APP_ACTIVITY_TIMEOUT', 30),
                 'max_connections' => env('REVERB_APP_MAX_CONNECTIONS'),

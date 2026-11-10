@@ -81,8 +81,6 @@ Route::post('/q/track/{token}/review', [\App\Http\Controllers\Customer\CustomerR
     ->name('customer.review.store');
 Route::post('/push-subscriptions/customer', [CustomerPushSubscriptionController::class, 'store'])->name('customer.push.subscribe');
 Route::delete('/push-subscriptions/customer', [CustomerPushSubscriptionController::class, 'destroy'])->name('customer.push.unsubscribe');
-Route::post('/api/push-subscriptions/customer', [CustomerPushSubscriptionController::class, 'store']);
-Route::delete('/api/push-subscriptions/customer', [CustomerPushSubscriptionController::class, 'destroy']);
 Route::post('/broadcasting/auth/ticket', [TicketBroadcastAuthController::class, 'authenticate'])->name('broadcasting.auth.ticket');
 
 // Public Queue TV/Monitor Display Routes (Milestone 16 - P1-08)

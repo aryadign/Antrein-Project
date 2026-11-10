@@ -6,7 +6,7 @@ AntreIn adalah aplikasi web terintegrasi untuk manajemen antrean bisnis UMKM (Us
 
 ## 🚀 Arsitektur & Teknologi
 
-- **Backend Framework:** Laravel 12 (PHP 8.4+)
+- **Backend Framework:** Laravel 13 (PHP 8.3+)
 - **Database:** MySQL 8.0+ (InnoDB, strict mode, transactional engine dengan locking `lockForUpdate`)
 - **Frontend / UI:** Blade Templates, Tailwind CSS v4, Alpine.js / Livewire v4
 - **Visualisasi & Analitik:** Chart.js
@@ -17,7 +17,7 @@ AntreIn adalah aplikasi web terintegrasi untuk manajemen antrean bisnis UMKM (Us
 
 ## 📋 Prasyarat Sistem
 
-1. **PHP:** Versi 8.4 atau lebih baru (dengan ekstensi `pdo_mysql`, `mbstring`, `openssl`, `bcmath`, `fileinfo`, `gd`/`imagick`, `curl`).
+1. **PHP:** Versi 8.3 atau lebih baru (dengan ekstensi `pdo_mysql`, `mbstring`, `openssl`, `bcmath`, `fileinfo`, `gd`/`imagick`, `curl`).
 2. **Composer:** Versi 2.x.
 3. **Node.js & npm:** Node.js v20+ dan npm v10+.
 4. **Database:** MySQL 8.0+ atau MariaDB 10.5+.
@@ -116,6 +116,12 @@ Menjalankan pengujian spesifik keamanan:
 php artisan test --filter=Security
 ```
 
+> **Catatan — Pengujian Integrasi MySQL (Opt-in):** Tes integrasi MySQL (konkurensi InnoDB dan integritas referensial) hanya berjalan ketika variabel `DB_TEST_HOST` / `DB_TEST_PORT` / `DB_TEST_DATABASE` / `DB_TEST_USERNAME` / `DB_TEST_PASSWORD` dikonfigurasi pada environment ke database khusus pengujian (nama database wajib mengandung kata `test`). Tanpa konfigurasi tersebut, tes ini dilewati otomatis dengan alasan eksplisit dan tidak pernah secara implisit diarahkan ke database aplikasi maupun produksi:
+> ```bash
+> # Contoh: menjalankan suite integrasi MySQL secara eksplisit
+> DB_TEST_DATABASE=antrein_test php artisan test tests/Feature/Database
+> ```
+
 ---
 
 ## 🔒 Fitur Keamanan & Perlindungan Data
@@ -130,6 +136,11 @@ php artisan test --filter=Security
 4. **Validasi Berkas Ketat (*SVG & File Upload Sanitization*):** Validasi tipe MIME, ukuran maksimum (2 MB), serta inspeksi regex terhadap berkas SVG untuk memblokir tag `<script>`, `<iframe>`, `<foreignObject>`, dan event handler `on*`.
 5. **Token Pelacakan Kriptografis:** Token pelacakan antrean dibuat acak 64 karakter heksadesimal (`bin2hex(random_bytes(32))`) yang aman dan otomatis kedaluwarsa setelah tiket berstatus terminal (`completed`, `cancelled`, `skipped`) lewat dari 24 jam.
 6. **Perlindungan Ekspor CSV & Formula Injection:** Seluruh nilai pada ekspor CSV yang diawali karakter trigger formula (`=`, `+`, `-`, `@`, `\t`, `\r`) diproteksi dengan sanitasi prefix petik tunggal (`'`) untuk memitigasi eksekusi formula jahat (*CSV Formula Injection*). Berkas CSV dilengkapi UTF-8 BOM untuk kompatibilitas otomatis Microsoft Excel.
+7. **Anonimisasi PII Pelanggan (ADR-13):** Tiket antrean berstatus terminal yang lebih tua dari jendela retensi `QUEUE_PII_RETENTION_DAYS` (default 30 hari) dianonimisasi secara otomatis setiap hari: nama pelanggan diganti placeholder (`Pelanggan #A-012`), nomor telepon dimaskirifikasi irreversibel (`0812****0000`), dan catatan operator dihapus permanen (`NULL`). Nomor tiket, stempel waktu, relasi, dan metrik analitik tetap dipertahankan untuk pelaporan. Operasi bersifat idempoten, di-chunk, dan transaksional. Dapat dijalankan manual melalui `php artisan queues:anonymize-pii` (tersedia opsi `--dry-run`).
+
+### 🕐 Penjadwalan Tugas Anonimisasi PII
+
+Tugas `queues:anonymize-pii` terdaftar pada scheduler Laravel (berjalan sekali per hari dengan proteksi `withoutOverlapping()`). Deployment produksi memerlukan *scheduler runner* aktif — misalnya entri cron per menit yang menjalankan `php artisan schedule:run`, atau proses panjang `php artisan schedule:work` — agar jadwal dieksekusi. Tanpa *scheduler runner*, anonimisasi tidak berjalan otomatis dan harus dipicu manual.
 
 ---
 
@@ -183,7 +194,7 @@ Untuk mode pengembangan atau lokal:
 ```bash
 php artisan reverb:start
 ```
-Secara default Reverb berjalan pada port `8080` (dapat dikonfigurasi melalui variabel `REVERB_PORT` di `.env`).
+Secara default Reverb berjalan pada port `8080` (dapat dikonfigurasi melalui variabel `REVERB_PORT` di `.env`). Origin WebSocket yang diizinkan dikendalikan oleh variabel `REVERB_ALLOWED_ORIGINS` (daftar dipisah koma): lingkungan pengembangan lokal dapat memakai `*`, sedangkan produksi wajib mendefinisikan origin eksplisit — wildcard ditolak secara fail-fast saat bootstrap aplikasi.
 
 ---
 
@@ -212,7 +223,7 @@ Untuk menginisialisasi atau memperbarui pasangan kunci VAPID:
 ```bash
 php artisan webpush:vapid
 ```
-Kunci publik dan privat akan otomatis diperbarui pada berkas `.env` aplikasi Anda.
+Perintah mencetak pasangan kunci baru; salin nilainya ke variabel `VAPID_PUBLIC_KEY` dan `VAPID_PRIVATE_KEY` pada berkas `.env` Anda. Tidak ada kunci fallback yang di-hardcode pada source — tanpa kunci yang terkonfigurasi, fitur notifikasi peramban dinonaktifkan secara aman (halaman dan notifikasi email tetap berfungsi normal), sedangkan environment produksi menolak pengiriman push secara fail-fast sampai kunci diatur.
 
 ---
 
