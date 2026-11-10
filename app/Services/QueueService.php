@@ -2,6 +2,10 @@
 
 namespace App\Services;
 
+use App\Events\CounterStatusChanged;
+use App\Events\QueueTicketCounterAssigned;
+use App\Events\QueueTicketCreated;
+use App\Events\QueueTicketStatusChanged;
 use App\Models\Business;
 use App\Models\BusinessCounter;
 use App\Models\DailyQueue;
@@ -184,6 +188,8 @@ class QueueService
                 'created_at' => now(),
             ]);
 
+            event(new QueueTicketCreated($ticket));
+
             return $ticket;
         });
     }
@@ -296,6 +302,8 @@ class QueueService
                 'created_at' => now(),
             ]);
 
+            event(new QueueTicketCreated($ticket));
+
             return $ticket;
         });
     }
@@ -402,6 +410,10 @@ class QueueService
                 'created_at' => $now,
             ]);
 
+            event(new QueueTicketCounterAssigned($nextTicket, $counter));
+            event(new QueueTicketStatusChanged($nextTicket, QueueTicket::STATUS_MENUNGGU));
+            event(new CounterStatusChanged($counter));
+
             return $nextTicket;
         });
     }
@@ -441,6 +453,11 @@ class QueueService
                 'note' => sprintf('Panggilan ulang tiket antrean%s oleh operator', $counterNote),
                 'created_at' => $now,
             ]);
+
+            event(new QueueTicketStatusChanged($ticket, QueueTicket::STATUS_DIPANGGIL));
+            if ($effectiveCounter) {
+                event(new CounterStatusChanged($effectiveCounter));
+            }
 
             return $ticket;
         });
@@ -484,6 +501,11 @@ class QueueService
                 'created_at' => $now,
             ]);
 
+            event(new QueueTicketStatusChanged($ticket, QueueTicket::STATUS_DIPANGGIL));
+            if ($effectiveCounter) {
+                event(new CounterStatusChanged($effectiveCounter));
+            }
+
             return $ticket;
         });
     }
@@ -525,6 +547,11 @@ class QueueService
                 'note' => $note ?: sprintf('Pelayanan pelanggan selesai%s', $counterNote),
                 'created_at' => $now,
             ]);
+
+            event(new QueueTicketStatusChanged($ticket, QueueTicket::STATUS_SEDANG_DILAYANI));
+            if ($effectiveCounter) {
+                event(new CounterStatusChanged($effectiveCounter));
+            }
 
             return $ticket;
         });
@@ -571,6 +598,11 @@ class QueueService
                 'created_at' => $now,
             ]);
 
+            event(new QueueTicketStatusChanged($ticket, $previousStatus));
+            if ($effectiveCounter) {
+                event(new CounterStatusChanged($effectiveCounter));
+            }
+
             return $ticket;
         });
     }
@@ -609,6 +641,11 @@ class QueueService
                 'note' => $trimmedReason,
                 'created_at' => $now,
             ]);
+
+            event(new QueueTicketStatusChanged($ticket, QueueTicket::STATUS_MENUNGGU));
+            if ($ticket->counter) {
+                event(new CounterStatusChanged($ticket->counter));
+            }
 
             return $ticket;
         });

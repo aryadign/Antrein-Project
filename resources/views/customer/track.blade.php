@@ -6,7 +6,9 @@
     <div 
         class="max-w-xl mx-auto py-2 sm:py-6"
         x-data="queueTracker({
+            ticketId: {{ $ticket->id }},
             token: '{{ $ticket->access_token }}',
+            tokenHash: '{{ hash('sha256', $ticket->access_token) }}',
             trackUrl: '{{ route('customer.queue.track', ['token' => $ticket->access_token]) }}',
             status: '{{ $ticket->status }}',
             ticketNumber: '{{ $ticket->ticket_number }}',
@@ -347,7 +349,9 @@
     <script>
         function queueTracker(config) {
             return {
+                ticketId: config.ticketId,
                 token: config.token,
+                tokenHash: config.tokenHash,
                 trackUrl: config.trackUrl,
                 status: config.status,
                 ticketNumber: config.ticketNumber,
@@ -357,6 +361,7 @@
                 serviceName: config.serviceName,
                 customerName: config.customerName,
                 customerPhone: config.customerPhone,
+                counterName: config.counterName || '',
                 estimatedWaitMinutes: config.estimatedWaitMinutes,
                 calledAt: config.calledAt,
                 completedAt: config.completedAt,
@@ -365,8 +370,16 @@
                 pollTimer: null,
                 isPollingActive: true,
                 isFetching: false,
+                echoChannel: null,
+                isRealtimeConnected: false,
 
                 initTracker() {
+                    window.__ANTREIN_TICKET_TOKEN__ = this.token;
+
+                    // Initialize Real-time WebSocket listener with Laravel Echo & Reverb
+                    this.initRealtime();
+
+                    // Fallback Adaptive Polling schedule
                     this.scheduleNextPoll();
 
                     // Visibility awareness: pause timer when tab is hidden, resume immediately when visible
@@ -380,6 +393,31 @@
                             }
                         }
                     });
+                },
+
+                initRealtime() {
+                    if (window.Echo && this.tokenHash && !this.isTerminalStatus() && !this.isExpired) {
+                        try {
+                            this.echoChannel = window.Echo.private('ticket.' + this.tokenHash)
+                                .listen('.QueueTicketStatusChanged', (e) => {
+                                    if (e.ticket_id && e.ticket_id === this.ticketId) {
+                                        this.status = e.status;
+                                        if (e.counter_name) this.counterName = e.counter_name;
+                                        this.fetchLatestStatus();
+                                    }
+                                })
+                                .listen('.QueueTicketCounterAssigned', (e) => {
+                                    if (e.ticket_id && e.ticket_id === this.ticketId) {
+                                        if (e.counter_name) this.counterName = e.counter_name;
+                                        this.fetchLatestStatus();
+                                    }
+                                });
+
+                            this.isRealtimeConnected = true;
+                        } catch (err) {
+                            console.warn('Realtime channel subscription error:', err);
+                        }
+                    }
                 },
 
                 isTerminalStatus() {

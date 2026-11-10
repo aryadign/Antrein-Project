@@ -477,6 +477,35 @@ In Milestone 12, multiple staff members could log in to the queue console, but t
    - Database migration backfills a default `Loket 1` (`L-01`) for all existing businesses and automatically assigns active memberships.
    - Model lifecycle hooks automatically provision `Loket 1` for new businesses and assign new operators to default active counters.
 
+## ADR-15: Real-Time Broadcasting with Laravel Reverb & WebSocket (P1-04)
+
+### Status: Approved & Implemented (Milestone 14)
+
+### Context:
+Prior to Milestone 14, queue status synchronization relied entirely on client-side HTTP polling (5s intervals during `menunggu`/`dipanggil`, 15s during `sedang_dilayani`). While functional and resilient, polling introduces network overhead, latency (up to 5–15 seconds before a customer realizes their number is called), and unnecessary server load. A first-party real-time push mechanism is needed to notify customers immediately when their ticket is called, recalled, served, or assigned to a specific counter, while also giving merchants an instantaneous dashboard experience.
+
+### Decision:
+1. **Laravel Reverb as Native First-Party WebSocket Server:**
+   - Deployed `laravel/reverb` v1.12 with `pusher/pusher-php-server` and `laravel-echo` / `pusher-js`.
+   - Native integration with Laravel's broadcasting architecture without requiring external third-party hosted dependencies (Pusher cloud) or separate Node.js services (socket.io).
+2. **Transaction-Safe Event Broadcasting (`ShouldDispatchAfterCommit`):**
+   - All queue broadcast events implement `Illuminate\Contracts\Events\ShouldDispatchAfterCommit` and `Illuminate\Contracts\Broadcasting\ShouldBroadcastNow`.
+   - Events are only broadcast to WebSocket clients AFTER database transactions commit successfully. Rollbacks produce zero spurious broadcast signals.
+3. **Four Dedicated Core Broadcasting Events:**
+   - `QueueTicketCreated`: Dispatched when online or walk-in tickets are generated; broadcasts on private merchant channel `business.{businessId}`.
+   - `QueueTicketStatusChanged`: Dispatched when ticket lifecycle transitions; broadcasts on merchant channel `business.{businessId}` and private customer channel `ticket.{tokenHash}`.
+   - `QueueTicketCounterAssigned`: Dispatched when a ticket is assigned to a specific counter; broadcasts on `business.{businessId}`, `counter.{counterId}`, and `ticket.{tokenHash}`.
+   - `CounterStatusChanged`: Dispatched when a counter active status or current serving ticket changes; broadcasts on `business.{businessId}` and `counter.{counterId}`.
+4. **Channel Authorization & Privacy Architecture:**
+   - **Merchant Channel (`private-business.{businessId}`):** Restricted via `routes/channels.php` to platform admins and active merchant members (owners and operators) belonging to the specified business.
+   - **Counter Channel (`private-counter.{counterId}`):** Restricted to owners and operators assigned to operate that counter.
+   - **Customer Channel (`private-ticket.{tokenHash}`):** Guest customers access tracking via a secure 40-character access token. The channel name uses `SHA-256(access_token)` to prevent exposing raw tokens over network inspection. Guest authorization is authenticated via a dedicated endpoint `POST /broadcasting/auth/ticket` with IP rate limiting (60 req/min/IP), token matching, ticket existence verification, and Pusher HMAC authorization signatures.
+   - **Data Privacy & Sanitization:** Broadcast payloads contain zero PII: customer phone numbers, full email addresses, and database access tokens are completely excluded from payloads.
+5. **Connection Resilience & Adaptive Polling Fallback:**
+   - WebSockets act as the primary low-latency accelerator.
+   - The existing adaptive HTTP polling mechanism remains fully intact as an automatic fallback when WebSocket connections are disconnected, blocked by strict enterprise proxies, or offline.
+   - Background tab optimization: WebSocket listeners and timers throttle gracefully when browser tabs are hidden, and refresh instantaneously upon tab visibility.
+
 ---
 
 *Authored by Senior Full-Stack Software Engineer & Technical Architect — AntreIn Project*

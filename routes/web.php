@@ -11,6 +11,7 @@ use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\StaffInvitationController;
+use App\Http\Controllers\Broadcasting\TicketBroadcastAuthController;
 use App\Http\Controllers\Customer\QueueTicketController;
 use App\Http\Controllers\Merchant\CounterManagementController;
 use App\Http\Controllers\Merchant\DashboardController;
@@ -71,6 +72,7 @@ Route::get('/q/{slug}/take-queue', [QueueTicketController::class, 'create'])->na
 Route::post('/q/{slug}/take-queue', [QueueTicketController::class, 'store'])->name('customer.queue.take');
 Route::get('/q/track/{token}', [QueueTicketController::class, 'track'])->name('customer.queue.track');
 Route::get('/ticket/{token}', [QueueTicketController::class, 'track'])->name('customer.ticket.show');
+Route::post('/broadcasting/auth/ticket', [TicketBroadcastAuthController::class, 'authenticate'])->name('broadcasting.auth.ticket');
 
 // Design System & Layout Preview Testbed (Milestone 2)
 Route::get('/design-system', function () {

@@ -591,5 +591,58 @@
             </div>
         </div>
     </div>
+
+    @push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (window.Echo && {{ $business->id }}) {
+                const businessId = {{ $business->id }};
+                window.Echo.private('business.' + businessId)
+                    .listen('.QueueTicketCreated', function (e) {
+                        showRealtimeToast('Tiket Masuk', 'Nomor ' + e.ticket_number + ' (' + e.customer_name + ') baru terdaftar.');
+                    })
+                    .listen('.QueueTicketStatusChanged', function (e) {
+                        showRealtimeToast('Status Antrean', 'Tiket ' + e.ticket_number + ' kini ' + e.status + (e.counter_name ? ' di ' + e.counter_name : '') + '.');
+                    })
+                    .listen('.QueueTicketCounterAssigned', function (e) {
+                        showRealtimeToast('Penugasan Loket', 'Tiket ' + e.ticket_number + ' dipanggil ke ' + e.counter_name + '.');
+                    })
+                    .listen('.CounterStatusChanged', function (e) {
+                        showRealtimeToast('Status Loket', 'Loket ' + e.counter_name + (e.is_active ? ' aktif' : ' nonaktif') + '.');
+                    });
+            }
+
+            function showRealtimeToast(title, message) {
+                let container = document.getElementById('dashboard-realtime-toast-container');
+                if (!container) {
+                    container = document.createElement('div');
+                    container.id = 'dashboard-realtime-toast-container';
+                    container.className = 'fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm pointer-events-none';
+                    document.body.appendChild(container);
+                }
+
+                const toast = document.createElement('div');
+                toast.className = 'pointer-events-auto bg-neutral-900 text-white text-xs font-medium px-4 py-3 rounded-xl shadow-xl border border-neutral-700 flex items-start justify-between gap-3 transition-opacity duration-300';
+                toast.innerHTML = `
+                    <div class="flex items-start gap-2.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 mt-1 shrink-0 animate-ping"></span>
+                        <div>
+                            <div class="font-bold text-neutral-200">${title}</div>
+                            <div class="text-neutral-400 mt-0.5">${message}</div>
+                        </div>
+                    </div>
+                    <button type="button" class="text-neutral-400 hover:text-white shrink-0 ml-2" onclick="this.parentElement.remove()">&times;</button>
+                `;
+                container.appendChild(toast);
+
+                setTimeout(() => {
+                    if (toast && toast.parentElement) {
+                        toast.remove();
+                    }
+                }, 6000);
+            }
+        });
+    </script>
+    @endpush
 </x-layouts.merchant>
 
