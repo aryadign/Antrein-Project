@@ -97,6 +97,12 @@
                 >
                     Notifikasi
                 </a>
+                <a
+                    href="{{ route('merchant.display.index') }}"
+                    class="pb-3 px-1 border-b-2 font-medium text-sm transition-colors border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300"
+                >
+                    Layar TV (Display)
+                </a>
             </nav>
         </div>
 
