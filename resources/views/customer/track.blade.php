@@ -203,7 +203,7 @@
                     </div>
 
                     {{-- Status: SELESAI --}}
-                    <div x-show="status === 'selesai'" class="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900" style="display: none;">
+                    <div x-show="status === 'selesai'" class="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 space-y-3" style="display: none;">
                         <div class="flex items-start gap-3">
                             <svg class="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -214,6 +214,123 @@
                                     Layanan Anda telah selesai. Terima kasih telah menggunakan layanan antrean digital AntreIn!
                                 </p>
                             </div>
+                        </div>
+
+                        {{-- Customer Review Section --}}
+                        <div class="pt-3 border-t border-emerald-200/80">
+                            @if ($review)
+                                {{-- Already Reviewed State --}}
+                                <div class="p-3.5 rounded-xl bg-white/90 border border-emerald-200 shadow-2xs space-y-2">
+                                    <div class="flex items-center justify-between">
+                                        <div class="text-xs font-bold text-neutral-900 flex items-center gap-1.5">
+                                            <span>Penilaian Anda:</span>
+                                            <div class="flex items-center text-amber-400">
+                                                @for ($i = 1; $i <= 5; $i++)
+                                                    @if ($i <= $review->rating)
+                                                        <svg class="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                                                    @else
+                                                        <svg class="w-4 h-4 text-neutral-300 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                                                    @endif
+                                                @endfor
+                                            </div>
+                                        </div>
+                                        <span class="text-2xs text-neutral-500 font-medium">
+                                            {{ $review->created_at->translatedFormat('d M Y, H:i') }}
+                                        </span>
+                                    </div>
+                                    @if ($review->comment)
+                                        <p class="text-xs text-neutral-700 italic bg-neutral-50 p-2.5 rounded-lg border border-neutral-100">
+                                            "{{ $review->comment }}"
+                                        </p>
+                                    @endif
+                                    <p class="text-2xs text-emerald-800 font-medium flex items-center gap-1">
+                                        <svg class="w-3.5 h-3.5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                        <span>Ulasan Anda telah tersimpan. Terima kasih atas masukan berharga Anda!</span>
+                                    </p>
+                                </div>
+                            @else
+                                {{-- Review Intake Form --}}
+                                <form
+                                    method="POST"
+                                    action="{{ route('customer.review.store', ['token' => $ticket->access_token]) }}"
+                                    x-data="{ rating: 5, comment: '' }"
+                                    class="p-4 rounded-xl bg-white border border-emerald-300 shadow-sm space-y-3 text-neutral-800"
+                                >
+                                    @csrf
+                                    <div class="space-y-0.5">
+                                        <h4 class="text-xs sm:text-sm font-bold text-neutral-900 flex items-center gap-1.5">
+                                            <svg class="w-4 h-4 text-amber-500 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                                            <span>Beri Ulasan & Penilaian Pelayanan</span>
+                                        </h4>
+                                        <p class="text-caption text-neutral-600">
+                                            Bagaimana pengalaman pelayanan Anda hari ini? Beri bintang dan masukan Anda.
+                                        </p>
+                                    </div>
+
+                                    {{-- Star Rating Interactive Selector --}}
+                                    <div class="space-y-1">
+                                        <label class="block text-2xs font-bold text-neutral-700 uppercase tracking-wider">
+                                            Rating Pelayanan
+                                        </label>
+                                        <div class="flex items-center gap-2">
+                                            <div class="flex items-center gap-1">
+                                                <template x-for="star in [1, 2, 3, 4, 5]" :key="star">
+                                                    <button
+                                                        type="button"
+                                                        @click="rating = star"
+                                                        class="p-1 rounded hover:scale-110 transition focus:outline-none"
+                                                        :aria-label="star + ' Bintang'"
+                                                    >
+                                                        <svg
+                                                            class="w-7 h-7 transition-colors"
+                                                            :class="star <= rating ? 'text-amber-400 fill-current' : 'text-neutral-200 fill-current hover:text-amber-200'"
+                                                            viewBox="0 0 20 20"
+                                                        >
+                                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                                        </svg>
+                                                    </button>
+                                                </template>
+                                            </div>
+                                            <input type="hidden" name="rating" :value="rating">
+                                            <span class="text-xs font-bold text-amber-700 ml-1" x-text="rating + ' / 5 Bintang'"></span>
+                                        </div>
+                                        @error('rating')
+                                            <p class="text-xs text-rose-600 mt-1">{{ $message }}</p>
+                                        @enderror
+                                    </div>
+
+                                    {{-- Comment Textarea --}}
+                                    <div class="space-y-1">
+                                        <div class="flex items-center justify-between">
+                                            <label for="review-comment" class="block text-2xs font-bold text-neutral-700 uppercase tracking-wider">
+                                                Komentar / Saran (Opsional)
+                                            </label>
+                                            <span class="text-2xs text-neutral-400" x-text="comment.length + '/1000'"></span>
+                                        </div>
+                                        <textarea
+                                            id="review-comment"
+                                            name="comment"
+                                            x-model="comment"
+                                            maxlength="1000"
+                                            rows="3"
+                                            placeholder="Pelayanan sangat ramah, tempat bersih dan tepat waktu..."
+                                            class="w-full text-xs sm:text-sm rounded-xl border border-neutral-300 p-3 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent text-neutral-800 placeholder-neutral-400 shadow-2xs resize-none"
+                                        ></textarea>
+                                        @error('comment')
+                                            <p class="text-xs text-rose-600 mt-1">{{ $message }}</p>
+                                        @enderror
+                                    </div>
+
+                                    {{-- Submit Button --}}
+                                    <button
+                                        type="submit"
+                                        class="w-full py-2.5 px-4 rounded-xl bg-brand-700 hover:bg-brand-800 active:bg-brand-900 text-white font-bold text-xs sm:text-sm transition flex items-center justify-center gap-2 shadow-xs"
+                                    >
+                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                                        <span>Kirim Ulasan</span>
+                                    </button>
+                                </form>
+                            @endif
                         </div>
                     </div>
 

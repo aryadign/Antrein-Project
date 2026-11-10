@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class QueueTicket extends Model
 {
@@ -179,6 +180,22 @@ class QueueTicket extends Model
     public function pushSubscriptions(): HasMany
     {
         return $this->hasMany(PushSubscription::class);
+    }
+
+    /**
+     * Get the customer review for this ticket.
+     */
+    public function review(): HasOne
+    {
+        return $this->hasOne(CustomerReview::class);
+    }
+
+    /**
+     * Determine whether this ticket has already been reviewed by the customer.
+     */
+    public function hasReview(): bool
+    {
+        return $this->review()->exists();
     }
 }
 

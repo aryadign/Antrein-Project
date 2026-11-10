@@ -366,5 +366,29 @@ class Business extends Model
 
         return route('display.show', ['token' => $token]);
     }
+
+    /**
+     * Get customer reviews for this business.
+     */
+    public function customerReviews(): HasMany
+    {
+        return $this->hasMany(CustomerReview::class);
+    }
+
+    /**
+     * Get the average customer review rating.
+     */
+    public function averageRating(): float
+    {
+        return round((float) ($this->customerReviews()->avg('rating') ?? 0), 1);
+    }
+
+    /**
+     * Get the total number of customer reviews.
+     */
+    public function totalReviewsCount(): int
+    {
+        return $this->customerReviews()->count();
+    }
 }
 

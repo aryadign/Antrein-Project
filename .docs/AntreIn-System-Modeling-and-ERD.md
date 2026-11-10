@@ -698,6 +698,22 @@ General platform audit log capturing administrative and merchant configuration c
 
 ---
 
+### 6.10 Table: `customer_reviews` (P1-09)
+Customer rating and feedback submitted after a queue ticket has been completed.
+
+| Column | Type | Nullable | Default | Index / Key | Description |
+|---|---|:---:|---|---|---|
+| `id` | `BIGINT UNSIGNED` | No | Auto Increment | Primary Key | Unique review identifier. |
+| `business_id` | `BIGINT UNSIGNED` | No | — | Foreign Key, Index | References `businesses.id`. `ON DELETE CASCADE`. |
+| `queue_ticket_id` | `BIGINT UNSIGNED` | No | — | Unique Foreign Key | References `queue_tickets.id`. Strictly 1 review per ticket. `ON DELETE CASCADE`. |
+| `service_id` | `BIGINT UNSIGNED` | No | — | Foreign Key, Index | References `services.id`. `ON DELETE CASCADE`. |
+| `rating` | `TINYINT UNSIGNED` | No | — | Index | Review score between 1 and 5 stars. |
+| `comment` | `TEXT` | Yes | `NULL` | — | Customer feedback text (sanitized against XSS, max 1000 chars). |
+| `created_at` | `TIMESTAMP` | Yes | `NULL` | Index | Timestamp when review was submitted. |
+| `updated_at` | `TIMESTAMP` | Yes | `NULL` | — | Timestamp of review update. |
+
+---
+
 ## 7. Technical Decision on Table Notifications (M1-17)
 - **Decision:** The dedicated `notifications` table is **OMITTED from MVP**.
 - **Justification:** In MVP, user feedback is synchronous (flash messages, toasts, Livewire component events, and polling updates). External channel notifications (Email digests, Web Push, WhatsApp API) belong to Milestone P1 and P2. Omitting this table in MVP prevents dead code and schema bloat. When P1 begins, Laravel's standard `php artisan notifications:table` migration will be executed seamlessly.

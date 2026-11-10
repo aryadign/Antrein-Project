@@ -278,7 +278,7 @@ class QueueTicketController extends Controller
 
         /** @var QueueTicket $ticket */
         $ticket = QueueTicket::where('access_token', $token)
-            ->with(['business.category', 'business.hours', 'service', 'counter'])
+            ->with(['business.category', 'business.hours', 'service', 'counter', 'review'])
             ->firstOrFail();
 
         $isExpired = $this->queueService->isTokenExpired($ticket);
@@ -347,6 +347,11 @@ class QueueTicketController extends Controller
             'called_at' => $ticket->called_at?->toIso8601String(),
             'service_started_at' => $ticket->service_started_at?->toIso8601String(),
             'completed_at' => $ticket->completed_at?->toIso8601String(),
+            'review' => $ticket->review ? [
+                'rating' => $ticket->review->rating,
+                'comment' => $ticket->review->comment,
+                'created_at' => $ticket->review->created_at->toIso8601String(),
+            ] : null,
         ];
 
         if ($request->wantsJson()) {
@@ -367,6 +372,7 @@ class QueueTicketController extends Controller
             'maskedPhone' => $maskedPhone,
             'estimatedWaitMinutes' => $estimatedWaitMinutes,
             'isExpired' => false,
+            'review' => $ticket->review,
         ]);
     }
 }

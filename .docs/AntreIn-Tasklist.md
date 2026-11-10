@@ -950,7 +950,42 @@ Fokus utama: Implementasi pembaruan antrean real-time berbasis WebSocket menggun
 
 ---
 
-# 19. Milestone P1 — Pengembangan setelah MVP
+# 19. Milestone 17 — Customer Reviews & Feedback (P1-09)
+
+## 19.1 Skema Database & Model Customer Review (P1-09)
+
+- [x] `M17-01` Buat migrasi tabel `customer_reviews`: `id`, `business_id` (foreign key cascade), `queue_ticket_id` (foreign key unik cascade), `service_id` (foreign key cascade), `rating` (unsigned tiny integer 1-5), `comment` (text nullable), dan timestamps.
+- [x] `M17-02` Buat model `CustomerReview` dengan mass assignable, casting rating ke integer, dan relasi `business()`, `queueTicket()`, `service()`.
+- [x] `M17-03` Perbarui model `QueueTicket` dengan relasi `review()` (`HasOne`) dan helper `hasReview()`.
+- [x] `M17-04` Perbarui model `Business` dengan relasi `customerReviews()` (`HasMany`), helper `averageRating()`, dan `totalReviewsCount()`.
+- [x] `M17-05` Buat `CustomerReviewFactory` untuk mendukung otomasi pengujian database.
+
+## 19.2 Pengambilan Ulasan Pelanggan & Keamanan (P1-09)
+
+- [x] `M17-06` Implementasikan `CustomerReviewController::store` dengan validasi lifecycle ketat: ulasan hanya dapat dikirimkan untuk tiket dengan status terminal `selesai` (`STATUS_SELESAI`). Tiket `menunggu`, `dipanggil`, `sedang_dilayani`, `dilewati`, atau `dibatalkan` ditolak dengan HTTP 422.
+- [x] `M17-07` Implementasikan proteksi idempotensi dan duplikasi: tiket antrean hanya dapat diulas satu kali (HTTP 422 jika sudah diulas).
+- [x] `M17-08` Terapkan sanitasi anti-XSS (`strip_tags`) dan validasi panjang komentar maksimal 1000 karakter serta rating 1-5 bintang.
+- [x] `M17-09` Terapkan rate limiting `throttle:15,1` dan pencatatan riwayat audit `ActivityLog` (`customer_review_submitted`).
+- [x] `M17-10` Integrasikan formulir ulasan interaktif (selector 5 bintang Alpine, textarea komentar, dan penghitung karakter) pada halaman pelacakan pelanggan `resources/views/customer/track.blade.php`. Tampilkan ringkasan ulasan dan ucapan terima kasih jika tiket telah diulas.
+
+## 19.3 Pemantauan & Analisis Ulasan Merchant (P1-09)
+
+- [x] `M17-11` Implementasikan `Merchant\CustomerReviewController::index` dengan kalkulasi KPI analitik: rata-rata rating, total ulasan, total tiket selesai, tingkat respon ulasan, dan distribusi rating bintang 1-5.
+- [x] `M17-12` Terapkan filter interaktif berdasarkan rating (1-5), jenis layanan (`service_id`), dan pencarian teks (`search`), serta paginasi daftar ulasan.
+- [x] `M17-13` Terapkan isolasi tenant ketat: merchant hanya dapat melihat ulasan dari unit usaha miliknya sendiri.
+- [x] `M17-14` Buat antarmuka `merchant/reviews/index.blade.php` dan tambahkan menu navigasi "Ulasan" pada navigasi staf dan pemilik UMKM.
+
+## 19.4 Pengujian Komprehensif & Verifikasi (P1-09)
+
+- [x] `M17-15` Buat test suite komprehensif `tests/Feature/Reviews/CustomerReviewTest.php` (17 tests, 53 assertions) mencakup intake ulasan, validasi rating/komentar, proteksi duplikasi, lifecycle enforcement, sanitasi XSS, otorisasi merchant, filter, dan isolasi tenant.
+- [x] `M17-16` Jalankan seluruh regression test suite proyek (373 automated tests, 2.399 assertions) dengan kelulusan 100%.
+- [x] `M17-17` Kompilasi aset Vite frontend via `npm run build` berhasil tanpa kendala.
+
+**Exit Gate 17:** Fitur Customer Reviews & Feedback (`P1-09`) terimplementasi penuh dengan skema database unik, penegakan siklus hidup selesai, anti-XSS, rate limiting, visualisasi analitik merchant, dan seluruh 373 automated tests lulus 100%.
+
+---
+
+# 20. Milestone P1 — Pengembangan setelah MVP
 
 Jangan mulai sebelum MVP selesai dan mendapat persetujuan.
 
@@ -962,7 +997,7 @@ Jangan mulai sebelum MVP selesai dan mendapat persetujuan.
 - [x] `P1-06` Ekspor CSV.
 - [x] `P1-07` Ekspor PDF.
 - [x] `P1-08` Display antrean publik.
-- [ ] `P1-09` Ulasan pelanggan.
+- [x] `P1-09` Ulasan pelanggan.
 - [ ] `P1-10` Estimasi waktu tunggu berbasis data historis jika kualitas data mencukupi.
 
 # 18. Milestone P2 — Pengembangan lanjutan
