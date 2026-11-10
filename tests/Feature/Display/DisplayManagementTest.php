@@ -95,19 +95,31 @@ class DisplayManagementTest extends TestCase
 
     public function test_owner_can_generate_display_token_and_enable_display(): void
     {
-        $this->assertNull($this->business->display_token);
+        $this->assertNull($this->business->display_token_hash);
         $this->assertFalse((bool) $this->business->is_display_enabled);
 
         $response = $this->actingAs($this->owner)->post(route('merchant.display.generate'));
 
         $response->assertRedirect(route('merchant.display.index'));
         $response->assertSessionHas('status');
+        $response->assertSessionHas('one_time_display_token');
+
+        $rawToken = session('one_time_display_token');
+        $this->assertNotEmpty($rawToken);
 
         $this->business->refresh();
         $this->assertTrue($this->business->is_display_enabled);
-        $this->assertNotNull($this->business->display_token);
         $this->assertNotNull($this->business->display_token_hash);
-        $this->assertSame(hash('sha256', $this->business->display_token), $this->business->display_token_hash);
+        $this->assertSame(hash('sha256', $rawToken), $this->business->display_token_hash);
+
+        // Verify database does not store plaintext display token
+        $this->assertArrayNotHasKey('display_token', $this->business->getAttributes());
+
+        // Assert one-time token notice is shown when flashed in session
+        $indexResponse = $this->actingAs($this->owner)
+            ->withSession(['one_time_display_token' => $rawToken])
+            ->get(route('merchant.display.index'));
+        $indexResponse->assertSee('Salin & Simpan Tautan Layar Display Sekarang', false);
 
         // Verify activity log
         $this->assertDatabaseHas('activity_logs', [
@@ -124,9 +136,11 @@ class DisplayManagementTest extends TestCase
         ]);
 
         $response->assertRedirect(route('merchant.display.index'));
+        $response->assertSessionHas('one_time_display_token');
+
         $this->business->refresh();
         $this->assertTrue($this->business->is_display_enabled);
-        $this->assertNotNull($this->business->display_token);
+        $this->assertNotNull($this->business->display_token_hash);
 
         // Then disable
         $response = $this->actingAs($this->owner)->post(route('merchant.display.toggle'), [
@@ -146,9 +160,10 @@ class DisplayManagementTest extends TestCase
         $response = $this->actingAs($this->owner)->post(route('merchant.display.generate'));
 
         $response->assertRedirect(route('merchant.display.index'));
+        $response->assertSessionHas('one_time_display_token');
 
         $this->business->refresh();
-        $newToken = $this->business->display_token;
+        $newToken = session('one_time_display_token');
         $newTokenHash = $this->business->display_token_hash;
 
         $this->assertNotSame($oldToken, $newToken);
@@ -173,7 +188,6 @@ class DisplayManagementTest extends TestCase
 
         $this->business->refresh();
         $this->assertFalse($this->business->is_display_enabled);
-        $this->assertNull($this->business->display_token);
         $this->assertNull($this->business->display_token_hash);
         $this->assertFalse($this->business->isDisplayActive());
 

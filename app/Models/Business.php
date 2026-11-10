@@ -36,7 +36,6 @@ class Business extends Model
         'status',
         'is_suspended',
         'is_display_enabled',
-        'display_token',
         'display_token_hash',
         'display_token_created_at',
     ];
@@ -330,13 +329,13 @@ class Business extends Model
 
     /**
      * Generate a fresh cryptographic display token and update hash.
+     * The raw token is returned for one-time disclosure to the merchant and NEVER stored in the database.
      */
     public function generateDisplayToken(): string
     {
         $token = bin2hex(random_bytes(24));
         $this->forceFill([
             'is_display_enabled' => true,
-            'display_token' => $token,
             'display_token_hash' => hash('sha256', $token),
             'display_token_created_at' => now(),
         ])->save();
@@ -351,22 +350,21 @@ class Business extends Model
     {
         $this->forceFill([
             'is_display_enabled' => false,
-            'display_token' => null,
             'display_token_hash' => null,
             'display_token_created_at' => null,
         ])->save();
     }
 
     /**
-     * Get the public display URL.
+     * Get the public display URL given a raw token.
      */
-    public function getDisplayUrl(): ?string
+    public function getDisplayUrl(?string $token = null): ?string
     {
-        if (! $this->display_token) {
+        if (! $token) {
             return null;
         }
 
-        return route('display.show', ['token' => $this->display_token]);
+        return route('display.show', ['token' => $token]);
     }
 }
 

@@ -57,9 +57,11 @@ class DisplayManagementController extends Controller
         ]);
 
         $enabled = $request->boolean('is_display_enabled');
+        $rawToken = null;
 
-        if ($enabled && empty($business->display_token)) {
-            $business->generateDisplayToken();
+        if ($enabled && empty($business->display_token_hash)) {
+            $rawToken = $business->generateDisplayToken();
+            session()->flash('one_time_display_token', $rawToken);
         } else {
             $business->update(['is_display_enabled' => $enabled]);
         }
@@ -91,8 +93,9 @@ class DisplayManagementController extends Controller
             return redirect()->route('merchant.onboarding');
         }
 
-        $isRegeneration = ! empty($business->display_token);
-        $business->generateDisplayToken();
+        $isRegeneration = ! empty($business->display_token_hash);
+        $rawToken = $business->generateDisplayToken();
+        session()->flash('one_time_display_token', $rawToken);
 
         ActivityLog::log(
             action: $isRegeneration ? 'display_token_regenerated' : 'display_token_generated',

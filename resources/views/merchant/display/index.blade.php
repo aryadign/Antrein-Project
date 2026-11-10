@@ -67,25 +67,30 @@
                 </div>
 
                 {{-- Display Link & Quick Launch --}}
-                @if ($business->isDisplayActive() && $business->display_token)
-                    <div class="space-y-4" x-data="{ copied: false }">
-                        <label class="block text-label font-bold text-neutral-900">
-                            Tautan Layar Publik (Buka di Smart TV / Monitor Ruang Tunggu)
-                        </label>
+                @if ($business->isDisplayActive() && session('one_time_display_token'))
+                    <div class="space-y-4 p-4 rounded-xl border border-amber-200 bg-amber-50/50" x-data="{ copied: false }">
+                        <div class="flex items-start gap-3">
+                            <span class="p-1 rounded-full bg-amber-100 text-amber-800 text-xs font-bold">⚠️</span>
+                            <div>
+                                <h4 class="text-xs sm:text-sm font-bold text-amber-900">Salin & Simpan Tautan Layar Display Sekarang</h4>
+                                <p class="text-caption text-amber-800 mt-0.5">
+                                    Demi keamanan privasi & anti-tampering, token akses lengkap ini <strong>hanya ditampilkan sekali ini saja</strong> dan tidak disimpan dalam teks biasa di database. Simpan atau segera buka tautan ini pada browser Smart TV / Monitor ruang tunggu Anda.
+                                </p>
+                            </div>
+                        </div>
 
                         <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
                             <input 
                                 type="text" 
                                 readonly 
-                                value="{{ route('display.show', ['token' => $business->display_token]) }}"
-                                class="flex-1 px-4 py-2.5 text-xs sm:text-sm font-mono bg-neutral-50 border border-neutral-300 rounded-xl text-neutral-800 select-all focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-2xs"
+                                value="{{ route('display.show', ['token' => session('one_time_display_token')]) }}"
+                                class="flex-1 px-4 py-2.5 text-xs sm:text-sm font-mono bg-white border border-amber-300 rounded-xl text-neutral-800 select-all focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs"
                             >
 
                             <button 
                                 type="button" 
-                                @click="navigator.clipboard.writeText('{{ route('display.show', ['token' => $business->display_token]) }}'); copied = true; setTimeout(() => copied = false, 2500);"
-                                class="px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition flex items-center justify-center gap-2 shrink-0 border"
-                                :class="copied ? 'bg-emerald-50 text-emerald-800 border-emerald-300' : 'bg-brand-50 hover:bg-brand-100 text-brand-700 border-brand-200'"
+                                @click="navigator.clipboard.writeText('{{ route('display.show', ['token' => session('one_time_display_token')]) }}'); copied = true; setTimeout(() => copied = false, 2500);"
+                                class="px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition flex items-center justify-center gap-2 shrink-0 border bg-amber-100 hover:bg-amber-200 text-amber-900 border-amber-300"
                             >
                                 <svg x-show="!copied" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
                                 <svg x-show="copied" class="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display: none;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
@@ -93,7 +98,7 @@
                             </button>
 
                             <a 
-                                href="{{ route('display.show', ['token' => $business->display_token]) }}" 
+                                href="{{ route('display.show', ['token' => session('one_time_display_token')]) }}" 
                                 target="_blank"
                                 class="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm transition flex items-center justify-center gap-2 shrink-0 shadow-xs"
                             >
@@ -101,31 +106,48 @@
                                 <span>Buka Layar Display</span>
                             </a>
                         </div>
-
-                        <div class="flex flex-col sm:flex-row sm:items-center justify-between text-caption text-neutral-500 pt-1 gap-2">
-                            <div>
-                                Kredensial aktif sejak: <strong>{{ $business->display_token_created_at ? $business->display_token_created_at->setTimezone($business->timezone ?? 'Asia/Makassar')->translatedFormat('d M Y, H:i') : 'Baru saja' }}</strong>
+                    </div>
+                @elseif ($business->isDisplayActive())
+                    <div class="p-4 rounded-xl border border-emerald-200 bg-emerald-50/50 space-y-3">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                <h4 class="text-xs sm:text-sm font-bold text-emerald-900">Layar Display Publik Aktif & Berjalan</h4>
                             </div>
+                            <span class="text-2xs font-mono px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                Hash: {{ substr($business->display_token_hash, 0, 12) }}...
+                            </span>
+                        </div>
+                        <p class="text-caption text-neutral-600">
+                            Layar display monitor TV Anda saat ini sedang aktif menerima pembaruan antrean real-time. Demi alasan keamanan, token plaintext tidak disimpan di sistem. Jika Anda lupa atau kehilangan tautan pada layar TV Anda, gunakan tombol <strong>Rotasi / Regenerasi Tautan</strong> di bawah untuk membuat kredensial baru.
+                        </p>
+                    </div>
+                @endif
 
-                            {{-- Danger Zone Actions: Regenerate & Revoke --}}
-                            <div class="flex items-center gap-4">
-                                <form method="POST" action="{{ route('merchant.display.generate') }}" onsubmit="return confirm('Apakah Anda yakin ingin membuat tautan baru? Tautan lama akan segera dinonaktifkan.');">
-                                    @csrf
-                                    <button type="submit" class="text-amber-700 hover:text-amber-900 text-xs font-semibold underline flex items-center gap-1">
-                                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                                        Rotasi / Regenerasi Tautan
-                                    </button>
-                                </form>
+                @if ($business->isDisplayActive())
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between text-caption text-neutral-500 pt-1 gap-2">
+                        <div>
+                            Kredensial aktif sejak: <strong>{{ $business->display_token_created_at ? $business->display_token_created_at->setTimezone($business->timezone ?? 'Asia/Makassar')->translatedFormat('d M Y, H:i') : 'Baru saja' }}</strong>
+                        </div>
 
-                                <form method="POST" action="{{ route('merchant.display.revoke') }}" onsubmit="return confirm('Apakah Anda yakin ingin mencabut akses layar ini? Layar TV akan segera dinonaktifkan.');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="text-rose-600 hover:text-rose-800 text-xs font-semibold underline flex items-center gap-1">
-                                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                                        Cabut Akses
-                                    </button>
-                                </form>
-                            </div>
+                        {{-- Danger Zone Actions: Regenerate & Revoke --}}
+                        <div class="flex items-center gap-4">
+                            <form method="POST" action="{{ route('merchant.display.generate') }}" onsubmit="return confirm('Apakah Anda yakin ingin membuat tautan baru? Tautan lama akan segera dinonaktifkan.');">
+                                @csrf
+                                <button type="submit" class="text-amber-700 hover:text-amber-900 text-xs font-semibold underline flex items-center gap-1">
+                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                    Rotasi / Regenerasi Tautan
+                                </button>
+                            </form>
+
+                            <form method="POST" action="{{ route('merchant.display.revoke') }}" onsubmit="return confirm('Apakah Anda yakin ingin mencabut akses layar ini? Layar TV akan segera dinonaktifkan.');">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="text-rose-600 hover:text-rose-800 text-xs font-semibold underline flex items-center gap-1">
+                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                    Cabut Akses
+                                </button>
+                            </form>
                         </div>
                     </div>
                 @else
