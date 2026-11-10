@@ -28,6 +28,12 @@ class OnboardingController extends Controller
     public function show(Request $request): View|RedirectResponse
     {
         $user = $request->user();
+
+        // Operators belong to an existing business and never need to run owner onboarding
+        if ($user->isOperator()) {
+            return redirect()->route('merchant.dashboard');
+        }
+
         $business = $user->business;
 
         // If user already fully onboarded and not requesting a specific step, redirect to dashboard
@@ -78,6 +84,10 @@ class OnboardingController extends Controller
     public function storeStep1(Request $request): RedirectResponse
     {
         $user = $request->user();
+
+        if ($user->isOperator()) {
+            abort(403, 'Akses terbatas untuk Pemilik Usaha.');
+        }
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -152,6 +162,11 @@ class OnboardingController extends Controller
     public function storeStep2(Request $request): RedirectResponse
     {
         $user = $request->user();
+
+        if ($user->isOperator()) {
+            abort(403, 'Akses terbatas untuk Pemilik Usaha.');
+        }
+
         $business = $user->business;
 
         if (! $business) {
@@ -202,6 +217,11 @@ class OnboardingController extends Controller
     public function storeStep3(Request $request): RedirectResponse
     {
         $user = $request->user();
+
+        if ($user->isOperator()) {
+            abort(403, 'Akses terbatas untuk Pemilik Usaha.');
+        }
+
         $business = $user->business;
 
         if (! $business) {
@@ -244,6 +264,11 @@ class OnboardingController extends Controller
     public function complete(Request $request): RedirectResponse
     {
         $user = $request->user();
+
+        if ($user->isOperator()) {
+            abort(403, 'Akses terbatas untuk Pemilik Usaha.');
+        }
+
         $business = $user->business;
 
         if (! $business || ! $user->hasCompletedOnboarding()) {

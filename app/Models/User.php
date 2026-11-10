@@ -6,6 +6,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -63,11 +64,58 @@ class User extends Authenticatable
     }
 
     /**
-     * Determine whether the user is a registered merchant owner.
+     * Determine whether the user is a registered merchant (Owner or Operator).
      */
     public function isMerchant(): bool
     {
         return $this->role === self::ROLE_MERCHANT;
+    }
+
+    /**
+     * Determine whether the user is an owner of their associated business.
+     */
+    public function isOwner(): bool
+    {
+        return $this->businessRole() === BusinessMembership::ROLE_OWNER;
+    }
+
+    /**
+     * Determine whether the user is an operator staff member of their associated business.
+     */
+    public function isOperator(): bool
+    {
+        return $this->businessRole() === BusinessMembership::ROLE_OPERATOR;
+    }
+
+    /**
+     * Get the business membership role ('owner' or 'operator') of this user.
+     */
+    public function businessRole(): ?string
+    {
+        $membership = $this->businessMembership;
+        if ($membership) {
+            return $membership->role;
+        }
+
+        // Fallback for direct owner (M3 compatibility)
+        if ($this->ownedBusiness()->exists()) {
+            return BusinessMembership::ROLE_OWNER;
+        }
+
+        return null;
+    }
+
+    /**
+     * Determine whether the user's business membership is currently active.
+     */
+    public function isBusinessMemberActive(): bool
+    {
+        $membership = $this->businessMembership;
+        if ($membership) {
+            return $membership->is_active;
+        }
+
+        return $this->isMerchant() && $this->ownedBusiness()->exists();
     }
 
     /**
@@ -76,6 +124,11 @@ class User extends Authenticatable
     public function hasCompletedOnboarding(): bool
     {
         if (! $this->isMerchant()) {
+            return true;
+        }
+
+        // Operators join an already-onboarded business, so onboarding is considered complete
+        if ($this->isOperator()) {
             return true;
         }
 
@@ -88,11 +141,63 @@ class User extends Authenticatable
     }
 
     /**
-     * Get the merchant business associated with this owner account (1:1 in MVP).
+     * Get the merchant business associated with this account (Owner or Operator).
      */
-    public function business(): HasOne
+    public function business(): HasOneThrough|HasOne
     {
-        return $this->hasOne(Business::class);
+        return $this->hasOneThrough(
+            Business::class,
+            BusinessMembership::class,
+            'user_id',       // Foreign key on BusinessMembership table
+            'id',            // Foreign key on Business table
+            'id',            // Local key on User table
+            'business_id'    // Local key on BusinessMembership table
+        );
+    }
+
+    /**
+     * Accessor fallback for $user->business to guarantee compatibility if membership is pending.
+     */
+    public function getBusinessAttribute(): ?Business
+    {
+        if ($this->relationLoaded('business')) {
+            $business = $this->getRelation('business');
+            if ($business) {
+                return $business;
+            }
+        }
+
+        // 1. Through membership
+        $membership = $this->businessMembership()->with('business')->first();
+        if ($membership && $membership->business) {
+            $this->setRelation('business', $membership->business);
+            return $membership->business;
+        }
+
+        // 2. Direct owner fallback (MVP compatibility)
+        $owned = $this->ownedBusiness()->first();
+        if ($owned) {
+            $this->setRelation('business', $owned);
+            return $owned;
+        }
+
+        return null;
+    }
+
+    /**
+     * Get the directly owned business (where businesses.user_id = users.id).
+     */
+    public function ownedBusiness(): HasOne
+    {
+        return $this->hasOne(Business::class, 'user_id');
+    }
+
+    /**
+     * Get the business membership record for this user.
+     */
+    public function businessMembership(): HasOne
+    {
+        return $this->hasOne(BusinessMembership::class, 'user_id');
     }
 
     /**

@@ -143,6 +143,16 @@ Tautan unduh dapat diakses langsung dari dashboard laporan merchant (`/umkm/repo
 
 ---
 
+## 👥 Manajemen Multi-Staf & Otorisasi Peran (Multi-Staff & RBAC)
+
+AntreIn mendukung kolaborasi tim operasional UMKM melalui sistem keanggotaan bisnis berjenjang:
+1. **Pemilik Usaha (Owner):** Memiliki kontrol penuh atas profil usaha, jam operasional, manajemen layanan, pengaturan akun, unduh laporan & ekspor (CSV/PDF), serta mengundang atau mengelola akses staf. Akun pemilik utama diproteksi dari penonaktifan atau penghapusan mandiri.
+2. **Staf Operasional (Operator):** Diberikan akses khusus ke konsol antrean untuk melayani pelanggan: mengambil nomor antrean walk-in, memanggil antrean berikutnya, memanggil ulang, memulai layanan, dan menyelesaikan tiket. Staf operator dilarang mengakses halaman pengaturan, laporan, ekspor, manajemen staf, atau membatalkan tiket antrean.
+3. **Alur Undangan Kriptografis (Tokenized Invitation):** Pemilik dapat membuat tautan undangan staf berdurasi 72 jam melalui menu `/umkm/staff`. Calon staf dapat langsung bergabung atau mendaftar via `/invite/{token}`.
+4. **Aturan Satu Akun Satu Usaha:** Setiap akun staf hanya dapat terhubung ke satu unit usaha pada lingkup rilis ini demi menjaga isolasi data operasional.
+
+---
+
 ## 💾 Prosedur Backup & Restore Database
 
 ### 1. Pencadangan (*Backup*) Harian Database MySQL

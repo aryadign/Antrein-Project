@@ -320,6 +320,10 @@ flowchart TD
 ```mermaid
 erDiagram
     users ||--o| businesses : "owns (1:1 in MVP)"
+    users ||--o{ business_memberships : "belongs as member"
+    businesses ||--o{ business_memberships : "has members"
+    businesses ||--o{ staff_invitations : "issues invites"
+    users ||--o{ staff_invitations : "invites by"
     business_categories ||--o{ businesses : "categorizes"
     businesses ||--o{ business_hours : "operates on"
     businesses ||--o{ services : "offers"
@@ -451,6 +455,31 @@ erDiagram
         text user_agent
         json properties
         timestamp created_at
+    }
+
+    business_memberships {
+        bigint id PK
+        bigint business_id FK
+        bigint user_id FK,UK "1 business per user in M12"
+        enum role "owner, operator"
+        boolean is_active
+        timestamp joined_at
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    staff_invitations {
+        bigint id PK
+        bigint business_id FK
+        bigint invited_by_user_id FK
+        string email
+        enum role "operator"
+        string token_hash UK "SHA-256"
+        timestamp expires_at
+        timestamp accepted_at
+        timestamp revoked_at
+        timestamp created_at
+        timestamp updated_at
     }
 ```
 

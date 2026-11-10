@@ -349,7 +349,70 @@ CREATE TABLE activity_logs (
     INDEX idx_business_log (business_id, created_at),
     INDEX idx_user_log (user_id, created_at)
 );
+
+-- 10. Business Memberships (ADR-13: Multi-Staff RBAC)
+CREATE TABLE business_memberships (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    business_id BIGINT UNSIGNED NOT NULL,
+    user_id BIGINT UNSIGNED NOT NULL UNIQUE, -- Single business per user in M12
+    role ENUM('owner', 'operator') NOT NULL DEFAULT 'operator',
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    joined_at TIMESTAMP NULL,
+    created_at TIMESTAMP NULL,
+    updated_at TIMESTAMP NULL,
+    INDEX idx_business_role (business_id, role),
+    INDEX idx_business_active (business_id, is_active),
+    FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- 11. Staff Invitations (ADR-13: Secure Tokenized Invitations)
+CREATE TABLE staff_invitations (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    business_id BIGINT UNSIGNED NOT NULL,
+    invited_by_user_id BIGINT UNSIGNED NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    role ENUM('operator') NOT NULL DEFAULT 'operator',
+    token_hash VARCHAR(64) NOT NULL UNIQUE,
+    expires_at TIMESTAMP NOT NULL,
+    accepted_at TIMESTAMP NULL,
+    revoked_at TIMESTAMP NULL,
+    created_at TIMESTAMP NULL,
+    updated_at TIMESTAMP NULL,
+    INDEX idx_invitation_business (business_id),
+    INDEX idx_invitation_email (email),
+    INDEX idx_invitation_hash (token_hash),
+    FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE,
+    FOREIGN KEY (invited_by_user_id) REFERENCES users(id) ON DELETE CASCADE
+);
 ```
+
+---
+
+## ADR-13: Multi-Staff Architecture & Role-Based Access Control (RBAC)
+
+### Status: Approved & Implemented (Milestone 12)
+
+### Context:
+MVP AntreIn linked one `User` directly to one `Business` via `businesses.user_id`. In real-world UMKM operations, an owner employs staff operators to call queue tickets, start services, and complete queues, while preserving administrative secrecy over revenue, service management, reports/exports, and business settings.
+
+### Decision:
+1. **Decouple Platform Role vs Business Role:**
+   - Platform Level (`users.role`): Remains `admin` vs `merchant`.
+   - Business Level (`business_memberships.role`): `owner` vs `operator`.
+2. **Single Business Constraint (M12 Scope):**
+   - In M12, `business_memberships.user_id` has a `UNIQUE` constraint, enforcing that a user account belongs to at most one business unit.
+3. **Secure Staff Invitation Workflow:**
+   - Pre-hashed single-use invitation tokens (`SHA-256`) with configurable expiration (72h default).
+   - No emails are dispatched in M12; instant copyable links are generated for the business owner.
+   - Self-service onboarding for invited staff: guests register directly from the invitation link; existing users verify password.
+4. **Authorization Middleware & Operator Scope:**
+   - Middleware `business.role:owner,operator` secures queue console and operations.
+   - Middleware `business.role:owner` strictly gates administrative, financial/reporting, and staff management routes.
+   - Ticket cancellation is strictly owner-only.
+5. **Single Active Operator Rule & FIFO Preservation:**
+   - Multi-staff does not imply multi-counter (P1-03 multi-loket is deferred).
+   - Single active ticket rule remains enforced at the business level (`DailyQueue`).
 
 ---
 
