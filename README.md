@@ -153,6 +153,17 @@ AntreIn mendukung kolaborasi tim operasional UMKM melalui sistem keanggotaan bis
 
 ---
 
+## 🏢 Manajemen Multi-Loket & Penugasan Antrean (Multi-Counter & Queue Assignment)
+
+AntreIn mendukung pelayanan antrean multi-loket secara paralel untuk UMKM dengan banyak meja pelayanan (barbershop multi-kursi, klinik multi-dokter, konter pembayaran/layanan):
+1. **Antrean Terpadu FIFO Global:** Seluruh tiket (online & walk-in) tetap masuk ke dalam satu antrean harian terpadu (`DailyQueue`). Antrean tidak dipecah per loket sehingga keadilan dan urutan kedatangan pelanggan tetap terjaga mutlak.
+2. **Pelayanan Paralel Antar-Loket:** Konkurensi aktif berlaku per loket (`counter_id`). Banyak loket dapat memanggil dan melayani tiket secara bersamaan tanpa saling mengunci, tetapi satu loket hanya dapat memiliki maksimal satu tiket aktif (`dipanggil` atau `sedang_dilayani`).
+3. **Manajemen Loket & Penugasan Operator:** Pemilik usaha dapat membuat, mengubah, mengaktifkan/menonaktifkan, dan menugaskan operator ke loket melalui menu `/umkm/counters`. Owner dapat mengoperasikan seluruh loket aktif, sedangkan operator hanya dapat mengoperasikan loket yang ditugaskan kepada mereka.
+4. **Perlindungan Integritas Operasional:** Loket tidak dapat dinonaktifkan atau dihapus jika sedang melayani antrean aktif atau jika merupakan satu-satunya loket aktif di unit usaha.
+5. **Transparansi Pemanggilan Pelanggan:** Halaman pelacakan publik pelanggan menampilkan loket tujuan pemanggilan (misal: "Loket 2") secara real-time tanpa mengekspos identifier database internal.
+
+---
+
 ## 💾 Prosedur Backup & Restore Database
 
 ### 1. Pencadangan (*Backup*) Harian Database MySQL

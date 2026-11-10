@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Merchant;
 
 use App\Http\Controllers\Controller;
 use App\Models\Business;
+use App\Models\BusinessCounter;
 use App\Models\QueueTicket;
 use App\Models\Service;
+use App\Models\User;
 use App\Services\QueueService;
 use DomainException;
 use Illuminate\Http\JsonResponse;
@@ -82,7 +84,36 @@ class QueueOperationController extends Controller
     }
 
     /**
-     * Call the next waiting ticket in strict FIFO sequence.
+     * Resolve the operating counter from request, active session, ticket, or user assignments.
+     */
+    protected function resolveCounter(Request $request, Business $business, User $user, ?QueueTicket $ticket = null): ?BusinessCounter
+    {
+        $counterId = $request->input('counter_id') ?: session('merchant_active_counter_id');
+
+        if ($counterId) {
+            /** @var BusinessCounter|null $counter */
+            $counter = BusinessCounter::where('id', $counterId)
+                ->where('business_id', $business->id)
+                ->first();
+
+            if ($counter && $counter->is_active && $user->canOperateCounter($counter)) {
+                return $counter;
+            }
+        }
+
+        // If operating on an existing ticket that already has an assigned counter, prioritize it if authorized
+        if ($ticket && $ticket->counter_id) {
+            $ticketCounter = $ticket->counter;
+            if ($ticketCounter && $ticketCounter->is_active && $user->canOperateCounter($ticketCounter)) {
+                return $ticketCounter;
+            }
+        }
+
+        return $user->assignedCounters()->first() ?: $business->activeCounters()->first();
+    }
+
+    /**
+     * Call the next waiting ticket in strict FIFO sequence for a specific counter.
      */
     public function callNext(Request $request): JsonResponse|RedirectResponse
     {
@@ -90,24 +121,29 @@ class QueueOperationController extends Controller
         /** @var Business $business */
         $business = $user->business;
 
+        $counter = $this->resolveCounter($request, $business, $user);
+
         try {
-            $ticket = $this->queueService->callNext($business, $user);
+            $ticket = $this->queueService->callNext($business, $user, $counter);
 
             if ($request->wantsJson()) {
                 return response()->json([
                     'success' => true,
-                    'message' => sprintf('Memanggil antrean %s', $ticket->ticket_number),
+                    'message' => sprintf('Memanggil antrean %s di %s', $ticket->ticket_number, $ticket->counter?->name ?? 'Loket'),
                     'data' => [
                         'ticket_id' => $ticket->id,
                         'ticket_number' => $ticket->ticket_number,
                         'customer_name' => $ticket->customer_name,
                         'status' => $ticket->status,
+                        'counter_id' => $ticket->counter_id,
+                        'counter_name' => $ticket->counter?->name,
+                        'counter_code' => $ticket->counter?->code,
                         'called_at' => $ticket->called_at?->toIso8601String(),
                     ],
                 ]);
             }
 
-            return back()->with('status', sprintf('Memanggil antrean nomor %s (%s)', $ticket->ticket_number, $ticket->customer_name));
+            return back()->with('status', sprintf('Memanggil antrean nomor %s (%s) di %s', $ticket->ticket_number, $ticket->customer_name, $ticket->counter?->name ?? 'Loket'));
         } catch (DomainException $e) {
             if ($request->wantsJson()) {
                 return response()->json([
@@ -127,9 +163,10 @@ class QueueOperationController extends Controller
     {
         $user = $request->user();
         $this->authorizeTicketOwnership($ticket, $user->business);
+        $counter = $this->resolveCounter($request, $user->business, $user, $ticket);
 
         try {
-            $this->queueService->recallTicket($ticket, $user);
+            $this->queueService->recallTicket($ticket, $user, $counter);
 
             if ($request->wantsJson()) {
                 return response()->json([
@@ -156,9 +193,10 @@ class QueueOperationController extends Controller
     {
         $user = $request->user();
         $this->authorizeTicketOwnership($ticket, $user->business);
+        $counter = $this->resolveCounter($request, $user->business, $user, $ticket);
 
         try {
-            $this->queueService->startService($ticket, $user);
+            $this->queueService->startService($ticket, $user, $counter);
 
             if ($request->wantsJson()) {
                 return response()->json([
@@ -185,13 +223,14 @@ class QueueOperationController extends Controller
     {
         $user = $request->user();
         $this->authorizeTicketOwnership($ticket, $user->business);
+        $counter = $this->resolveCounter($request, $user->business, $user, $ticket);
 
         $validated = $request->validate([
             'notes' => ['nullable', 'string', 'max:255'],
         ]);
 
         try {
-            $this->queueService->completeTicket($ticket, $user, $validated['notes'] ?? null);
+            $this->queueService->completeTicket($ticket, $user, $validated['notes'] ?? null, $counter);
 
             if ($request->wantsJson()) {
                 return response()->json([
@@ -218,13 +257,14 @@ class QueueOperationController extends Controller
     {
         $user = $request->user();
         $this->authorizeTicketOwnership($ticket, $user->business);
+        $counter = $this->resolveCounter($request, $user->business, $user, $ticket);
 
         $validated = $request->validate([
             'reason' => ['nullable', 'string', 'max:255'],
         ]);
 
         try {
-            $this->queueService->skipTicket($ticket, $user, $validated['reason'] ?? null);
+            $this->queueService->skipTicket($ticket, $user, $validated['reason'] ?? null, $counter);
 
             if ($request->wantsJson()) {
                 return response()->json([
@@ -291,10 +331,13 @@ class QueueOperationController extends Controller
         $user = $request->user();
         /** @var Business $business */
         $business = $user->business;
+        $counter = $this->resolveCounter($request, $business, $user);
 
         $dailyQueue = $this->queueService->getOrCreateDailyQueue($business);
 
-        $nowServing = $this->queueService->getCurrentServingTicket($business);
+        $nowServing = $this->queueService->getCurrentServingTicket($business, $counter);
+        $activeCounters = $this->queueService->getActiveCountersStatus($business);
+
         $waitingCount = QueueTicket::where('business_id', $business->id)
             ->where('daily_queue_id', $dailyQueue->id)
             ->where('status', QueueTicket::STATUS_MENUNGGU)
@@ -309,17 +352,73 @@ class QueueOperationController extends Controller
             'success' => true,
             'data' => [
                 'current_number' => $dailyQueue->current_number,
+                'active_counter' => $counter ? [
+                    'id' => $counter->id,
+                    'name' => $counter->name,
+                    'code' => $counter->code,
+                ] : null,
                 'now_serving' => $nowServing ? [
                     'ticket_number' => $nowServing->ticket_number,
                     'customer_name' => $nowServing->customer_name,
                     'status' => $nowServing->status,
                     'service_name' => $nowServing->service->name,
+                    'counter_id' => $nowServing->counter_id,
+                    'counter_name' => $nowServing->counter?->name,
                     'called_at' => $nowServing->called_at?->toIso8601String(),
                 ] : null,
+                'counters_summary' => $activeCounters->map(fn ($c) => [
+                    'id' => $c->id,
+                    'name' => $c->name,
+                    'code' => $c->code,
+                    'has_active_ticket' => $c->hasActiveTicket(),
+                    'active_ticket_number' => $c->activeTicket?->ticket_number,
+                    'active_customer_name' => $c->activeTicket?->customer_name,
+                    'active_status' => $c->activeTicket?->status,
+                ]),
                 'waiting_count' => $waitingCount,
                 'completed_count' => $completedCount,
             ],
         ]);
+    }
+
+    /**
+     * Switch active operational counter for the merchant session.
+     */
+    public function selectCounter(Request $request): JsonResponse|RedirectResponse
+    {
+        $user = $request->user();
+        /** @var Business $business */
+        $business = $user->business;
+
+        $validated = $request->validate([
+            'counter_id' => ['required', 'integer', 'exists:business_counters,id'],
+        ]);
+
+        /** @var BusinessCounter $counter */
+        $counter = BusinessCounter::where('id', $validated['counter_id'])
+            ->where('business_id', $business->id)
+            ->where('is_active', true)
+            ->firstOrFail();
+
+        if (! $user->canOperateCounter($counter)) {
+            abort(403, 'Anda tidak memiliki hak otorisasi untuk mengoperasikan loket ini.');
+        }
+
+        session(['merchant_active_counter_id' => $counter->id]);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => sprintf('Loket operasional aktif dialihkan ke %s.', $counter->name),
+                'counter' => [
+                    'id' => $counter->id,
+                    'name' => $counter->name,
+                    'code' => $counter->code,
+                ],
+            ]);
+        }
+
+        return back()->with('status', sprintf('Loket aktif berhasil dialihkan ke %s (%s).', $counter->name, $counter->code));
     }
 
     /**

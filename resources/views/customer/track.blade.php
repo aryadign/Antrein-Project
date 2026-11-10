@@ -16,6 +16,7 @@
             serviceName: '{{ addslashes($ticket->service->name) }}',
             customerName: '{{ addslashes($ticket->customer_name) }}',
             customerPhone: '{{ $maskedPhone }}',
+            counterName: '{{ $ticket->counter ? addslashes($ticket->counter->name) : '' }}',
             estimatedWaitMinutes: {{ (int) $estimatedWaitMinutes }},
             calledAt: '{{ $ticket->called_at?->translatedFormat('H:i, d M Y') ?? '' }}',
             completedAt: '{{ $ticket->completed_at?->translatedFormat('H:i, d M Y') ?? '' }}',
@@ -85,46 +86,55 @@
                     </div>
 
                     {{-- Dynamic Status Pill --}}
-                    <div class="mt-4 flex items-center justify-center">
-                        <template x-if="status === 'menunggu'">
-                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                                <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-                                Menunggu
-                            </span>
-                        </template>
+                    <div class="mt-4 flex flex-col items-center justify-center gap-2">
+                        <div>
+                            <template x-if="status === 'menunggu'">
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                                    <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                                    Menunggu
+                                </span>
+                            </template>
 
-                        <template x-if="status === 'dipanggil'">
-                            <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-300 animate-pulse">
-                                <span class="w-2 h-2 rounded-full bg-blue-600"></span>
-                                Sedang Dipanggil
-                            </span>
-                        </template>
+                            <template x-if="status === 'dipanggil'">
+                                <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-300 animate-pulse">
+                                    <span class="w-2 h-2 rounded-full bg-blue-600"></span>
+                                    Sedang Dipanggil
+                                </span>
+                            </template>
 
-                        <template x-if="status === 'sedang_dilayani'">
-                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-teal-50 text-teal-800 border border-teal-200">
-                                <span class="w-2 h-2 rounded-full bg-teal-500"></span>
-                                Sedang Dilayani
-                            </span>
-                        </template>
+                            <template x-if="status === 'sedang_dilayani'">
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-teal-50 text-teal-800 border border-teal-200">
+                                    <span class="w-2 h-2 rounded-full bg-teal-500"></span>
+                                    Sedang Dilayani
+                                </span>
+                            </template>
 
-                        <template x-if="status === 'selesai'">
-                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                                Selesai
-                            </span>
-                        </template>
+                            <template x-if="status === 'selesai'">
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                    Selesai
+                                </span>
+                            </template>
 
-                        <template x-if="status === 'dilewati'">
-                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-neutral-100 text-neutral-700 border border-neutral-300">
-                                <span class="w-2 h-2 rounded-full bg-neutral-400"></span>
-                                Dilewati
-                            </span>
-                        </template>
+                            <template x-if="status === 'dilewati'">
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-neutral-100 text-neutral-700 border border-neutral-300">
+                                    <span class="w-2 h-2 rounded-full bg-neutral-400"></span>
+                                    Dilewati
+                                </span>
+                            </template>
 
-                        <template x-if="status === 'dibatalkan'">
-                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-800 border border-rose-200">
-                                <span class="w-2 h-2 rounded-full bg-rose-500"></span>
-                                Dibatalkan
+                            <template x-if="status === 'dibatalkan'">
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-800 border border-rose-200">
+                                    <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+                                    Dibatalkan
+                                </span>
+                            </template>
+                        </div>
+
+                        <template x-if="counterName && (status === 'dipanggil' || status === 'sedang_dilayani')">
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-brand-50 text-brand-800 border border-brand-200 shadow-2xs">
+                                <svg class="w-3.5 h-3.5 text-brand-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                                <span x-text="counterName"></span>
                             </span>
                         </template>
                     </div>
@@ -157,11 +167,14 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/>
                             </svg>
                             <div class="text-sm">
-                                <div class="font-extrabold text-base text-brand-950">
-                                    NOMOR ANDA SEDANG DIPANGGIL!
+                                <div class="font-extrabold text-base text-brand-950 flex flex-wrap items-center gap-2">
+                                    <span>NOMOR ANDA SEDANG DIPANGGIL!</span>
+                                    <template x-if="counterName">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-brand-700 text-white" x-text="'Menuju ' + counterName"></span>
+                                    </template>
                                 </div>
                                 <p class="text-xs text-blue-800 mt-1 font-medium leading-relaxed">
-                                    Silakan segera menuju meja pelayanan / kasir <span class="font-bold">{{ $business->name }}</span> untuk mendapatkan pelayanan.
+                                    Silakan segera menuju <span class="font-bold" x-text="counterName ? counterName + ' (' + '{{ $business->name }}' + ')' : 'meja pelayanan / kasir {{ $business->name }}'"></span> untuk mendapatkan pelayanan.
                                 </p>
                             </div>
                         </div>
@@ -174,9 +187,14 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                             </svg>
                             <div class="text-sm">
-                                <div class="font-bold">Pelayanan Sedang Berlangsung</div>
+                                <div class="font-bold flex items-center gap-2">
+                                    <span>Pelayanan Sedang Berlangsung</span>
+                                    <template x-if="counterName">
+                                        <span class="text-xs px-2 py-0.5 rounded bg-teal-200/70 text-teal-900 font-semibold" x-text="counterName"></span>
+                                    </template>
+                                </div>
                                 <p class="text-xs text-teal-800/90 mt-1 leading-relaxed">
-                                    Anda saat ini sedang dilayani oleh staf {{ $business->name }}. Terima kasih atas kesabaran Anda menunggu.
+                                    Anda saat ini sedang dilayani di <span class="font-semibold" x-text="counterName || 'meja pelayanan'"></span> staf {{ $business->name }}. Terima kasih atas kesabaran Anda menunggu.
                                 </p>
                             </div>
                         </div>
@@ -436,6 +454,7 @@
                             this.aheadCount = data.ahead_count ?? Math.max(0, data.queue_position - 1);
                             this.nowServing = data.now_serving || '—';
                             this.estimatedWaitMinutes = data.estimated_wait_minutes ?? 0;
+                            if (data.counter_name) this.counterName = data.counter_name;
                             if (data.customer_name) this.customerName = data.customer_name;
                             if (data.customer_phone_masked) this.customerPhone = data.customer_phone_masked;
 

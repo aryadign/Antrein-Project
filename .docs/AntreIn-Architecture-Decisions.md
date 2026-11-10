@@ -385,6 +385,40 @@ CREATE TABLE staff_invitations (
     FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE,
     FOREIGN KEY (invited_by_user_id) REFERENCES users(id) ON DELETE CASCADE
 );
+
+-- 12. Business Counters (ADR-14: Multi-Loket & Queue Assignment)
+CREATE TABLE business_counters (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    business_id BIGINT UNSIGNED NOT NULL,
+    name VARCHAR(50) NOT NULL,
+    code VARCHAR(10) NOT NULL,
+    description VARCHAR(255) NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP NULL,
+    updated_at TIMESTAMP NULL,
+    UNIQUE KEY uk_business_counter_code (business_id, code),
+    INDEX idx_counter_business_active (business_id, is_active),
+    FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE
+);
+
+-- 13. Counter Operator Assignments (ADR-14: Pivot Table)
+CREATE TABLE counter_operator_assignments (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    business_counter_id BIGINT UNSIGNED NOT NULL,
+    business_membership_id BIGINT UNSIGNED NOT NULL,
+    created_at TIMESTAMP NULL,
+    updated_at TIMESTAMP NULL,
+    UNIQUE KEY uk_counter_operator (business_counter_id, business_membership_id),
+    INDEX idx_assignment_counter (business_counter_id),
+    INDEX idx_assignment_membership (business_membership_id),
+    FOREIGN KEY (business_counter_id) REFERENCES business_counters(id) ON DELETE CASCADE,
+    FOREIGN KEY (business_membership_id) REFERENCES business_memberships(id) ON DELETE CASCADE
+);
+
+-- Note on queue_tickets: added counter_id nullable foreign key
+-- ALTER TABLE queue_tickets ADD COLUMN counter_id BIGINT UNSIGNED NULL AFTER daily_queue_id;
+-- ALTER TABLE queue_tickets ADD CONSTRAINT fk_queue_tickets_counter FOREIGN KEY (counter_id) REFERENCES business_counters(id) ON DELETE SET NULL;
+-- ALTER TABLE queue_tickets ADD INDEX idx_tickets_business_counter_status (business_id, counter_id, status);
 ```
 
 ---
@@ -413,6 +447,35 @@ MVP AntreIn linked one `User` directly to one `Business` via `businesses.user_id
 5. **Single Active Operator Rule & FIFO Preservation:**
    - Multi-staff does not imply multi-counter (P1-03 multi-loket is deferred).
    - Single active ticket rule remains enforced at the business level (`DailyQueue`).
+
+---
+
+## ADR-14: Multi-Counter Architecture & Queue Assignment (P1-03)
+
+### Status: Approved & Implemented (Milestone 13)
+
+### Context:
+In Milestone 12, multiple staff members could log in to the queue console, but the business-level lock restricted the entire business to exactly one active ticket (`dipanggil` or `sedang_dilayani`) at any given time. Growing UMKMs (barbershops with multiple chairs, clinics with multiple consultation desks, retail repair counters) require parallel servicing across physical desks/counters while maintaining fairness and order for waiting customers.
+
+### Decision:
+1. **Single Global FIFO Queue with Counter-Level Active Concurrency:**
+   - One unified daily sequence (`DailyQueue`) remains the single source of truth for queue sequencing. Online and walk-in tickets follow one strict sequential order (`sequence_number`).
+   - Waiting tickets (`menunggu`) stay in the global FIFO without a counter (`counter_id = NULL`) until called.
+   - The single active ticket constraint changes from **business-wide** to **counter-wide**: multiple counters can serve active tickets in parallel; a single counter can only have at most one active ticket.
+2. **Counter Assignment & Operator Access Control:**
+   - Business Owners can operate any active counter in their business.
+   - Operators can only operate counters assigned to their active membership in `counter_operator_assignments`.
+   - Owners manage counters at `/umkm/counters`: CRUD counters, toggle active status, and assign/unassign operator memberships.
+   - Safeguards: A counter cannot be deactivated or deleted if it currently holds an active ticket, or if it is the sole active counter in the business.
+3. **Pessimistic Concurrency Locking:**
+   - Calling next (`QueueService::callNext`) locks `DailyQueue` via `lockForUpdate()` to serialize calls and prevent race conditions when two operators call next simultaneously.
+   - The next waiting ticket in strict FIFO sequence is assigned to the calling counter atomically.
+4. **Customer Tracking & Privacy Abstraction:**
+   - Customer tracking payload displays human-friendly counter name (e.g., `Loket 1`, `Loket 2`) and code (`L-01`), never exposing internal database counter IDs.
+   - Real-time customer tracking dynamically highlights the specific desk/counter the customer must proceed to when called.
+5. **Seamless Backward Compatibility:**
+   - Database migration backfills a default `Loket 1` (`L-01`) for all existing businesses and automatically assigns active memberships.
+   - Model lifecycle hooks automatically provision `Loket 1` for new businesses and assign new operators to default active counters.
 
 ---
 

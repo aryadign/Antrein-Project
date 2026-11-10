@@ -58,9 +58,10 @@ class Business extends Model
         static::created(function (Business $business) {
             if ($business->user_id) {
                 $connection = $business->getConnectionName();
+                $membership = null;
                 try {
                     if (\Illuminate\Support\Facades\Schema::connection($connection)->hasTable('business_memberships')) {
-                        BusinessMembership::on($connection)->firstOrCreate(
+                        $membership = BusinessMembership::on($connection)->firstOrCreate(
                             ['user_id' => $business->user_id],
                             [
                                 'business_id' => $business->id,
@@ -69,6 +70,21 @@ class Business extends Model
                                 'joined_at' => $business->created_at ?? now(),
                             ]
                         );
+                    }
+
+                    if (\Illuminate\Support\Facades\Schema::connection($connection)->hasTable('business_counters')) {
+                        $counter = BusinessCounter::on($connection)->firstOrCreate(
+                            ['business_id' => $business->id, 'code' => 'L-01'],
+                            [
+                                'name' => 'Loket 1',
+                                'description' => 'Loket pelayanan utama',
+                                'is_active' => true,
+                            ]
+                        );
+
+                        if ($membership && \Illuminate\Support\Facades\Schema::connection($connection)->hasTable('counter_operator_assignments')) {
+                            $counter->assignedMemberships()->syncWithoutDetaching([$membership->id]);
+                        }
                     }
                 } catch (\Throwable) {
                     // Suppress if table does not exist on target connection during isolated DB tests
@@ -241,6 +257,22 @@ class Business extends Model
             ->whereNull('accepted_at')
             ->whereNull('revoked_at')
             ->where('expires_at', '>', now());
+    }
+
+    /**
+     * Get the counters belonging to this business.
+     */
+    public function counters(): HasMany
+    {
+        return $this->hasMany(BusinessCounter::class);
+    }
+
+    /**
+     * Get the active counters belonging to this business.
+     */
+    public function activeCounters(): HasMany
+    {
+        return $this->hasMany(BusinessCounter::class)->where('is_active', true);
     }
 
     /**

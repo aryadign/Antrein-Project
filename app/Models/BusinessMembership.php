@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class BusinessMembership extends Model
 {
@@ -53,6 +54,31 @@ class BusinessMembership extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Get the counters assigned to this membership.
+     */
+    public function assignedCounters(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            BusinessCounter::class,
+            'counter_operator_assignments',
+            'business_membership_id',
+            'business_counter_id'
+        )->withTimestamps();
+    }
+
+    protected static function booted(): void
+    {
+        static::created(function (BusinessMembership $membership) {
+            if ($membership->role === self::ROLE_OPERATOR && $membership->business) {
+                $defaultCounter = $membership->business->counters()->where('is_active', true)->first();
+                if ($defaultCounter) {
+                    $defaultCounter->assignedMemberships()->syncWithoutDetaching([$membership->id]);
+                }
+            }
+        });
     }
 
     /**

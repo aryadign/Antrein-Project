@@ -780,13 +780,55 @@ Sumber visual: `AntreIn-design.md`. Jangan membuat palette atau skala baru tanpa
 
 ---
 
-# 15. Milestone P1 — Pengembangan setelah MVP
+# 15. Milestone 13 — Multi-Loket Management & Queue Assignment (P1-03)
+
+**Dependensi:** M5 (Core Queue Engine), M7 (Dashboard & Operasional UMKM), M12 (Multi-Staff & RBAC).
+
+## 15.1 Arsitektur Multi-Loket & Skema Database (P1-03)
+
+- [x] `M13-01` Buat migrasi tabel `business_counters` (`id`, `business_id`, `name`, `code`, `description`, `is_active`, timestamps; unique `[business_id, code]`).
+- [x] `M13-02` Buat migrasi tabel `counter_operator_assignments` (`id`, `business_counter_id`, `business_membership_id`, timestamps; unique `[business_counter_id, business_membership_id]`).
+- [x] `M13-03` Tambahkan kolom foreign key `counter_id` pada tabel `queue_tickets` (`nullable`, `constrained('business_counters')->nullOnDelete()`, index gabungan `[business_id, counter_id, status]`).
+- [x] `M13-04` Buat migrasi data otomatis untuk backfill `Loket 1` (`L-01`) pada seluruh unit usaha eksisting, asosiasi tiket aktif, dan penugasan seluruh membership aktif.
+- [x] `M13-05` Definisikan model Eloquent `BusinessCounter` dengan relasi `business()`, `assignedMemberships()`, `tickets()`, `activeTicket()`, scope `active()`, dan helper methods `hasActiveTicket()`, `canBeOperatedBy(User $user)`.
+- [x] `M13-06` Tambahkan relasi `counters()` dan `activeCounters()` pada model `Business`.
+- [x] `M13-07` Tambahkan relasi `assignedCounters()` pada model `BusinessMembership`.
+- [x] `M13-08` Tambahkan relasi dan helper pada model `User`: `assignedCounters()`, `canOperateCounter(BusinessCounter $counter)`.
+- [x] `M13-09` Pasang event lifecycle model pada `Business` (`booted()`) untuk auto-provision default `Loket 1` saat UMKM baru dibuat.
+- [x] `M13-10` Pasang event lifecycle model pada `BusinessMembership` (`booted()`) untuk auto-assign operator baru ke loket aktif default.
+
+## 15.2 Core Queue Engine Multi-Counter & Konkurensi (P1-03)
+
+- [x] `M13-11` Perbarui `QueueService::callNext` dengan parameter `?BusinessCounter $counter = null`, validasi otorisasi, dan penegakan aturan Single Active Ticket per Counter (bukan per bisnis).
+- [x] `M13-12` Pertahankan Single Source of Truth Global FIFO (`DailyQueue` per bisnis per tanggal operasional); seluruh tiket online & walk-in mengantre dalam sequence terpadu tanpa memecah antrean per loket.
+- [x] `M13-13` Perbarui `QueueService::recallTicket`, `startService`, `completeTicket`, `skipTicket` dengan validasi kepemilikan dan integritas loket.
+- [x] `M13-14` Implementasikan `QueueService::getActiveCountersStatus(Business $business)` dan perbarui `getCurrentServingTicket(?BusinessCounter $counter = null)`.
+
+## 15.3 Antarmuka Manajemen Loket & Pengalaman Operasional (P1-03)
+
+- [x] `M13-15` Implementasikan `CounterManagementController` pada route `/umkm/counters`: CRUD loket, toggle status aktif/nonaktif, penugasan staf operator, dan pencatatan audit log `ActivityLog`.
+- [x] `M13-16` Pasang guards pada penonaktifan dan penghapusan loket: tidak dapat menonaktifkan/menghapus loket terakhir yang aktif, dan tidak dapat menonaktifkan/menghapus loket yang masih memiliki tiket aktif.
+- [x] `M13-17` Batasi seluruh rute manajemen loket `/umkm/counters` khusus untuk role `owner` via middleware `business.role:owner`.
+- [x] `M13-18` Implementasikan pemilihan loket aktif via endpoint `POST /umkm/queues/select-counter` dengan persistensi session `merchant_active_counter_id`.
+- [x] `M13-19` Perbarui dashboard operasional `/umkm/dashboard` dengan loket selector, badge loket pada kartu Now Serving, dan monitoring status seluruh loket aktif.
+- [x] `M13-20` Perbarui meja operasional `/umkm/queues` dengan loket selector, filter berdasarkan loket, dan indikator badge loket pada tabel serta kartu antrean.
+- [x] `M13-21` Tambahkan item menu navigasi 'Loket' dengan ikon loket pada sidebar UMKM untuk role `owner`.
+- [x] `M13-22` Perbarui endpoint pelacakan pelanggan `GET /queue/{token}/track` untuk menampilkan nama loket pemanggil aman (`counter_name`, `counter_code`) tanpa mengekspos ID internal database.
+- [x] `M13-23` Perbarui tampilan pelacakan antrean pelanggan `customer/track.blade.php` dengan badge loket tujuan saat tiket berstatus `dipanggil` dan `sedang_dilayani`.
+- [x] `M13-24` Implementasikan automated feature test suite komprehensif `CounterManagementTest.php` mencakup 17 skenario: provisioning, CRUD, guards, multi-operator, paralel calling, single active ticket per loket, global FIFO, session, dan tenant isolation.
+- [x] `M13-25` Seluruh test suite (302 automated tests) lulus 100% tanpa regresi dan aset frontend terkompilasi optimal via Vite.
+
+**Exit Gate 13:** Fitur multi-loket dan penugasan operator berjalan optimal, antrean dapat dilayani paralel di banyak loket dengan tetap menjaga FIFO global, customer dapat melihat loket tujuan, dan 302 automated tests lulus 100%.
+
+---
+
+# 16. Milestone P1 — Pengembangan setelah MVP
 
 Jangan mulai sebelum MVP selesai dan mendapat persetujuan.
 
 - [x] `P1-01` Multi-staf dan relasi banyak user ke business.
 - [x] `P1-02` Role dan permission operator/staf.
-- [ ] `P1-03` Multi-loket dan penugasan antrean.
+- [x] `P1-03` Multi-loket dan penugasan antrean.
 - [ ] `P1-04` Laravel Reverb/WebSocket untuk update status real-time.
 - [ ] `P1-05` Notifikasi email/browser sesuai kanal yang dipilih.
 - [x] `P1-06` Ekspor CSV.
@@ -795,7 +837,7 @@ Jangan mulai sebelum MVP selesai dan mendapat persetujuan.
 - [ ] `P1-09` Ulasan pelanggan.
 - [ ] `P1-10` Estimasi waktu tunggu berbasis data historis jika kualitas data mencukupi.
 
-# 16. Milestone P2 — Pengembangan lanjutan
+# 17. Milestone P2 — Pengembangan lanjutan
 
 - [ ] `P2-01` Multi-cabang.
 - [ ] `P2-02` Integrasi WhatsApp API.
@@ -807,7 +849,7 @@ Jangan mulai sebelum MVP selesai dan mendapat persetujuan.
 
 ---
 
-# 15. Cross-cutting checklist — berlaku untuk semua fitur
+# 18. Cross-cutting checklist — berlaku untuk semua fitur
 
 Agent harus memeriksa bagian ini pada setiap halaman atau modul, bukan hanya pada tahap akhir.
 

@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Collection;
 
 class User extends Authenticatable
 {
@@ -138,6 +139,34 @@ class User extends Authenticatable
         }
 
         return $business->services()->exists();
+    }
+
+    /**
+     * Get the counters that this user can operate (active counters).
+     *
+     * @return Collection<int, BusinessCounter>
+     */
+    public function assignedCounters(): Collection
+    {
+        if ($this->isOwner()) {
+            return $this->business?->activeCounters ?? collect();
+        }
+
+        if ($this->isOperator()) {
+            return $this->businessMembership?->assignedCounters()
+                ->where('is_active', true)
+                ->get() ?? collect();
+        }
+
+        return collect();
+    }
+
+    /**
+     * Determine whether this user is authorized to operate the given counter.
+     */
+    public function canOperateCounter(BusinessCounter $counter): bool
+    {
+        return $counter->canBeOperatedBy($this);
     }
 
     /**

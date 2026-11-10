@@ -39,6 +39,7 @@ class QueueTicket extends Model
         'business_id',
         'daily_queue_id',
         'service_id',
+        'counter_id',
         'ticket_number',
         'sequence_number',
         'customer_name',
@@ -150,6 +151,14 @@ class QueueTicket extends Model
     public function service(): BelongsTo
     {
         return $this->belongsTo(Service::class);
+    }
+
+    /**
+     * Get the counter assigned to serve this ticket.
+     */
+    public function counter(): BelongsTo
+    {
+        return $this->belongsTo(BusinessCounter::class, 'counter_id');
     }
 
     /**

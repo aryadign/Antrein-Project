@@ -333,6 +333,10 @@ erDiagram
     queue_tickets ||--o{ queue_status_histories : "audits transitions"
     users ||--o{ activity_logs : "records actions"
     businesses ||--o{ activity_logs : "logs context"
+    businesses ||--o{ business_counters : "operates"
+    business_counters ||--o{ counter_operator_assignments : "assigned to"
+    business_memberships ||--o{ counter_operator_assignments : "operates at"
+    business_counters ||--o{ queue_tickets : "serves"
 
     users {
         bigint id PK
@@ -412,6 +416,7 @@ erDiagram
         bigint id PK
         bigint business_id FK
         bigint daily_queue_id FK
+        bigint counter_id FK "nullable until called"
         bigint service_id FK
         string ticket_number "e.g. A-001"
         int sequence_number
@@ -478,6 +483,25 @@ erDiagram
         timestamp expires_at
         timestamp accepted_at
         timestamp revoked_at
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    business_counters {
+        bigint id PK
+        bigint business_id FK
+        string name "e.g. Loket 1"
+        string code "e.g. L-01, unique per business"
+        string description
+        boolean is_active
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    counter_operator_assignments {
+        bigint id PK
+        bigint business_counter_id FK
+        bigint business_membership_id FK
         timestamp created_at
         timestamp updated_at
     }
