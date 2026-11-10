@@ -236,4 +236,42 @@ class User extends Authenticatable
     {
         return $this->hasMany(ActivityLog::class);
     }
+
+    /**
+     * Get the notification preferences for this user.
+     */
+    public function notificationPreference(): HasOne
+    {
+        return $this->hasOne(UserNotificationPreference::class);
+    }
+
+    /**
+     * Get the browser push subscriptions registered for this user.
+     */
+    public function pushSubscriptions(): HasMany
+    {
+        return $this->hasMany(PushSubscription::class);
+    }
+
+    /**
+     * Determine whether the user wants to receive email notifications for new online tickets.
+     */
+    public function wantsEmailOnNewTicket(): bool
+    {
+        if (! $this->hasVerifiedEmail()) {
+            return false;
+        }
+
+        $pref = $this->notificationPreference;
+        return $pref ? (bool) $pref->email_on_new_online_ticket : true;
+    }
+
+    /**
+     * Determine whether the user wants to receive browser push notifications for new online tickets.
+     */
+    public function wantsBrowserPushOnNewTicket(): bool
+    {
+        $pref = $this->notificationPreference;
+        return $pref ? (bool) $pref->browser_on_new_online_ticket : true;
+    }
 }

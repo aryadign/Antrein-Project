@@ -185,6 +185,45 @@
                     @enderror
                 </div>
 
+                {{-- Optional Customer Email Notification --}}
+                <div x-data="{ notifyEmail: {{ old('notify_email') ? 'true' : 'false' }} }" class="pt-2">
+                    <label class="flex items-start gap-3 p-3.5 rounded-xl border border-neutral-200 bg-neutral-50/70 hover:bg-neutral-50 cursor-pointer select-none transition">
+                        <input
+                            type="checkbox"
+                            name="notify_email"
+                            value="1"
+                            x-model="notifyEmail"
+                            class="h-4 w-4 mt-0.5 rounded border-neutral-300 text-brand-700 focus:ring-brand-500"
+                        >
+                        <div class="text-xs">
+                            <span class="font-semibold text-neutral-900 block">Kirim pembaruan status antrean ke email saya (opsional)</span>
+                            <span class="text-neutral-500 block mt-0.5">Dapatkan notifikasi otomatis saat antrean Anda dipanggil, sedang dilayani, atau selesai.</span>
+                        </div>
+                    </label>
+
+                    <div x-show="notifyEmail" x-transition class="mt-3 pl-1" style="display: none;">
+                        <label for="customer_email" class="block text-label font-semibold text-neutral-900 mb-1.5">
+                            Alamat Email <span class="text-rose-500">*</span>
+                        </label>
+                        <input
+                            type="email"
+                            id="customer_email"
+                            name="customer_email"
+                            value="{{ old('customer_email') }}"
+                            placeholder="nama@email.com"
+                            :required="notifyEmail"
+                            maxlength="255"
+                            class="w-full px-3.5 py-2.5 bg-white border border-neutral-300 rounded-xl text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition text-sm @error('customer_email') border-rose-300 text-rose-900 focus:ring-rose-500 focus:border-rose-500 @enderror"
+                        >
+                        <p class="mt-1 text-[11px] text-neutral-500">
+                            Email Anda hanya digunakan untuk notifikasi tiket ini dan tidak akan ditampilkan pada publik.
+                        </p>
+                        @error('customer_email')
+                            <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+                </div>
+
                 {{-- Action Buttons --}}
                 <div class="pt-4 border-t border-neutral-200 flex flex-col sm:flex-row items-center gap-3">
                     <button 

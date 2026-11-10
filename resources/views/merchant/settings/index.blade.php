@@ -91,6 +91,12 @@
                 >
                     Akun & Keamanan
                 </a>
+                <a
+                    href="{{ route('merchant.settings', ['tab' => 'notifications']) }}"
+                    class="pb-3 px-1 border-b-2 font-medium text-sm transition-colors {{ $activeTab === 'notifications' ? 'border-brand-700 text-brand-700 font-bold' : 'border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300' }}"
+                >
+                    Notifikasi
+                </a>
             </nav>
         </div>
 
@@ -502,6 +508,282 @@
                     </div>
                 </form>
             </x-card>
+        @endif
+
+        <!-- TAB CONTENT: NOTIFIKASI -->
+        @if ($activeTab === 'notifications')
+            <div class="space-y-6" x-data="merchantPushManager({
+                vapidPublicKey: '{{ config('webpush.vapid.public_key') }}',
+                subscribeUrl: '{{ route('merchant.settings.push.subscribe') }}',
+                unsubscribeUrl: '{{ route('merchant.settings.push.unsubscribe') }}',
+                csrfToken: '{{ csrf_token() }}'
+            })" x-init="checkSubscription()">
+                {{-- Notification Preferences Form --}}
+                <x-card padding="lg">
+                    <form method="POST" action="{{ route('merchant.settings.notifications.update') }}" class="space-y-6">
+                        @csrf
+                        @method('PUT')
+
+                        <div>
+                            <h2 class="text-h3 font-bold text-neutral-900">Preferensi Notifikasi Antrean</h2>
+                            <p class="text-body text-neutral-600 mt-1">
+                                Tentukan saluran pemberitahuan yang ingin Anda terima saat pelanggan mendaftar antrean online baru di bisnis Anda.
+                            </p>
+                        </div>
+
+                        <div class="space-y-4 pt-2">
+                            {{-- Email Notification Toggle --}}
+                            <label class="flex items-start gap-3 p-4 rounded-xl border border-neutral-200 bg-neutral-50/50 hover:bg-neutral-50 cursor-pointer transition">
+                                <input
+                                    type="checkbox"
+                                    name="email_on_new_online_ticket"
+                                    value="1"
+                                    {{ old('email_on_new_online_ticket', $notificationPreference?->email_on_new_online_ticket ?? true) ? 'checked' : '' }}
+                                    class="mt-1 h-4 w-4 rounded border-neutral-300 text-brand-600 focus:ring-brand-500"
+                                >
+                                <div class="flex-1">
+                                    <div class="text-sm font-bold text-neutral-900 flex items-center gap-2">
+                                        <span>Notifikasi Email untuk Tiket Online Baru</span>
+                                        <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-200">Email</span>
+                                    </div>
+                                    <p class="text-xs text-neutral-600 mt-1">
+                                        Kirimkan ringkasan instan ke alamat email akun Anda (<strong>{{ $user->email }}</strong>) setiap kali ada pelanggan yang mengambil tiket online.
+                                    </p>
+                                </div>
+                            </label>
+
+                            {{-- Browser Push Notification Toggle --}}
+                            <label class="flex items-start gap-3 p-4 rounded-xl border border-neutral-200 bg-neutral-50/50 hover:bg-neutral-50 cursor-pointer transition">
+                                <input
+                                    type="checkbox"
+                                    name="browser_on_new_online_ticket"
+                                    value="1"
+                                    {{ old('browser_on_new_online_ticket', $notificationPreference?->browser_on_new_online_ticket ?? true) ? 'checked' : '' }}
+                                    class="mt-1 h-4 w-4 rounded border-neutral-300 text-brand-600 focus:ring-brand-500"
+                                >
+                                <div class="flex-1">
+                                    <div class="text-sm font-bold text-neutral-900 flex items-center gap-2">
+                                        <span>Web Push Notification (Browser / Desktop)</span>
+                                        <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">Browser Push</span>
+                                    </div>
+                                    <p class="text-xs text-neutral-600 mt-1">
+                                        Izinkan pengiriman pemberitahuan web push ke peramban aktif staf ketika tiket online baru diterbitkan oleh pelanggan.
+                                    </p>
+                                </div>
+                            </label>
+                        </div>
+
+                        <div class="pt-4 flex justify-end border-t border-neutral-200">
+                            <x-button type="submit" variant="primary" class="px-6 h-11">
+                                Simpan Preferensi
+                            </x-button>
+                        </div>
+                    </form>
+                </x-card>
+
+                {{-- Device Push Subscription Management --}}
+                <x-card padding="lg">
+                    <div class="space-y-4">
+                        <div class="flex items-start justify-between gap-4">
+                            <div>
+                                <h3 class="text-h3 font-bold text-neutral-900">Aktivasi Notifikasi di Peramban Ini</h3>
+                                <p class="text-body text-neutral-600 mt-1">
+                                    Daftarkan peramban/perangkat ini agar dapat menerima bunyi dan popup notifikasi tiket secara real-time meskipun jendela AntreIn sedang tertutup atau diminimalkan.
+                                </p>
+                            </div>
+                            <div>
+                                <template x-if="isSubscribed">
+                                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                        <span class="w-2 h-2 rounded-full bg-emerald-600"></span>
+                                        Peramban Terhubung
+                                    </span>
+                                </template>
+                                <template x-if="!isSubscribed && isSupported">
+                                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-neutral-100 text-neutral-700 border border-neutral-200">
+                                        <span class="w-2 h-2 rounded-full bg-neutral-400"></span>
+                                        Belum Diaktifkan
+                                    </span>
+                                </template>
+                            </div>
+                        </div>
+
+                        {{-- Unsupported Notice --}}
+                        <div x-show="!isSupported" class="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs">
+                            <p class="font-semibold">Peramban Anda belum mendukung Web Push Notifications.</p>
+                            <p class="mt-0.5">Gunakan peramban modern seperti Google Chrome, Mozilla Firefox, Microsoft Edge, atau Safari 16.4+ untuk menerima notifikasi di latar belakang.</p>
+                        </div>
+
+                        {{-- Blocked Permission Notice --}}
+                        <div x-show="permission === 'denied'" class="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs">
+                            <p class="font-semibold">Izin notifikasi diblokir oleh peramban.</p>
+                            <p class="mt-0.5">Silakan buka pengaturan privasi / perizinan situs peramban Anda untuk mengizinkan AntreIn mengirimkan notifikasi.</p>
+                        </div>
+
+                        {{-- Action Controls --}}
+                        <div x-show="isSupported && permission !== 'denied'" class="pt-2 flex flex-wrap items-center gap-3">
+                            <button
+                                type="button"
+                                x-show="!isSubscribed"
+                                @click="subscribe()"
+                                :disabled="isLoading"
+                                class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-semibold text-sm transition shadow-xs disabled:opacity-50"
+                            >
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                                <span x-text="isLoading ? 'Memproses...' : 'Aktifkan Notifikasi di Peramban Ini'"></span>
+                            </button>
+
+                            <button
+                                type="button"
+                                x-show="isSubscribed"
+                                @click="unsubscribe()"
+                                :disabled="isLoading"
+                                class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-800 font-semibold text-sm transition border border-neutral-300 disabled:opacity-50"
+                            >
+                                <svg class="w-4 h-4 text-neutral-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                                <span x-text="isLoading ? 'Memproses...' : 'Nonaktifkan Notifikasi Peramban'"></span>
+                            </button>
+
+                            <span x-show="message" class="text-xs font-semibold" :class="isError ? 'text-rose-600' : 'text-emerald-700'" x-text="message"></span>
+                        </div>
+                    </div>
+                </x-card>
+            </div>
+
+            @push('scripts')
+            <script>
+                function urlBase64ToUint8Array(base64String) {
+                    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+                    const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+                    const rawData = window.atob(base64);
+                    const outputArray = new Uint8Array(rawData.length);
+                    for (let i = 0; i < rawData.length; ++i) {
+                        outputArray[i] = rawData.charCodeAt(i);
+                    }
+                    return outputArray;
+                }
+
+                function merchantPushManager(config) {
+                    return {
+                        vapidPublicKey: config.vapidPublicKey,
+                        subscribeUrl: config.subscribeUrl,
+                        unsubscribeUrl: config.unsubscribeUrl,
+                        csrfToken: config.csrfToken,
+                        isSupported: ('serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window),
+                        permission: ('Notification' in window) ? Notification.permission : 'default',
+                        isSubscribed: false,
+                        isLoading: false,
+                        message: '',
+                        isError: false,
+
+                        async checkSubscription() {
+                            if (!this.isSupported) return;
+                            try {
+                                const registration = await navigator.serviceWorker.register('/sw.js');
+                                const subscription = await registration.pushManager.getSubscription();
+                                this.isSubscribed = !(subscription === null);
+                            } catch (e) {
+                                console.warn('Push check error:', e);
+                            }
+                        },
+
+                        async subscribe() {
+                            if (!this.isSupported) return;
+                            this.isLoading = true;
+                            this.message = '';
+                            this.isError = false;
+
+                            try {
+                                const perm = await Notification.requestPermission();
+                                this.permission = perm;
+                                if (perm !== 'granted') {
+                                    this.isError = true;
+                                    this.message = 'Izin notifikasi tidak diberikan oleh pengguna.';
+                                    this.isLoading = false;
+                                    return;
+                                }
+
+                                const registration = await navigator.serviceWorker.register('/sw.js');
+                                await navigator.serviceWorker.ready;
+
+                                const convertedVapidKey = urlBase64ToUint8Array(this.vapidPublicKey);
+                                const subscription = await registration.pushManager.subscribe({
+                                    userVisibleOnly: true,
+                                    applicationServerKey: convertedVapidKey
+                                });
+
+                                const subJson = subscription.toJSON();
+                                const response = await fetch(this.subscribeUrl, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRF-TOKEN': this.csrfToken,
+                                        'Accept': 'application/json',
+                                        'X-Requested-With': 'XMLHttpRequest'
+                                    },
+                                    body: JSON.stringify({
+                                        endpoint: subscription.endpoint,
+                                        public_key: subJson.keys?.p256dh,
+                                        auth_token: subJson.keys?.auth,
+                                        content_encoding: (PushManager.supportedContentEncodings || ['aesgcm'])[0]
+                                    })
+                                });
+
+                                const result = await response.json();
+                                if (response.ok && result.success) {
+                                    this.isSubscribed = true;
+                                    this.message = 'Peramban berhasil terhubung dengan notifikasi push!';
+                                } else {
+                                    this.isError = true;
+                                    this.message = result.message || 'Gagal menyimpan langganan notifikasi.';
+                                }
+                            } catch (err) {
+                                this.isError = true;
+                                this.message = 'Terjadi kesalahan: ' + err.message;
+                            } finally {
+                                this.isLoading = false;
+                            }
+                        },
+
+                        async unsubscribe() {
+                            if (!this.isSupported) return;
+                            this.isLoading = true;
+                            this.message = '';
+                            this.isError = false;
+
+                            try {
+                                const registration = await navigator.serviceWorker.ready;
+                                const subscription = await registration.pushManager.getSubscription();
+
+                                if (subscription) {
+                                    await fetch(this.unsubscribeUrl, {
+                                        method: 'DELETE',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            'X-CSRF-TOKEN': this.csrfToken,
+                                            'Accept': 'application/json',
+                                            'X-Requested-With': 'XMLHttpRequest'
+                                        },
+                                        body: JSON.stringify({
+                                            endpoint: subscription.endpoint
+                                        })
+                                    });
+
+                                    await subscription.unsubscribe();
+                                }
+
+                                this.isSubscribed = false;
+                                this.message = 'Notifikasi di peramban ini telah dinonaktifkan.';
+                            } catch (err) {
+                                this.isError = true;
+                                this.message = 'Gagal menonaktifkan notifikasi: ' + err.message;
+                            } finally {
+                                this.isLoading = false;
+                            }
+                        }
+                    };
+                }
+            </script>
+            @endpush
         @endif
     </div>
 </x-layouts.merchant>

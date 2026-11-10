@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -168,8 +169,22 @@ class QueueTicketController extends Controller
             'service_id' => ['required', 'integer', 'exists:services,id'],
             'customer_name' => ['required', 'string', 'max:100'],
             'customer_phone' => ['nullable', 'string', 'max:30'],
+            'notify_email' => ['nullable', 'boolean'],
+            'customer_email' => [
+                'nullable',
+                Rule::requiredIf(fn () => (bool) $request->input('notify_email')),
+                'email',
+                'max:255',
+            ],
             'idempotency_key' => ['nullable', 'string', 'max:64'],
+        ], [
+            'customer_email.required' => 'Alamat email wajib diisi jika Anda memilih menerima notifikasi email.',
+            'customer_email.email' => 'Format alamat email tidak valid.',
         ]);
+
+        $notifyEmail = ! empty($validated['notify_email']);
+        $customerEmail = $notifyEmail && ! empty($validated['customer_email']) ? trim($validated['customer_email']) : null;
+        $consentedAt = $customerEmail ? now() : null;
 
         /** @var Service $service */
         $service = Service::where('id', $validated['service_id'])
@@ -185,7 +200,9 @@ class QueueTicketController extends Controller
                 customerName: $validated['customer_name'],
                 customerPhone: $validated['customer_phone'] ?? null,
                 idempotencyKey: $validated['idempotency_key'] ?? null,
-                activeSessionTicketIds: is_array($activeSessionTicketIds) ? $activeSessionTicketIds : []
+                activeSessionTicketIds: is_array($activeSessionTicketIds) ? $activeSessionTicketIds : [],
+                customerEmail: $customerEmail,
+                customerEmailConsentedAt: $consentedAt
             );
 
             // Record this ticket ID into customer browser session for session protection

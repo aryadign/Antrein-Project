@@ -12,9 +12,11 @@ use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\StaffInvitationController;
 use App\Http\Controllers\Broadcasting\TicketBroadcastAuthController;
+use App\Http\Controllers\Customer\CustomerPushSubscriptionController;
 use App\Http\Controllers\Customer\QueueTicketController;
 use App\Http\Controllers\Merchant\CounterManagementController;
 use App\Http\Controllers\Merchant\DashboardController;
+use App\Http\Controllers\Merchant\NotificationPreferenceController;
 use App\Http\Controllers\Merchant\OnboardingController;
 use App\Http\Controllers\Merchant\QueueController;
 use App\Http\Controllers\Merchant\QueueOperationController;
@@ -72,6 +74,10 @@ Route::get('/q/{slug}/take-queue', [QueueTicketController::class, 'create'])->na
 Route::post('/q/{slug}/take-queue', [QueueTicketController::class, 'store'])->name('customer.queue.take');
 Route::get('/q/track/{token}', [QueueTicketController::class, 'track'])->name('customer.queue.track');
 Route::get('/ticket/{token}', [QueueTicketController::class, 'track'])->name('customer.ticket.show');
+Route::post('/push-subscriptions/customer', [CustomerPushSubscriptionController::class, 'store'])->name('customer.push.subscribe');
+Route::delete('/push-subscriptions/customer', [CustomerPushSubscriptionController::class, 'destroy'])->name('customer.push.unsubscribe');
+Route::post('/api/push-subscriptions/customer', [CustomerPushSubscriptionController::class, 'store']);
+Route::delete('/api/push-subscriptions/customer', [CustomerPushSubscriptionController::class, 'destroy']);
 Route::post('/broadcasting/auth/ticket', [TicketBroadcastAuthController::class, 'authenticate'])->name('broadcasting.auth.ticket');
 
 // Design System & Layout Preview Testbed (Milestone 2)
@@ -203,6 +209,11 @@ Route::middleware(['auth', 'active'])->group(function () {
                 Route::post('/queues/{ticket}/complete', [QueueOperationController::class, 'complete'])->name('queues.complete');
                 Route::post('/queues/{ticket}/skip', [QueueOperationController::class, 'skip'])->name('queues.skip');
                 Route::get('/queues/status', [QueueOperationController::class, 'status'])->name('queues.status');
+
+                // Notification Preferences & Web Push Subscriptions (Milestone 15 - P1-05)
+                Route::put('/settings/notifications', [NotificationPreferenceController::class, 'update'])->name('settings.notifications.update');
+                Route::post('/settings/push-subscription', [NotificationPreferenceController::class, 'storeSubscription'])->name('settings.push.subscribe');
+                Route::delete('/settings/push-subscription', [NotificationPreferenceController::class, 'destroySubscription'])->name('settings.push.unsubscribe');
             });
 
             // Owner-Only Administrative Routes (Restricted to Owner)
