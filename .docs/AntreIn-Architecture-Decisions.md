@@ -419,6 +419,24 @@ CREATE TABLE counter_operator_assignments (
 -- ALTER TABLE queue_tickets ADD COLUMN counter_id BIGINT UNSIGNED NULL AFTER daily_queue_id;
 -- ALTER TABLE queue_tickets ADD CONSTRAINT fk_queue_tickets_counter FOREIGN KEY (counter_id) REFERENCES business_counters(id) ON DELETE SET NULL;
 -- ALTER TABLE queue_tickets ADD INDEX idx_tickets_business_counter_status (business_id, counter_id, status);
+
+-- 14. Customer Reviews & Feedback (ADR-18: P1-09)
+CREATE TABLE customer_reviews (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    business_id BIGINT UNSIGNED NOT NULL,
+    queue_ticket_id BIGINT UNSIGNED NOT NULL UNIQUE,
+    service_id BIGINT UNSIGNED NOT NULL,
+    rating TINYINT UNSIGNED NOT NULL, -- 1 to 5
+    comment TEXT NULL,
+    created_at TIMESTAMP NULL,
+    updated_at TIMESTAMP NULL,
+    FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE,
+    FOREIGN KEY (queue_ticket_id) REFERENCES queue_tickets(id) ON DELETE CASCADE,
+    FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE CASCADE,
+    INDEX idx_reviews_business_created (business_id, created_at),
+    INDEX idx_reviews_business_rating (business_id, rating),
+    INDEX idx_reviews_service_rating (service_id, rating)
+);
 ```
 
 ---
@@ -585,6 +603,42 @@ In physical UMKM waiting rooms (e.g., clinics, salons, barbershops, payment coun
 6. **Adaptive Polling Fallback & Resilience:**
    - Operates a 10-second background polling cycle as an automatic failover when WebSocket connections disconnect or drop.
    - Listens to `online` and `window.focus` events to immediately recover and synchronize state when network connectivity is restored.
+
+---
+
+## ADR-18: Customer Reviews & Feedback (P1-09)
+
+### Status: Approved & Implemented (Milestone 17)
+
+### Context:
+In service and retail UMKM operations, gathering timely feedback immediately after customer service completion is vital to monitor operational service quality, track staff performance, and identify service bottlenecks. However, review intake must prevent malicious spamming, duplicate voting, unauthorized reviews of incomplete/cancelled queues, and cross-tenant leakage.
+
+### Decision:
+1. **Relational Data Model & Integrity:**
+   - Dedicated table `customer_reviews` with foreign keys referencing `businesses`, `queue_tickets`, and `services`.
+   - Uniqueness constraint: `queue_ticket_id` is marked `UNIQUE`, enforcing strictly at most one review per completed service ticket at the database layer.
+   - Cascade deletion: Deleting a ticket or business cleanly removes its associated review records without orphaned data.
+2. **Strict Lifecycle Enforcement & Access Security:**
+   - Reviews can **ONLY** be submitted for queue tickets in terminal state `selesai` (`QueueTicket::STATUS_SELESAI`).
+   - Attempted review submissions for tickets in progress (`menunggu`, `dipanggil`, `sedang_dilayani`) or aborted states (`dilewati`, `dibatalkan`) are strictly rejected with HTTP 422 Unprocessable Entity.
+   - Expired tickets (>24 hours post-completion) are rejected with HTTP 410 Gone via `QueueService::isTokenExpired`.
+   - Endpoint: `POST /q/track/{token}/review` resolves tickets via the cryptographically secure 40-character `access_token`, eliminating vulnerability to sequential ID guessing.
+3. **Anti-XSS & Anti-Abuse Hardening:**
+   - Input validation: `rating` required, integer, 1 to 5; `comment` nullable, string, max: 1000 characters.
+   - Anti-XSS Sanitization: Raw comment input is cleaned with `strip_tags()` before persisting to prevent stored cross-site scripting attacks.
+   - Rate limiting: Protected with `throttle:15,1` per client IP.
+   - Full audit logging: Each review submission dispatches an `ActivityLog` entry (`customer_review_submitted`).
+4. **Customer Experience on Live Tracking Page:**
+   - Integrated into `customer.track`: Upon transitioning to `selesai` (either on load or via live WebSocket update), the review card appears automatically.
+   - Interactive 5-star rating selector powered by Alpine.js with live visual feedback and character counter.
+   - Idempotency & persistent display: If already reviewed, the form is replaced by a verified review badge displaying the submitted stars, comment, submission timestamp, and an appreciative acknowledgment.
+5. **Merchant Review Analytics & Multi-Role Visibility:**
+   - Dedicated merchant portal screen: `GET /umkm/reviews` (`merchant.reviews.index`).
+   - Accessible to both Owner and Operator (`business.role:owner,operator`) to keep frontline staff aligned on customer sentiment.
+   - Real-time KPI summary cards: Rata-rata Rating, Total Ulasan, Tiket Selesai, and Tingkat Respon Ulasan (review percentage).
+   - Rating distribution histogram (percentage and counts for 5, 4, 3, 2, 1 stars).
+   - Multi-parameter filtering: by star rating, service type (`service_id`), and search text across ticket numbers, customer names, or comment contents.
+   - Strict tenant isolation: Query is constrained by `$business->customerReviews()`, preventing cross-merchant data leakage.
 
 ---
 

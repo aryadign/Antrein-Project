@@ -242,6 +242,28 @@ AntreIn menyediakan antarmuka khusus layar monitor TV ruang tunggu yang dapat di
 
 ---
 
+## ⭐ Ulasan & Masukan Pelanggan / Customer Reviews (P1-09)
+
+AntreIn menyediakan modul umpan balik dan penilaian kepuasan pelanggan yang terintegrasi langsung pada siklus hidup antrean:
+
+1. **Pengambilan Ulasan Setelah Layanan Selesai:**
+   - Formulir ulasan muncul secara otomatis pada halaman pelacakan pelanggan (`/q/track/{token}`) segera setelah tiket berstatus **Selesai** (`STATUS_SELESAI`).
+   - Pelanggan yang sedang menunggu, dipanggil, dilayani, dilewati, atau dibatalkan dilarang mengirimkan ulasan (validasi HTTP 422).
+2. **Penilaian Bintang & Masukan Teks Interaktif:**
+   - Selektor interaktif 1 hingga 5 bintang dengan animasi sentuh/klik berbasis Alpine.js.
+   - Kolom masukan teks (hingga 1.000 karakter) dengan penghitung karakter *real-time*.
+   - Proteksi keamanan: Teks komentar dibersihkan secara otomatis dari tag HTML berbahaya (*Anti-XSS Sanitization* via `strip_tags`).
+3. **Idempotensi & Proteksi Duplikasi:**
+   - Satu tiket antrean hanya dapat diulas satu kali (`unique` constraint pada basis data).
+   - Setelah ulasan tersimpan, halaman pelacakan menampilkan rincian bintang, komentar yang telah dikirim, dan pesan apresiasi terima kasih.
+4. **Analisis & Pemantauan Ulasan Merchant:**
+   - Dasbor ulasan terisolasi multi-tenant pada menu **Ulasan** (`/umkm/reviews`), dapat diakses oleh Pemilik (*Owner*) dan Operator.
+   - Ringkasan metrik analitik: Rata-rata Rating, Total Ulasan, Tiket Selesai, dan Tingkat Respon Ulasan.
+   - Grafik distribusi bintang (5, 4, 3, 2, 1 bintang) dengan persentase dan jumlah ulasan.
+   - Filter interaktif berdasarkan penilaian bintang, jenis layanan, serta pencarian nama pelanggan, nomor tiket, atau isi komentar.
+
+---
+
 ## 💾 Prosedur Backup & Restore Database
 
 ### 1. Pencadangan (*Backup*) Harian Database MySQL

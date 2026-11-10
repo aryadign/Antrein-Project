@@ -76,6 +76,9 @@ Route::get('/q/{slug}/take-queue', [QueueTicketController::class, 'create'])->na
 Route::post('/q/{slug}/take-queue', [QueueTicketController::class, 'store'])->name('customer.queue.take');
 Route::get('/q/track/{token}', [QueueTicketController::class, 'track'])->name('customer.queue.track');
 Route::get('/ticket/{token}', [QueueTicketController::class, 'track'])->name('customer.ticket.show');
+Route::post('/q/track/{token}/review', [\App\Http\Controllers\Customer\CustomerReviewController::class, 'store'])
+    ->middleware('throttle:15,1')
+    ->name('customer.review.store');
 Route::post('/push-subscriptions/customer', [CustomerPushSubscriptionController::class, 'store'])->name('customer.push.subscribe');
 Route::delete('/push-subscriptions/customer', [CustomerPushSubscriptionController::class, 'destroy'])->name('customer.push.unsubscribe');
 Route::post('/api/push-subscriptions/customer', [CustomerPushSubscriptionController::class, 'store']);
@@ -220,6 +223,9 @@ Route::middleware(['auth', 'active'])->group(function () {
                 Route::put('/settings/notifications', [NotificationPreferenceController::class, 'update'])->name('settings.notifications.update');
                 Route::post('/settings/push-subscription', [NotificationPreferenceController::class, 'storeSubscription'])->name('settings.push.subscribe');
                 Route::delete('/settings/push-subscription', [NotificationPreferenceController::class, 'destroySubscription'])->name('settings.push.unsubscribe');
+
+                // Customer Reviews & Feedback Monitoring (Milestone 17 - P1-09)
+                Route::get('/reviews', [\App\Http\Controllers\Merchant\CustomerReviewController::class, 'index'])->name('reviews.index');
             });
 
             // Owner-Only Administrative Routes (Restricted to Owner)
