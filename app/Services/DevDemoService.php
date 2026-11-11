@@ -42,14 +42,14 @@ class DevDemoService
     }
 
     /**
-     * Ensure the dedicated demo admin user exists.
+     * Ensure the dedicated demo admin user exists and is active.
      */
     public function ensureAdminUser(): User
     {
         $adminEmail = (string) env('INITIAL_ADMIN_EMAIL', self::ADMIN_EMAIL);
         $adminPassword = env('INITIAL_ADMIN_PASSWORD') ?: 'AdminAntreIn#2026';
 
-        return User::firstOrCreate(
+        $admin = User::firstOrCreate(
             ['email' => $adminEmail],
             [
                 'name' => 'Administrator AntreIn (Demo)',
@@ -59,10 +59,19 @@ class DevDemoService
                 'email_verified_at' => now(),
             ]
         );
+
+        if (! $admin->is_active || $admin->role !== User::ROLE_ADMIN) {
+            $admin->update([
+                'is_active' => true,
+                'role' => User::ROLE_ADMIN,
+            ]);
+        }
+
+        return $admin;
     }
 
     /**
-     * Ensure the dedicated demo business and owner exist.
+     * Ensure the dedicated demo business and owner exist and are active.
      */
     public function ensureOwnerUser(): User
     {
@@ -86,6 +95,13 @@ class DevDemoService
             ]
         );
 
+        if (! $owner->is_active || $owner->role !== User::ROLE_MERCHANT) {
+            $owner->update([
+                'is_active' => true,
+                'role' => User::ROLE_MERCHANT,
+            ]);
+        }
+
         $business = Business::firstOrCreate(
             ['user_id' => $owner->id],
             [
@@ -101,8 +117,15 @@ class DevDemoService
             ]
         );
 
-        // Ensure owner membership exists
-        BusinessMembership::firstOrCreate(
+        if ($business->status !== Business::STATUS_BUKA || $business->is_suspended) {
+            $business->update([
+                'status' => Business::STATUS_BUKA,
+                'is_suspended' => false,
+            ]);
+        }
+
+        // Ensure owner membership exists and is active
+        $membership = BusinessMembership::firstOrCreate(
             [
                 'business_id' => $business->id,
                 'user_id' => $owner->id,
@@ -113,6 +136,13 @@ class DevDemoService
                 'joined_at' => now(),
             ]
         );
+
+        if (! $membership->is_active || $membership->role !== BusinessMembership::ROLE_OWNER) {
+            $membership->update([
+                'is_active' => true,
+                'role' => BusinessMembership::ROLE_OWNER,
+            ]);
+        }
 
         // Ensure at least one service exists for onboarding completeness
         Service::firstOrCreate(
@@ -152,6 +182,13 @@ class DevDemoService
             ]
         );
 
+        if (! $operator->is_active || $operator->role !== User::ROLE_MERCHANT) {
+            $operator->update([
+                'is_active' => true,
+                'role' => User::ROLE_MERCHANT,
+            ]);
+        }
+
         $membership = BusinessMembership::firstOrCreate(
             [
                 'business_id' => $business->id,
@@ -164,6 +201,13 @@ class DevDemoService
             ]
         );
 
+        if (! $membership->is_active || $membership->role !== BusinessMembership::ROLE_OPERATOR) {
+            $membership->update([
+                'is_active' => true,
+                'role' => BusinessMembership::ROLE_OPERATOR,
+            ]);
+        }
+
         $counter = $business->counters()->firstOrCreate(
             ['code' => 'L-01'],
             [
@@ -172,6 +216,10 @@ class DevDemoService
             ]
         );
 
+        if (! $counter->is_active) {
+            $counter->update(['is_active' => true]);
+        }
+
         if ($counter && method_exists($counter, 'assignedMemberships')) {
             $counter->assignedMemberships()->syncWithoutDetaching([$membership->id]);
         }
@@ -179,4 +227,3 @@ class DevDemoService
         return $operator;
     }
 }
-

@@ -55,7 +55,20 @@ class DevelopmentMerchantSeeder extends Seeder
             ]
         );
 
-        // 3. Create Operating Hours (Mon-Sun, 10:00 - 21:00 WITA)
+        // 3. Ensure Owner Membership exists
+        \App\Models\BusinessMembership::firstOrCreate(
+            [
+                'business_id' => $business->id,
+                'user_id' => $merchantUser->id,
+            ],
+            [
+                'role' => \App\Models\BusinessMembership::ROLE_OWNER,
+                'is_active' => true,
+                'joined_at' => now(),
+            ]
+        );
+
+        // 4. Create Operating Hours (Mon-Sun, 10:00 - 21:00 WITA)
         for ($day = 0; $day <= 6; $day++) {
             BusinessHour::firstOrCreate(
                 [

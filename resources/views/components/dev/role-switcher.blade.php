@@ -23,8 +23,14 @@
 <div 
     x-data="{ 
         open: false,
+        submitting: false,
+        selectedPersona: null,
         toggle() { this.open = !this.open; },
-        close() { this.open = false; }
+        close() { this.open = false; },
+        submitSwitch(persona) {
+            this.submitting = true;
+            this.selectedPersona = persona;
+        }
     }"
     @keydown.escape.window="close()"
     @click.away="close()"
@@ -99,16 +105,20 @@
         {{-- Persona Switch Buttons --}}
         <div class="space-y-1.5 pt-1">
             {{-- Admin Persona --}}
-            <form method="POST" action="{{ route('dev.switch-persona') }}">
+            <form method="POST" action="{{ route('dev.switch-persona') }}" @submit="submitSwitch('admin')">
                 @csrf
                 <input type="hidden" name="persona" value="admin">
                 <button
                     type="submit"
-                    class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-left bg-neutral-800/70 hover:bg-neutral-800 border border-neutral-700/50 hover:border-rose-500/50 transition group"
+                    :disabled="submitting"
+                    class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-left bg-neutral-800/70 hover:bg-neutral-800 border border-neutral-700/50 hover:border-rose-500/50 transition group disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                     <div>
                         <div class="text-xs font-bold text-neutral-200 group-hover:text-rose-400">Admin AntreIn</div>
-                        <div class="text-[11px] text-neutral-400 font-mono">admin@antrein.id</div>
+                        <div class="text-[11px] text-neutral-400 font-mono">
+                            <span x-show="!submitting || selectedPersona !== 'admin'">admin@antrein.id</span>
+                            <span x-show="submitting && selectedPersona === 'admin'" class="text-rose-400 font-semibold" style="display: none;">Beralih ke Admin...</span>
+                        </div>
                     </div>
                     <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-rose-950/80 text-rose-300 border border-rose-800/60">
                         Admin
@@ -117,16 +127,20 @@
             </form>
 
             {{-- Owner Persona --}}
-            <form method="POST" action="{{ route('dev.switch-persona') }}">
+            <form method="POST" action="{{ route('dev.switch-persona') }}" @submit="submitSwitch('owner')">
                 @csrf
                 <input type="hidden" name="persona" value="owner">
                 <button
                     type="submit"
-                    class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-left bg-neutral-800/70 hover:bg-neutral-800 border border-neutral-700/50 hover:border-blue-500/50 transition group"
+                    :disabled="submitting"
+                    class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-left bg-neutral-800/70 hover:bg-neutral-800 border border-neutral-700/50 hover:border-blue-500/50 transition group disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                     <div>
                         <div class="text-xs font-bold text-neutral-200 group-hover:text-blue-400">Made Aryawan (Owner)</div>
-                        <div class="text-[11px] text-neutral-400 font-mono">owner@garasi.id</div>
+                        <div class="text-[11px] text-neutral-400 font-mono">
+                            <span x-show="!submitting || selectedPersona !== 'owner'">owner@garasi.id</span>
+                            <span x-show="submitting && selectedPersona === 'owner'" class="text-blue-400 font-semibold" style="display: none;">Beralih ke Owner...</span>
+                        </div>
                     </div>
                     <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-950/80 text-blue-300 border border-blue-800/60">
                         Owner
@@ -135,16 +149,20 @@
             </form>
 
             {{-- Operator Persona --}}
-            <form method="POST" action="{{ route('dev.switch-persona') }}">
+            <form method="POST" action="{{ route('dev.switch-persona') }}" @submit="submitSwitch('operator')">
                 @csrf
                 <input type="hidden" name="persona" value="operator">
                 <button
                     type="submit"
-                    class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-left bg-neutral-800/70 hover:bg-neutral-800 border border-neutral-700/50 hover:border-emerald-500/50 transition group"
+                    :disabled="submitting"
+                    class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-left bg-neutral-800/70 hover:bg-neutral-800 border border-neutral-700/50 hover:border-emerald-500/50 transition group disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                     <div>
                         <div class="text-xs font-bold text-neutral-200 group-hover:text-emerald-400">Wayan Sudirga (Operator)</div>
-                        <div class="text-[11px] text-neutral-400 font-mono">operator@garasi.id &bull; Loket 1</div>
+                        <div class="text-[11px] text-neutral-400 font-mono">
+                            <span x-show="!submitting || selectedPersona !== 'operator'">operator@garasi.id &bull; Loket 1</span>
+                            <span x-show="submitting && selectedPersona === 'operator'" class="text-emerald-400 font-semibold" style="display: none;">Beralih ke Operator...</span>
+                        </div>
                     </div>
                     <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-800/60">
                         Operator
@@ -153,16 +171,20 @@
             </form>
 
             {{-- Customer Persona --}}
-            <form method="POST" action="{{ route('dev.switch-persona') }}">
+            <form method="POST" action="{{ route('dev.switch-persona') }}" @submit="submitSwitch('customer')">
                 @csrf
                 <input type="hidden" name="persona" value="customer">
                 <button
                     type="submit"
-                    class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-left bg-neutral-800/70 hover:bg-neutral-800 border border-neutral-700/50 hover:border-amber-500/50 transition group"
+                    :disabled="submitting"
+                    class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-left bg-neutral-800/70 hover:bg-neutral-800 border border-neutral-700/50 hover:border-amber-500/50 transition group disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                     <div>
                         <div class="text-xs font-bold text-neutral-200 group-hover:text-amber-400">Pelanggan (Tamu)</div>
-                        <div class="text-[11px] text-neutral-400">Antrean Barbershop Garasi</div>
+                        <div class="text-[11px] text-neutral-400">
+                            <span x-show="!submitting || selectedPersona !== 'customer'">Antrean Barbershop Garasi</span>
+                            <span x-show="submitting && selectedPersona === 'customer'" class="text-amber-400 font-semibold" style="display: none;">Membuka antrean demo...</span>
+                        </div>
                     </div>
                     <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-800/60">
                         Guest
@@ -191,4 +213,3 @@
         </div>
     </div>
 </div>
-

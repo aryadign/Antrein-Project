@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Models\Business;
+use App\Models\BusinessMembership;
 use App\Models\User;
 use App\Services\DevDemoService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -52,6 +54,16 @@ class DevDemoAccessTest extends TestCase
         $response->assertRedirect(route('admin.dashboard'));
     }
 
+    public function test_admin_demo_can_logout_cleanly(): void
+    {
+        $this->post(route('dev.quick-login'), ['persona' => 'admin']);
+        $this->assertAuthenticated();
+
+        $response = $this->post(route('logout'));
+        $this->assertGuest();
+        $response->assertRedirect(route('login'));
+    }
+
     public function test_quick_login_can_authenticate_as_owner_and_redirects_to_merchant_dashboard(): void
     {
         $response = $this->post(route('dev.quick-login'), [
@@ -65,6 +77,16 @@ class DevDemoAccessTest extends TestCase
         $this->assertSame(DevDemoService::OWNER_EMAIL, $user->email);
 
         $response->assertRedirect(route('merchant.dashboard'));
+    }
+
+    public function test_owner_demo_membership_is_verified_and_can_access_owner_routes(): void
+    {
+        $this->post(route('dev.quick-login'), ['persona' => 'owner']);
+        $this->assertAuthenticated();
+
+        // Owner can access owner-only routes like counters index
+        $response = $this->get(route('merchant.counters.index'));
+        $response->assertStatus(200);
     }
 
     public function test_quick_login_can_authenticate_as_operator_and_redirects_to_merchant_dashboard(): void
@@ -82,6 +104,16 @@ class DevDemoAccessTest extends TestCase
         $response->assertRedirect(route('merchant.dashboard'));
     }
 
+    public function test_operator_demo_is_forbidden_from_owner_only_routes(): void
+    {
+        $this->post(route('dev.quick-login'), ['persona' => 'operator']);
+        $this->assertAuthenticated();
+
+        // Operator attempting to access owner-only counter management should get 403 Forbidden
+        $response = $this->get(route('merchant.counters.index'));
+        $response->assertStatus(403);
+    }
+
     public function test_quick_login_as_customer_logs_out_session_and_redirects_to_guest_queue(): void
     {
         $admin = User::factory()->admin()->create();
@@ -92,6 +124,16 @@ class DevDemoAccessTest extends TestCase
 
         $this->assertGuest();
         $response->assertRedirect(route('customer.queue', ['slug' => DevDemoService::DEMO_SLUG]));
+    }
+
+    public function test_customer_guest_can_access_barbershop_public_queue_with_services(): void
+    {
+        $this->post(route('dev.quick-login'), ['persona' => 'customer']);
+
+        $response = $this->get(route('customer.queue', ['slug' => DevDemoService::DEMO_SLUG]));
+        $response->assertStatus(200);
+        $response->assertSee('Barbershop Garasi');
+        $response->assertSee('Potong Rambut Dewasa');
     }
 
     public function test_switch_persona_changes_authenticated_user_from_owner_to_admin(): void
@@ -156,6 +198,26 @@ class DevDemoAccessTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_arbitrary_user_id_parameter_is_ignored(): void
+    {
+        $targetUser = User::factory()->create([
+            'email' => 'victim@example.com',
+        ]);
+
+        // Attempt to pass arbitrary user_id parameter along with admin persona
+        $response = $this->post(route('dev.quick-login'), [
+            'persona' => 'admin',
+            'user_id' => $targetUser->id,
+            'id' => $targetUser->id,
+        ]);
+
+        $this->assertAuthenticated();
+        /** @var User $user */
+        $user = auth()->user();
+        $this->assertSame(DevDemoService::ADMIN_EMAIL, $user->email);
+        $this->assertNotSame($targetUser->id, $user->id);
+    }
+
     public function test_dev_demo_access_routes_abort_404_in_production(): void
     {
         $this->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class);
@@ -166,6 +228,27 @@ class DevDemoAccessTest extends TestCase
 
         $this->post('/dev/switch-persona', ['persona' => 'admin'])
             ->assertStatus(404);
+    }
+
+    public function test_demo_account_setup_is_idempotent_and_does_not_duplicate_records(): void
+    {
+        /** @var DevDemoService $devDemo */
+        $devDemo = app(DevDemoService::class);
+
+        // Call resolution multiple times
+        $devDemo->ensureAdminUser();
+        $devDemo->ensureAdminUser();
+
+        $devDemo->ensureOwnerUser();
+        $devDemo->ensureOwnerUser();
+
+        $devDemo->ensureOperatorUser();
+        $devDemo->ensureOperatorUser();
+
+        $this->assertSame(1, User::where('email', DevDemoService::ADMIN_EMAIL)->count());
+        $this->assertSame(1, User::where('email', DevDemoService::OWNER_EMAIL)->count());
+        $this->assertSame(1, User::where('email', DevDemoService::OPERATOR_EMAIL)->count());
+        $this->assertSame(1, Business::where('slug', DevDemoService::DEMO_SLUG)->count());
     }
 
     public function test_authenticated_merchant_hitting_login_redirects_to_merchant_dashboard(): void
