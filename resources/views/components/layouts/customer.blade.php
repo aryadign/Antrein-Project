@@ -4,7 +4,13 @@
     'backUrl' => null,
 ])
 
-<x-layouts.base :title="$title . ($business ? ' — ' . $business['name'] : ' — AntreIn')">
+@php
+    $businessName = data_get($business, 'name');
+    $businessCategory = data_get($business, 'category.name', data_get($business, 'category', 'UMKM Mitra'));
+    $businessStatus = data_get($business, 'status', 'buka');
+@endphp
+
+<x-layouts.base :title="$title . ($businessName ? ' — ' . $businessName : ' — AntreIn')">
     <div class="min-h-screen bg-neutral-50 flex flex-col justify-between">
         {{-- Public Header --}}
         <header class="bg-white border-b border-neutral-200 sticky top-0 z-30 shadow-2xs">
@@ -24,11 +30,11 @@
                 @if ($business)
                     <div class="flex items-center gap-2 sm:gap-3">
                         <div class="hidden sm:block text-right">
-                            <div class="text-label font-bold text-neutral-900 line-clamp-1">{{ $business['name'] }}</div>
-                            <div class="text-[11px] text-neutral-500">{{ $business['category'] ?? 'UMKM Mitra' }}</div>
+                            <div class="text-label font-bold text-neutral-900 line-clamp-1">{{ $businessName }}</div>
+                            <div class="text-[11px] text-neutral-500">{{ $businessCategory }}</div>
                         </div>
 
-                        <x-status-badge :status="$business['status'] ?? 'buka'" size="sm" />
+                        <x-status-badge :status="$businessStatus" size="sm" />
                     </div>
                 @else
                     <div class="text-caption text-neutral-500 font-medium">

@@ -28,10 +28,11 @@ class UserManagementTest extends TestCase
 
     public function test_admin_can_view_users_list_and_filters(): void
     {
-        $admin = User::factory()->admin()->create(['name' => 'Super Admin', 'email' => 'admin@antrein.test']);
-        $merchant = User::factory()->merchant()->create(['name' => 'Pak Joko', 'email' => 'joko@warung.test']);
+        $actingAdmin = User::factory()->admin()->create(['name' => 'Platform Auditor', 'email' => 'auditor@antrein.test']);
+        User::factory()->admin()->create(['name' => 'Super Admin', 'email' => 'admin@antrein.test']);
+        User::factory()->merchant()->create(['name' => 'Pak Joko', 'email' => 'joko@warung.test']);
 
-        $response = $this->actingAs($admin)->get(route('admin.users.index'));
+        $response = $this->actingAs($actingAdmin)->get(route('admin.users.index'));
 
         $response->assertOk();
         $response->assertViewIs('admin.users.index');
@@ -39,13 +40,13 @@ class UserManagementTest extends TestCase
         $response->assertSee('Pak Joko');
 
         // Filter by role
-        $roleResponse = $this->actingAs($admin)->get(route('admin.users.index', ['role' => 'admin']));
+        $roleResponse = $this->actingAs($actingAdmin)->get(route('admin.users.index', ['role' => 'admin']));
         $roleResponse->assertOk();
         $roleResponse->assertSee('Super Admin');
         $roleResponse->assertDontSee('Pak Joko');
 
         // Search by name
-        $searchResponse = $this->actingAs($admin)->get(route('admin.users.index', ['search' => 'Joko']));
+        $searchResponse = $this->actingAs($actingAdmin)->get(route('admin.users.index', ['search' => 'Joko']));
         $searchResponse->assertOk();
         $searchResponse->assertSee('Pak Joko');
         $searchResponse->assertDontSee('Super Admin');
