@@ -2,9 +2,9 @@
     'title' => 'Merchant AntreIn',
     'heading' => null,
     'description' => null,
-    'businessName' => 'Barbershop Garasi',
-    'businessStatus' => 'buka',
-    'businessSlug' => 'barbershop-garasi',
+    'businessName' => auth()->user()?->business?->name ?? 'Unit Usaha AntreIn',
+    'businessStatus' => auth()->user()?->business?->status ?? 'buka',
+    'businessSlug' => auth()->user()?->business?->slug ?? '',
 ])
 
 <x-layouts.base :title="$title . ' — AntreIn UMKM'">
@@ -100,11 +100,11 @@
                     {{-- Merchant Owner Dropdown --}}
                     <x-dropdown align="right" width="48">
                         <x-slot name="trigger">
-                            <button class="flex items-center gap-2 p-1.5 rounded-lg hover:bg-neutral-100 transition focus:outline-none focus:ring-2 focus:ring-brand-500">
+                            <button type="button" class="flex items-center gap-2 p-1.5 rounded-lg hover:bg-neutral-100 transition focus:outline-none focus:ring-2 focus:ring-brand-500">
                                 <div class="w-8 h-8 rounded-full bg-brand-700 text-white flex items-center justify-center font-semibold text-caption">
-                                    BG
+                                    {{ strtoupper(substr(auth()->user()?->name ?? 'UM', 0, 2)) }}
                                 </div>
-                                <span class="hidden sm:inline text-label font-medium text-neutral-700">Pemilik Usaha</span>
+                                <span class="hidden sm:inline text-label font-medium text-neutral-700">{{ auth()->user()?->name ?? 'Pemilik Usaha' }}</span>
                                 <svg class="w-4 h-4 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                             </button>
                         </x-slot>
@@ -122,7 +122,7 @@
                                 <a href="{{ route('merchant.staff.index') }}" class="block px-4 py-2 text-label text-neutral-700 hover:bg-neutral-50 transition">Kelola Staf</a>
                                 <a href="{{ route('merchant.settings', ['tab' => 'account']) }}" class="block px-4 py-2 text-label text-neutral-700 hover:bg-neutral-50 transition">Pengaturan Akun</a>
                             @endif
-                            <form method="POST" action="{{ route('logout') }}">
+                            <form method="POST" action="{{ route('logout') }}" @click.stop>
                                 @csrf
                                 <button type="submit" class="w-full text-left px-4 py-2 text-label text-danger-700 hover:bg-red-50 transition border-t border-neutral-100">Keluar</button>
                             </form>

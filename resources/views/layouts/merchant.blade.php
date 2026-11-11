@@ -122,7 +122,7 @@
                                 <a href="{{ route('merchant.staff.index') }}" class="block px-4 py-2 text-label text-neutral-700 hover:bg-neutral-50 transition">Kelola Staf</a>
                                 <a href="{{ route('merchant.settings', ['tab' => 'account']) }}" class="block px-4 py-2 text-label text-neutral-700 hover:bg-neutral-50 transition">Pengaturan Akun</a>
                             @endif
-                            <form method="POST" action="{{ route('logout') }}">
+                            <form method="POST" action="{{ route('logout') }}" @click.stop>
                                 @csrf
                                 <button type="submit" class="w-full text-left px-4 py-2 text-label text-danger-700 hover:bg-red-50 transition border-t border-neutral-100">Keluar</button>
                             </form>
