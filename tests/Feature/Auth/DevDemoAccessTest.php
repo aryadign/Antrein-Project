@@ -59,9 +59,57 @@ class DevDemoAccessTest extends TestCase
         $this->post(route('dev.quick-login'), ['persona' => 'admin']);
         $this->assertAuthenticated();
 
+        $previousSessionId = session()->getId();
+        $previousToken = session()->token();
+
+        $dashboard = $this->get(route('admin.dashboard'));
+        $dashboard->assertStatus(200);
+        $dashboard->assertSee('action="' . route('logout') . '"', false);
+        $dashboard->assertSee('href="' . route('admin.settings') . '"', false);
+        $dashboard->assertDontSee('href="#logout"', false);
+        $dashboard->assertDontSee('href="#settings"', false);
+
         $response = $this->post(route('logout'));
         $this->assertGuest();
-        $response->assertRedirect(route('login'));
+        $response->assertRedirect(route('home'));
+
+        $this->assertNotSame($previousSessionId, session()->getId());
+        $this->assertNotSame($previousToken, session()->token());
+
+        // Subsequent homepage render is guest-facing
+        $homeResponse = $this->get(route('home'));
+        $homeResponse->assertStatus(200);
+        $homeResponse->assertDontSee('Dashboard Admin');
+        $homeResponse->assertSee('Masuk');
+
+        // Subsequent protected admin route access is blocked
+        $this->get(route('admin.dashboard'))
+            ->assertRedirect(route('login'));
+    }
+
+    public function test_owner_and_operator_demo_can_logout_without_losing_demo_data(): void
+    {
+        foreach (['owner', 'operator'] as $persona) {
+            $this->post(route('dev.quick-login'), ['persona' => $persona]);
+            $this->assertAuthenticated();
+
+            $dashboard = $this->get(route('merchant.dashboard'));
+            $dashboard->assertStatus(200);
+            $dashboard->assertSee('action="' . route('logout') . '"', false);
+            $dashboard->assertDontSee('href="#logout"', false);
+
+            $logoutResponse = $this->post(route('logout'));
+            $this->assertGuest();
+            $logoutResponse->assertRedirect(route('home'));
+
+            $this->get(route('merchant.dashboard'))
+                ->assertRedirect(route('login'));
+        }
+
+        $business = Business::where('slug', DevDemoService::DEMO_SLUG)->firstOrFail();
+        $this->assertSame(1, BusinessMembership::where('business_id', $business->id)->where('role', 'owner')->count());
+        $this->assertSame(1, BusinessMembership::where('business_id', $business->id)->where('role', 'operator')->count());
+        $this->assertGreaterThanOrEqual(1, $business->counters()->count());
     }
 
     public function test_quick_login_can_authenticate_as_owner_and_redirects_to_merchant_dashboard(): void

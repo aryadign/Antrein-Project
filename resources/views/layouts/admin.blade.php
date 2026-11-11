@@ -101,7 +101,7 @@
                                 <p class="text-[11px] text-neutral-500 truncate">{{ auth()->user()?->email ?? 'admin@antrein.id' }}</p>
                             </div>
                             <a href="{{ route('admin.settings') }}" class="block px-4 py-2 text-label text-neutral-700 hover:bg-neutral-50 transition">Pengaturan Platform</a>
-                            <form method="POST" action="{{ route('logout') }}">
+                            <form method="POST" action="{{ route('logout') }}" @click.stop>
                                 @csrf
                                 <button type="submit" class="w-full text-left px-4 py-2 text-label text-danger-700 hover:bg-red-50 transition border-t border-neutral-100">Keluar</button>
                             </form>

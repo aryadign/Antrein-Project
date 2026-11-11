@@ -86,22 +86,25 @@
                     {{-- Admin User Profile Dropdown --}}
                     <x-dropdown align="right" width="48">
                         <x-slot name="trigger">
-                            <button class="flex items-center gap-2 p-1.5 rounded-lg hover:bg-neutral-100 transition focus:outline-none focus:ring-2 focus:ring-brand-500">
+                            <button type="button" class="flex items-center gap-2 p-1.5 rounded-lg hover:bg-neutral-100 transition focus:outline-none focus:ring-2 focus:ring-brand-500">
                                 <div class="w-8 h-8 rounded-full bg-neutral-900 text-white flex items-center justify-center font-semibold text-caption">
-                                    AD
+                                    {{ strtoupper(substr(auth()->user()?->name ?? 'AD', 0, 2)) }}
                                 </div>
-                                <span class="hidden sm:inline text-label font-medium text-neutral-700">Administrator</span>
+                                <span class="hidden sm:inline text-label font-medium text-neutral-700">{{ auth()->user()?->name ?? 'Administrator' }}</span>
                                 <svg class="w-4 h-4 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                             </button>
                         </x-slot>
 
                         <x-slot name="content">
                             <div class="px-4 py-2 border-b border-neutral-100">
-                                <p class="text-caption font-medium text-neutral-900">Admin AntreIn</p>
-                                <p class="text-[11px] text-neutral-500 truncate">admin@antrein.id</p>
+                                <p class="text-caption font-medium text-neutral-900">{{ auth()->user()?->name ?? 'Admin AntreIn' }}</p>
+                                <p class="text-[11px] text-neutral-500 truncate">{{ auth()->user()?->email ?? 'admin@antrein.id' }}</p>
                             </div>
-                            <a href="#settings" class="block px-4 py-2 text-label text-neutral-700 hover:bg-neutral-50 transition">Pengaturan Platform</a>
-                            <a href="#logout" class="block px-4 py-2 text-label text-danger-700 hover:bg-red-50 transition border-t border-neutral-100">Keluar</a>
+                            <a href="{{ route('admin.settings') }}" class="block px-4 py-2 text-label text-neutral-700 hover:bg-neutral-50 transition">Pengaturan Platform</a>
+                            <form method="POST" action="{{ route('logout') }}" @click.stop>
+                                @csrf
+                                <button type="submit" class="w-full text-left px-4 py-2 text-label text-danger-700 hover:bg-red-50 transition border-t border-neutral-100">Keluar</button>
+                            </form>
                         </x-slot>
                     </x-dropdown>
                 </div>
