@@ -16,6 +16,9 @@ use App\Http\Controllers\Customer\CustomerPushSubscriptionController;
 use App\Http\Controllers\Customer\QueueTicketController;
 use App\Http\Controllers\Display\PublicQueueDisplayController;
 use App\Http\Controllers\Merchant\CounterManagementController;
+use App\Http\Controllers\Merchant\BranchController;
+use App\Http\Controllers\Merchant\OrganizationController;
+use App\Http\Controllers\Merchant\OrganizationReportController;
 use App\Http\Controllers\Merchant\DashboardController;
 use App\Http\Controllers\Merchant\DisplayManagementController;
 use App\Http\Controllers\Merchant\NotificationPreferenceController;
@@ -211,7 +214,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     | Merchant Routes (role:merchant)
     |--------------------------------------------------------------------------
     */
-    Route::middleware('role:merchant')->prefix('umkm')->name('merchant.')->group(function () {
+    Route::middleware(['role:merchant', 'active.branch'])->prefix('umkm')->name('merchant.')->group(function () {
         // Onboarding flow (Accessible before completing onboarding)
         Route::get('/onboarding', [OnboardingController::class, 'show'])->name('onboarding');
         Route::post('/onboarding/step-1', [OnboardingController::class, 'storeStep1'])->name('onboarding.step1');
@@ -248,6 +251,23 @@ Route::middleware(['auth', 'active'])->group(function () {
 
                 // Customer Reviews & Feedback Monitoring (Milestone 17 - P1-09)
                 Route::get('/reviews', [\App\Http\Controllers\Merchant\CustomerReviewController::class, 'index'])->name('reviews.index');
+
+                // Multi-Branch switching & branch overview (Milestone 19 - P2-01)
+                Route::get('/branches', [BranchController::class, 'index'])->name('branches.index');
+                Route::post('/branches/switch', [BranchController::class, 'switch'])->name('branches.switch');
+            });
+
+            // Organization-level management (Milestone 19 - P2-01)
+            Route::middleware('organization.manager')->group(function () {
+                Route::get('/branches/create', [BranchController::class, 'create'])->name('branches.create');
+                Route::post('/branches', [BranchController::class, 'store'])->name('branches.store');
+                Route::get('/branches/{business}/edit', [BranchController::class, 'edit'])->name('branches.edit');
+                Route::put('/branches/{business}', [BranchController::class, 'update'])->name('branches.update');
+                Route::patch('/branches/{business}/toggle-active', [BranchController::class, 'toggleActive'])->name('branches.toggle-active');
+
+                Route::get('/organization', [OrganizationController::class, 'edit'])->name('organization.edit');
+                Route::put('/organization', [OrganizationController::class, 'update'])->name('organization.update');
+                Route::get('/organization/reports', [OrganizationReportController::class, 'index'])->name('organization.reports');
             });
 
             // Owner-Only Administrative Routes (Restricted to Owner)

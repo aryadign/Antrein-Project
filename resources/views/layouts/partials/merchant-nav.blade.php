@@ -1,12 +1,19 @@
 @php
     $user = auth()->user();
     $isOwner = $user?->isOwner() ?? false;
+    $canManageOrg = $user?->canManageOrganization() ?? false;
 
     $navItems = [
         ['name' => 'Beranda', 'route' => 'merchant.dashboard', 'icon' => 'home'],
         ['name' => 'Antrean', 'route' => 'merchant.queues', 'icon' => 'queue'],
         ['name' => 'Ulasan', 'route' => 'merchant.reviews.index', 'icon' => 'star'],
+        ['name' => 'Cabang', 'route' => 'merchant.branches.index', 'icon' => 'building'],
     ];
+
+    if ($canManageOrg) {
+        $navItems[] = ['name' => 'Laporan Grup', 'route' => 'merchant.organization.reports', 'icon' => 'presentation'];
+        $navItems[] = ['name' => 'Organisasi', 'route' => 'merchant.organization.edit', 'icon' => 'office'];
+    }
 
     if ($isOwner) {
         $navItems[] = ['name' => 'Loket', 'route' => 'merchant.counters.index', 'icon' => 'counter'];
@@ -34,6 +41,12 @@
             <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
         @elseif ($item['icon'] === 'star')
             <svg class="w-5 h-5 shrink-0 text-amber-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+        @elseif ($item['icon'] === 'building')
+            <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+        @elseif ($item['icon'] === 'office')
+            <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"/></svg>
+        @elseif ($item['icon'] === 'presentation')
+            <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/></svg>
         @elseif ($item['icon'] === 'counter')
             <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
         @elseif ($item['icon'] === 'scissors')

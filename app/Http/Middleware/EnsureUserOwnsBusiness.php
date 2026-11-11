@@ -10,7 +10,7 @@ use Symfony\Component\HttpFoundation\Response;
 class EnsureUserOwnsBusiness
 {
     /**
-     * Handle an incoming request.
+     * Handle an incoming request and verify branch access for the bound business.
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
@@ -30,9 +30,11 @@ class EnsureUserOwnsBusiness
         $businessParam = $request->route('business');
 
         if ($businessParam) {
-            $businessId = $businessParam instanceof Business ? $businessParam->id : (int) $businessParam;
+            $business = $businessParam instanceof Business
+                ? $businessParam
+                : Business::find((int) $businessParam);
 
-            if (! $user->business || $user->business->id !== $businessId) {
+            if (! $business || ! $user->canAccessBusiness($business)) {
                 abort(Response::HTTP_FORBIDDEN, 'Anda tidak memiliki hak akses terhadap data usaha ini.');
             }
         }
@@ -40,4 +42,3 @@ class EnsureUserOwnsBusiness
         return $next($request);
     }
 }
-

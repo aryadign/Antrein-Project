@@ -296,6 +296,26 @@ AntreIn menghitung perkiraan waktu tunggu pelanggan dari data historis pelayanan
 
 ---
 
+## 🏬 Manajemen Bisnis Multi-Cabang & Organisasi (Multi-Branch Management — P2-01)
+
+AntreIn mendukung struktur hierarki entitas grup usaha/brand yang menaungi beberapa cabang operasional secara fleksibel dan terisolasi:
+
+1. **Entitas Induk Organisasi (*BusinessOrganization*):**
+   - Brand atau payung usaha diwakili oleh model `BusinessOrganization` yang menaungi satu atau lebih cabang operasional (`businesses`).
+   - Pemilik organisasi dapat mengelola profil grup/brand, menambah cabang baru, mengubah identitas cabang, serta mengaktifkan/menonaktifkan cabang melalui `/umkm/branches` dan `/umkm/organization`.
+2. **Isolasi Penuh Antrean Per Cabang:**
+   - Setiap cabang memiliki nomor antrean harian mandiri (FIFO global unit yang selalu mulai dari `A-001`), kuota terpisah, dan status operasional masing-masing (`buka`, `tutup`, `jeda`).
+   - Loket dan display antrean terikat secara independen pada cabang bersangkutan; tidak ada percampuran antrean antar-cabang.
+3. **Pengalihan Cabang Aktif (*Active Branch Switching*):**
+   - Pengguna dengan hak akses beberapa cabang dapat berpindah konteks operasional kapan saja melalui *Branch Switcher Dropdown* di topbar atau menu `/umkm/branches`.
+   - Konteks sesi cabang (`active_business_id`) divalidasi ketat di sisi server via middleware `ResolveActiveBranch` untuk mencegah manipulasi sesi atau kebocoran data.
+4. **Analitik & Laporan Agregat Organisasi:**
+   - Halaman `/umkm/organization/reports` menyajikan metrik agregat performa seluruh cabang dalam grup (total tiket, tingkat penyelesaian, waktu tunggu rata-rata tertimbang, dan perbandingan antar cabang).
+5. **Kompatibilitas Penuh Data Historis:**
+   - Seluruh data bisnis tunggal lama secara otomatis terhubung ke organisasi default melalui migrasi backfill, menjaga stabilitas tautan slug publik (`/q/{slug}`), token pelacakan tiket, dan ulasan pelanggan.
+
+---
+
 ## 💾 Prosedur Backup & Restore Database
 
 ### 1. Pencadangan (*Backup*) Harian Database MySQL

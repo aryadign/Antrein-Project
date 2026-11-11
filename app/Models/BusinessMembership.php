@@ -20,6 +20,7 @@ class BusinessMembership extends Model
      * @var list<string>
      */
     protected $fillable = [
+        'organization_id',
         'business_id',
         'user_id',
         'role',
@@ -49,6 +50,14 @@ class BusinessMembership extends Model
     }
 
     /**
+     * Get the organization that owns the branch of this membership.
+     */
+    public function organization(): BelongsTo
+    {
+        return $this->belongsTo(BusinessOrganization::class, 'organization_id');
+    }
+
+    /**
      * Get the user linked to this membership.
      */
     public function user(): BelongsTo
@@ -71,6 +80,12 @@ class BusinessMembership extends Model
 
     protected static function booted(): void
     {
+        static::creating(function (BusinessMembership $membership) {
+            if (! $membership->organization_id && $membership->business_id) {
+                $membership->organization_id = Business::whereKey($membership->business_id)->value('organization_id');
+            }
+        });
+
         static::created(function (BusinessMembership $membership) {
             if ($membership->role === self::ROLE_OPERATOR && $membership->business) {
                 $defaultCounter = $membership->business->counters()->where('is_active', true)->first();

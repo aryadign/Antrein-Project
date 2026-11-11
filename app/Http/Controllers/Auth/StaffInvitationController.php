@@ -115,15 +115,18 @@ class StaffInvitationController extends Controller
                     ->with('status', 'Anda sudah menjadi staf aktif di unit usaha ini.');
             }
 
-            // Check if member of ANOTHER business
-            $hasOtherBusiness = BusinessMembership::where('user_id', $currentUser->id)
+            // Check if member of a DIFFERENT organization
+            $hasOtherOrganization = BusinessMembership::where('user_id', $currentUser->id)
                 ->where('business_id', '!=', $invitation->business_id)
+                ->whereHas('business', function ($query) use ($invitation) {
+                    $query->where('organization_id', '!=', $invitation->business?->organization_id);
+                })
                 ->exists();
 
-            if ($hasOtherBusiness) {
+            if ($hasOtherOrganization) {
                 return view('auth.staff-invitation', [
                     'status' => 'already_member_other',
-                    'message' => 'Akun Anda sudah terdaftar di unit usaha lain. Dalam rilis ini, satu akun pengguna hanya dapat terhubung ke satu UMKM.',
+                    'message' => 'Akun Anda sudah terdaftar pada organisasi usaha lain. Satu akun hanya dapat terhubung ke satu organisasi multi-cabang.',
                     'invitation' => $invitation,
                     'business' => $invitation->business,
                     'token' => $token,
@@ -212,23 +215,29 @@ class StaffInvitationController extends Controller
             ]);
         }
 
-        // Single business per user check
-        $otherBusinessMembership = BusinessMembership::where('user_id', $user->id)
+        // Cross-organization access is forbidden; multi-branch (same organization) is supported.
+        $otherOrganizationMembership = BusinessMembership::where('user_id', $user->id)
             ->where('business_id', '!=', $invitation->business_id)
+            ->whereHas('business', function ($query) use ($invitation) {
+                $query->where('organization_id', '!=', $invitation->business?->organization_id);
+            })
             ->first();
 
-        if ($otherBusinessMembership) {
+        if ($otherOrganizationMembership) {
             return back()->withErrors([
-                'general' => 'Akun Anda sudah terdaftar di unit usaha lain. Satu akun hanya dapat terhubung ke satu UMKM.',
+                'general' => 'Akun Anda sudah terdaftar pada organisasi usaha lain. Satu akun hanya dapat terhubung ke satu organisasi multi-cabang.',
             ]);
         }
 
         // Execute acceptance atomically
         DB::transaction(function () use ($invitation, $user) {
             BusinessMembership::updateOrCreate(
-                ['user_id' => $user->id],
                 [
                     'business_id' => $invitation->business_id,
+                    'user_id' => $user->id,
+                ],
+                [
+                    'organization_id' => $invitation->business?->organization_id,
                     'role' => $invitation->role,
                     'is_active' => true,
                     'joined_at' => now(),

@@ -102,7 +102,7 @@ class StaffManagementTest extends TestCase
     }
 
     /**
-     * Test P1-01: Single business per user DB constraint.
+     * Test P1-01 / M19: Duplicate business membership per user DB constraint.
      */
     public function test_user_cannot_belong_to_more_than_one_business(): void
     {
@@ -117,9 +117,9 @@ class StaffManagementTest extends TestCase
 
         $this->expectException(QueryException::class);
 
-        // Attempting to assign operator to business B must fail unique constraint on user_id
+        // Attempting to assign operator to same business A must fail unique constraint on (business_id, user_id)
         BusinessMembership::create([
-            'business_id' => $this->businessB->id,
+            'business_id' => $this->businessA->id,
             'user_id' => $operator->id,
             'role' => BusinessMembership::ROLE_OPERATOR,
             'is_active' => true,
