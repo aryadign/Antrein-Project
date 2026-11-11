@@ -55,7 +55,20 @@ class DevelopmentMerchantSeeder extends Seeder
             ]
         );
 
-        // 3. Create Operating Hours (Mon-Sun, 10:00 - 21:00 WITA)
+        // 3. Ensure Owner Membership exists
+        \App\Models\BusinessMembership::firstOrCreate(
+            [
+                'business_id' => $business->id,
+                'user_id' => $merchantUser->id,
+            ],
+            [
+                'role' => \App\Models\BusinessMembership::ROLE_OWNER,
+                'is_active' => true,
+                'joined_at' => now(),
+            ]
+        );
+
+        // 4. Create Operating Hours (Mon-Sun, 10:00 - 21:00 WITA)
         for ($day = 0; $day <= 6; $day++) {
             BusinessHour::firstOrCreate(
                 [
@@ -98,6 +111,42 @@ class DevelopmentMerchantSeeder extends Seeder
                 ],
                 $serviceData
             );
+        }
+
+        // 5. Create Demo Operator User & Assign to Counter (M12 & M13 RBAC)
+        $operatorUser = User::firstOrCreate(
+            ['email' => 'operator@garasi.id'],
+            [
+                'name' => 'Wayan Sudirga (Demo Operator)',
+                'password' => Hash::make('operator12345'),
+                'role' => User::ROLE_MERCHANT,
+                'is_active' => true,
+                'email_verified_at' => now(),
+            ]
+        );
+
+        $membership = \App\Models\BusinessMembership::firstOrCreate(
+            [
+                'business_id' => $business->id,
+                'user_id' => $operatorUser->id,
+            ],
+            [
+                'role' => \App\Models\BusinessMembership::ROLE_OPERATOR,
+                'is_active' => true,
+                'joined_at' => now(),
+            ]
+        );
+
+        $counter = $business->counters()->firstOrCreate(
+            ['code' => 'L-01'],
+            [
+                'name' => 'Loket 1',
+                'is_active' => true,
+            ]
+        );
+
+        if ($counter && method_exists($counter, 'assignedMemberships')) {
+            $counter->assignedMemberships()->syncWithoutDetaching([$membership->id]);
         }
     }
 }

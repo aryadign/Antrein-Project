@@ -13,6 +13,24 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->redirectUsersTo(function (Request $request): string {
+            $user = $request->user();
+
+            if ($user?->isAdmin()) {
+                return route('admin.dashboard');
+            }
+
+            if ($user?->hasCompletedOnboarding()) {
+                return route('merchant.dashboard');
+            }
+
+            if ($user) {
+                return route('merchant.onboarding');
+            }
+
+            return route('login');
+        });
+
         $middleware->alias([
             'role' => \App\Http\Middleware\EnsureUserHasRole::class,
             'active' => \App\Http\Middleware\EnsureUserIsActive::class,
