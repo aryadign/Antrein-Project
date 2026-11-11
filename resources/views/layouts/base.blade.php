@@ -25,6 +25,11 @@
     <!-- Global Toast Container -->
     <x-toast />
 
+    {{-- Developer Role Switcher (Local & Testing Only) --}}
+    @if (app()->environment(['local', 'testing']))
+        <x-dev.role-switcher />
+    @endif
+
     @livewireScripts
     @stack('scripts')
 </body>

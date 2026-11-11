@@ -65,10 +65,10 @@ Route::get('/health', function () {
     ], $status);
 });
 
-// Root Route: Showcase Landing & Navigation Hub
+// Root Route: AntreIn Public Homepage
 Route::get('/', function () {
-    return view('preview.design-system');
-});
+    return view('home');
+})->name('home');
 
 // Customer Public Queue Routes (Milestone 6)
 Route::get('/q/{slug}', [QueueTicketController::class, 'show'])->name('customer.queue');
@@ -87,26 +87,50 @@ Route::post('/broadcasting/auth/ticket', [TicketBroadcastAuthController::class, 
 Route::get('/display/{token}', [PublicQueueDisplayController::class, 'show'])->name('display.show');
 Route::get('/display/{token}/data', [PublicQueueDisplayController::class, 'data'])->name('display.data');
 
-// Design System & Layout Preview Testbed (Milestone 2)
+// Design System & Layout Preview Testbed (Internal / Development Only)
+Route::prefix('preview')->name('preview.')->group(function () {
+    Route::get('/design-system', function () {
+        abort_if(app()->isProduction(), 404);
+        return view('preview.design-system');
+    })->name('design-system');
+
+    Route::get('/admin', function () {
+        abort_if(app()->isProduction(), 404);
+        return view('preview.admin');
+    })->name('admin');
+
+    Route::get('/merchant', function () {
+        abort_if(app()->isProduction(), 404);
+        return view('preview.merchant');
+    })->name('merchant');
+
+    Route::get('/customer', function () {
+        abort_if(app()->isProduction(), 404);
+        return view('preview.customer');
+    })->name('customer');
+
+    Route::get('/auth', function () {
+        abort_if(app()->isProduction(), 404);
+        return view('preview.auth');
+    })->name('auth');
+});
+
 Route::get('/design-system', function () {
+    abort_if(app()->isProduction(), 404);
     return view('preview.design-system');
 })->name('design-system');
 
-Route::get('/preview/admin', function () {
-    return view('preview.admin');
-})->name('preview.admin');
-
-Route::get('/preview/merchant', function () {
-    return view('preview.merchant');
-})->name('preview.merchant');
-
-Route::get('/preview/customer', function () {
-    return view('preview.customer');
-})->name('preview.customer');
-
-Route::get('/preview/auth', function () {
-    return view('preview.auth');
-})->name('preview.auth');
+/*
+|--------------------------------------------------------------------------
+| Developer Demo Access & Role Switching (Local & Testing Environments Only)
+|--------------------------------------------------------------------------
+*/
+if (app()->environment(['local', 'testing'])) {
+    Route::prefix('dev')->name('dev.')->group(function () {
+        Route::post('/quick-login', [\App\Http\Controllers\Dev\DevDemoAccessController::class, 'quickLogin'])->name('quick-login');
+        Route::post('/switch-persona', [\App\Http\Controllers\Dev\DevDemoAccessController::class, 'switchPersona'])->name('switch-persona');
+    });
+}
 
 /*
 |--------------------------------------------------------------------------
