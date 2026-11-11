@@ -2,9 +2,6 @@
 
 namespace Tests\Feature\Home;
 
-use App\Models\Business;
-use App\Models\BusinessCategory;
-use App\Models\Service;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -22,17 +19,34 @@ class PublicHomepageTest extends TestCase
         $response->assertSee('AntreIn');
     }
 
-    public function test_homepage_renders_branding_and_hero_sections(): void
+    public function test_homepage_renders_official_branding_and_tagline(): void
     {
         $response = $this->get('/');
 
         $response->assertStatus(200);
-        $response->assertSee('Kelola Antrean Usaha Anda');
+        $response->assertSee('Antrean Lebih Teratur, Pelayanan Lebih Lancar.');
+        $response->assertSee('Kelola antrean online dan walk-in dalam satu platform digital yang membantu UMKM melayani pelanggan dengan lebih mudah.');
+    }
+
+    public function test_homepage_renders_all_mandatory_sections_and_features(): void
+    {
+        $response = $this->get('/');
+
+        $response->assertStatus(200);
         $response->assertSee('Cara Kerja');
-        $response->assertSee('Fitur UMKM');
-        $response->assertSee('Akses Pelanggan');
+        $response->assertSee('Fitur');
+        $response->assertSee('Untuk UMKM');
         $response->assertSee('Pertanyaan yang Sering Diajukan (FAQ)');
-        $response->assertSee('Daftarkan Usaha');
+        $response->assertSee('A-001'); // Mockup queue card number
+        $response->assertSee('Unified Online &amp; Walk-in Queue', false);
+        $response->assertSee('Multi-Counter Management');
+        $response->assertSee('Real-Time Queue Updates');
+        $response->assertSee('Email &amp; Browser Notifications', false);
+        $response->assertSee('Reports &amp; Analytics', false);
+        $response->assertSee('CSV &amp; PDF Export', false);
+        $response->assertSee('Public Queue Display');
+        $response->assertSee('Customer Reviews');
+        $response->assertSee('Historical Waiting Time Estimation');
     }
 
     public function test_homepage_does_not_render_internal_design_system_testbed(): void
@@ -50,7 +64,7 @@ class PublicHomepageTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee('Masuk');
-        $response->assertSee('Daftarkan Usaha');
+        $response->assertSee('Daftarkan UMKM');
         $response->assertDontSee('Dashboard Admin');
         $response->assertDontSee('Dashboard UMKM');
     }
