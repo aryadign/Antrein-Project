@@ -34,6 +34,10 @@ class EnsureBusinessRole
         $business = $user->business;
 
         if (! $business) {
+            if ($user->businessMemberships()->where('is_active', false)->exists()) {
+                abort(Response::HTTP_FORBIDDEN, 'Akses keanggotaan staf UMKM Anda telah dinonaktifkan atau tidak ditemukan.');
+            }
+
             abort(Response::HTTP_FORBIDDEN, 'Akun Anda belum terhubung ke unit usaha mana pun.');
         }
 

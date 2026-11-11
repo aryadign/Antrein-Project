@@ -1060,7 +1060,7 @@ Jangan mulai sebelum MVP selesai dan mendapat persetujuan.
 
 # 18. Milestone P2 — Pengembangan lanjutan
 
-- [ ] `P2-01` Multi-cabang.
+- [x] `P2-01` Multi-cabang (BusinessOrganization, branch management, isolated queue per branch, aggregated reporting).
 - [ ] `P2-02` Integrasi WhatsApp API.
 - [ ] `P2-03` Integrasi POS.
 - [ ] `P2-04` Prediksi antrean berbasis AI/ML.

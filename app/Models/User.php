@@ -172,7 +172,7 @@ class User extends Authenticatable
         }
 
         // Operators join an already-onboarded branch, so onboarding is considered complete
-        if ($this->isOperator()) {
+        if ($this->isOperator() || $this->businessMemberships()->where('role', BusinessMembership::ROLE_OPERATOR)->exists()) {
             return true;
         }
 
@@ -325,6 +325,28 @@ class User extends Authenticatable
         $this->activeBusinessCache = null;
         $this->activeMembershipResolved = false;
         $this->activeMembershipCache = null;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function unsetRelation($relation)
+    {
+        if ($relation === 'business' || $relation === 'businessMembership') {
+            $this->forgetActiveBusiness();
+        }
+
+        return parent::unsetRelation($relation);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function unsetRelations()
+    {
+        $this->forgetActiveBusiness();
+
+        return parent::unsetRelations();
     }
 
     /**

@@ -674,4 +674,34 @@ The MVP computed the customer's estimated wait from the configured `duration_min
 
 ---
 
+---
+
+## ADR-20: Multi-Branch Business Management (P2-01)
+
+### Status: Approved & Implemented (Milestone 19)
+
+### Context:
+Prior to Milestone 19, AntreIn operated under a strict single-business-per-user model (`business_memberships.user_id` unique constraint). Multi-unit businesses and regional brands required managing multiple independent operational branches under a unified brand identity, while maintaining complete operational isolation for daily queues, counters, ticket sequences, and public slugs.
+
+### Decision:
+1. **Hierarchical Organization & Branch Architecture:**
+   - Introduced `business_organizations` representing the brand/parent organization, owned by a merchant user (`owner_user_id`).
+   - The existing `businesses` table is retained as the operational branch/tenant boundary. Each business references its parent via foreign key `organization_id`.
+   - Backward compatibility: Legacy single-business records automatically backfilled with default organization records; slug URLs (`/q/{slug}`), QR codes, and ticket tracking tokens remain completely stable and unchanged.
+2. **Dual-Layer Membership & RBAC:**
+   - `organization_memberships`: Defines brand-level roles (`owner`, `admin`) governing branch creation, updates, activation/deactivation, and aggregate reporting.
+   - `business_memberships`: Scoped per operational branch with unique constraint `(business_id, user_id)` (`uq_membership_business_user`), enabling multi-branch operator assignments across branches belonging to the same organization. Cross-organization membership is strictly prohibited.
+3. **Active Branch Context & Session Protection:**
+   - Middleware `ResolveActiveBranch` (`active.branch`) dynamically resolves and server-validates `active_business_id` in the merchant session against `User::accessibleBusinessesQuery()`. Client session values are never blindly trusted; unauthorized or tampered IDs are immediately purged.
+4. **Queue Engine & Counter Isolation:**
+   - Queue isolation is strictly preserved: each branch runs an independent daily queue sequence starting at `A-001` with independent quota and operational status (`buka`, `jeda`, `tutup`).
+   - Counters belong strictly to a single branch; cross-branch counter servicing is forbidden.
+   - Deactivated branches immediately reject new queue tickets and hide intake forms while preserving historical audit records.
+5. **Organization Aggregated Analytics:**
+   - `MerchantReportService::getOrganizationSummary()` computes weighted average wait times, total tickets, and completion rates across all branches within the organization while enforcing strict tenant boundaries against foreign organizations.
+6. **Merchant UI & Branch Switcher:**
+   - Integrated quick branch switcher dropdown in merchant topbar and navigation links for "Cabang", "Laporan Grup", and "Organisasi".
+
+---
+
 *Authored by Senior Full-Stack Software Engineer & Technical Architect — AntreIn Project*

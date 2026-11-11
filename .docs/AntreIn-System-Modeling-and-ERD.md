@@ -1100,4 +1100,47 @@ To verify that the database constraints, row locks, tenant boundaries, and lifec
 
 ---
 
+---
+
+## 12. Milestone 19 — Multi-Branch & Business Organization Data Model (P2-01)
+
+### 12.1 Table: `business_organizations`
+Represents the brand / parent enterprise entity grouping one or more operational branches.
+
+| Column | Type | Attributes | Description |
+|---|---|---|---|
+| `id` | BIGINT UNSIGNED | PK, AUTO_INCREMENT | Organization identifier |
+| `owner_user_id` | BIGINT UNSIGNED | FK `users(id)`, RESTRICT | Primary owner account |
+| `name` | VARCHAR(150) | NOT NULL | Brand / organization name |
+| `slug` | VARCHAR(180) | NOT NULL, UNIQUE | Unique brand slug identifier |
+| `description` | TEXT | NULLABLE | Brand profile and mission |
+| `timezone` | VARCHAR(50) | NOT NULL, DEFAULT `'Asia/Makassar'` | Default operational timezone |
+| `is_active` | BOOLEAN | NOT NULL, DEFAULT `true` | Active status of brand group |
+| `created_at` / `updated_at` | TIMESTAMP | NULLABLE | Standard timestamps |
+| `deleted_at` | TIMESTAMP | NULLABLE | Soft deletes |
+
+### 12.2 Table: `organization_memberships`
+Defines brand-level management roles (`owner`, `admin`).
+
+| Column | Type | Attributes | Description |
+|---|---|---|---|
+| `id` | BIGINT UNSIGNED | PK, AUTO_INCREMENT | Membership identifier |
+| `organization_id` | BIGINT UNSIGNED | FK `business_organizations(id)`, CASCADE | Linked organization |
+| `user_id` | BIGINT UNSIGNED | FK `users(id)`, CASCADE | Linked user account |
+| `role` | VARCHAR(20) | NOT NULL, DEFAULT `'admin'` | `'owner'`, `'admin'` |
+| `is_active` | BOOLEAN | NOT NULL, DEFAULT `true` | Membership active status |
+| `joined_at` | TIMESTAMP | NULLABLE | Date user joined organization |
+| `created_at` / `updated_at` | TIMESTAMP | NULLABLE | Standard timestamps |
+| **Indexes** | UNIQUE (`organization_id`, `user_id`), INDEX (`user_id`, `is_active`) | Composite uniqueness |
+
+### 12.3 Additions to `businesses` table
+- Added `organization_id` BIGINT UNSIGNED FK `business_organizations(id)` (NULLABLE, CASCADE ON DELETE).
+- Index: `idx_businesses_org_active` on (`organization_id`, `is_active`).
+
+### 12.4 Additions to `business_memberships` table
+- Added `organization_id` BIGINT UNSIGNED FK `business_organizations(id)` (NULLABLE, CASCADE ON DELETE).
+- Replaced table-wide `UNIQUE(user_id)` with composite `UNIQUE(business_id, user_id)` (`uq_membership_business_user`), enabling multi-branch operator assignments across branches of the same organization.
+
+---
+
 *Milestone 1 System Modeling, ERD, Migration Plan, and Test Plan Complete.*
