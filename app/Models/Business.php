@@ -24,6 +24,7 @@ class Business extends Model
      * @var list<string>
      */
     protected $fillable = [
+        'organization_id',
         'user_id',
         'category_id',
         'name',
@@ -34,6 +35,7 @@ class Business extends Model
         'phone',
         'timezone',
         'status',
+        'is_active',
         'is_suspended',
         'is_display_enabled',
         'display_token_hash',
@@ -48,6 +50,7 @@ class Business extends Model
     protected function casts(): array
     {
         return [
+            'is_active' => 'boolean',
             'is_suspended' => 'boolean',
             'is_display_enabled' => 'boolean',
             'display_token_created_at' => 'datetime',
@@ -61,39 +64,80 @@ class Business extends Model
     protected static function booted(): void
     {
         static::created(function (Business $business) {
-            if ($business->user_id) {
-                $connection = $business->getConnectionName();
-                $membership = null;
-                try {
-                    if (\Illuminate\Support\Facades\Schema::connection($connection)->hasTable('business_memberships')) {
-                        $membership = BusinessMembership::on($connection)->firstOrCreate(
-                            ['user_id' => $business->user_id],
+            if (! $business->user_id) {
+                return;
+            }
+
+            $connection = $business->getConnectionName();
+
+            try {
+                $organization = null;
+
+                if (\Illuminate\Support\Facades\Schema::connection($connection)->hasTable('business_organizations')) {
+                    if ($business->organization_id) {
+                        $organization = BusinessOrganization::on($connection)->find($business->organization_id);
+                    } else {
+                        $organization = BusinessOrganization::on($connection)->create([
+                            'owner_user_id' => $business->user_id,
+                            'name' => $business->name,
+                            'slug' => static::generateUniqueOrganizationSlug($business, $connection),
+                            'description' => $business->description,
+                            'timezone' => $business->timezone ?: 'Asia/Makassar',
+                            'is_active' => true,
+                        ]);
+
+                        $business->forceFill(['organization_id' => $organization->id])->saveQuietly();
+                    }
+
+                    if ($organization && \Illuminate\Support\Facades\Schema::connection($connection)->hasTable('organization_memberships')) {
+                        OrganizationMembership::on($connection)->firstOrCreate(
                             [
-                                'business_id' => $business->id,
-                                'role' => BusinessMembership::ROLE_OWNER,
+                                'organization_id' => $organization->id,
+                                'user_id' => $business->user_id,
+                            ],
+                            [
+                                'role' => OrganizationMembership::ROLE_OWNER,
                                 'is_active' => true,
                                 'joined_at' => $business->created_at ?? now(),
                             ]
                         );
                     }
-
-                    if (\Illuminate\Support\Facades\Schema::connection($connection)->hasTable('business_counters')) {
-                        $counter = BusinessCounter::on($connection)->firstOrCreate(
-                            ['business_id' => $business->id, 'code' => 'L-01'],
-                            [
-                                'name' => 'Loket 1',
-                                'description' => 'Loket pelayanan utama',
-                                'is_active' => true,
-                            ]
-                        );
-
-                        if ($membership && \Illuminate\Support\Facades\Schema::connection($connection)->hasTable('counter_operator_assignments')) {
-                            $counter->assignedMemberships()->syncWithoutDetaching([$membership->id]);
-                        }
-                    }
-                } catch (\Throwable) {
-                    // Suppress if table does not exist on target connection during isolated DB tests
                 }
+
+                $membership = null;
+
+                if (\Illuminate\Support\Facades\Schema::connection($connection)->hasTable('business_memberships')) {
+                    // Ownership is scoped per branch: the same user may own/manage several branches.
+                    $membership = BusinessMembership::on($connection)->firstOrCreate(
+                        [
+                            'business_id' => $business->id,
+                            'user_id' => $business->user_id,
+                        ],
+                        [
+                            'organization_id' => $business->organization_id,
+                            'role' => BusinessMembership::ROLE_OWNER,
+                            'is_active' => true,
+                            'joined_at' => $business->created_at ?? now(),
+                        ]
+                    );
+                }
+
+                if (\Illuminate\Support\Facades\Schema::connection($connection)->hasTable('business_counters')) {
+                    $counter = BusinessCounter::on($connection)->firstOrCreate(
+                        ['business_id' => $business->id, 'code' => 'L-01'],
+                        [
+                            'name' => 'Loket 1',
+                            'description' => 'Loket pelayanan utama',
+                            'is_active' => true,
+                        ]
+                    );
+
+                    if ($membership && \Illuminate\Support\Facades\Schema::connection($connection)->hasTable('counter_operator_assignments')) {
+                        $counter->assignedMemberships()->syncWithoutDetaching([$membership->id]);
+                    }
+                }
+            } catch (\Throwable) {
+                // Suppress if table does not exist on target connection during isolated DB tests
             }
         });
 
@@ -103,9 +147,12 @@ class Business extends Model
                 try {
                     if (\Illuminate\Support\Facades\Schema::connection($connection)->hasTable('business_memberships')) {
                         BusinessMembership::on($connection)->updateOrCreate(
-                            ['user_id' => $business->user_id],
                             [
                                 'business_id' => $business->id,
+                                'user_id' => $business->user_id,
+                            ],
+                            [
+                                'organization_id' => $business->organization_id,
                                 'role' => BusinessMembership::ROLE_OWNER,
                                 'is_active' => true,
                                 'joined_at' => now(),
@@ -117,6 +164,27 @@ class Business extends Model
                 }
             }
         });
+    }
+
+    /**
+     * Generate an organization slug without mutating the branch public slug.
+     */
+    protected static function generateUniqueOrganizationSlug(Business $business, ?string $connection): string
+    {
+        $baseSlug = \Illuminate\Support\Str::slug($business->slug ?: $business->name);
+        if ($baseSlug === '') {
+            $baseSlug = 'organisasi-'.\Illuminate\Support\Str::lower(\Illuminate\Support\Str::random(6));
+        }
+
+        $slug = $baseSlug;
+        $counter = 1;
+
+        while (BusinessOrganization::on($connection)->where('slug', $slug)->exists()) {
+            $counter++;
+            $slug = "{$baseSlug}-{$counter}";
+        }
+
+        return $slug;
     }
 
     /**
@@ -136,7 +204,7 @@ class Business extends Model
      */
     public function isOpen(): bool
     {
-        return $this->status === self::STATUS_BUKA && ! $this->is_suspended;
+        return $this->is_active !== false && $this->status === self::STATUS_BUKA && ! $this->is_suspended;
     }
 
     /**
@@ -152,7 +220,23 @@ class Business extends Model
      */
     public function isClosed(): bool
     {
-        return $this->status === self::STATUS_TUTUP || $this->is_suspended;
+        return $this->is_active === false || $this->status === self::STATUS_TUTUP || $this->is_suspended;
+    }
+
+    /**
+     * Determine whether this branch is activated by its organization.
+     */
+    public function isActive(): bool
+    {
+        return $this->is_active !== false;
+    }
+
+    /**
+     * Get the organization (brand / business group) that owns this branch.
+     */
+    public function organization(): BelongsTo
+    {
+        return $this->belongsTo(BusinessOrganization::class, 'organization_id');
     }
 
     /**
@@ -297,11 +381,15 @@ class Business extends Model
             return true;
         }
 
-        return $this->memberships()
+        if ($this->memberships()
             ->where('user_id', $user->id)
             ->where('role', BusinessMembership::ROLE_OWNER)
             ->where('is_active', true)
-            ->exists();
+            ->exists()) {
+            return true;
+        }
+
+        return (bool) $this->organization?->canManageBranches($user);
     }
 
     /**
@@ -313,10 +401,14 @@ class Business extends Model
             return true;
         }
 
-        return $this->memberships()
+        if ($this->memberships()
             ->where('user_id', $user->id)
             ->where('is_active', true)
-            ->exists();
+            ->exists()) {
+            return true;
+        }
+
+        return (bool) $this->organization?->canManageBranches($user);
     }
 
     /**

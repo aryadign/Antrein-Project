@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Business;
 use App\Models\BusinessMembership;
 use Closure;
 use Illuminate\Http\Request;
@@ -10,10 +11,11 @@ use Symfony\Component\HttpFoundation\Response;
 class EnsureBusinessRole
 {
     /**
-     * Handle an incoming request to verify that the user has the required business membership role.
+     * Handle an incoming request to verify that the user has the required role
+     * in the currently active branch.
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
-     * @param  string  ...$roles Allowed business roles: 'owner', 'operator'
+     * @param  string  ...$roles Allowed effective branch roles: 'owner', 'operator'
      */
     public function handle(Request $request, Closure $next, string ...$roles): Response
     {
@@ -28,33 +30,36 @@ class EnsureBusinessRole
             abort(Response::HTTP_FORBIDDEN, 'Akses terbatas untuk akun Merchant.');
         }
 
-        // Resolve or ensure membership
-        $membership = $user->businessMembership;
+        /** @var Business|null $business */
+        $business = $user->business;
 
-        if (! $membership) {
-            $business = $user->business;
-            if ($business && $business->user_id === $user->id) {
-                $membership = BusinessMembership::firstOrCreate(
-                    ['user_id' => $user->id],
-                    [
-                        'business_id' => $business->id,
-                        'role' => BusinessMembership::ROLE_OWNER,
-                        'is_active' => true,
-                        'joined_at' => $business->created_at ?? now(),
-                    ]
-                );
-            }
+        if (! $business) {
+            abort(Response::HTTP_FORBIDDEN, 'Akun Anda belum terhubung ke unit usaha mana pun.');
         }
 
-        if (! $membership || ! $membership->is_active) {
+        // Ensure legacy direct owners always have a branch membership record.
+        if ($business->user_id === $user->id) {
+            BusinessMembership::firstOrCreate(
+                ['business_id' => $business->id, 'user_id' => $user->id],
+                [
+                    'organization_id' => $business->organization_id,
+                    'role' => BusinessMembership::ROLE_OWNER,
+                    'is_active' => true,
+                    'joined_at' => $business->created_at ?? now(),
+                ]
+            );
+        }
+
+        $role = $user->roleInBusiness($business);
+
+        if (! $role) {
             abort(Response::HTTP_FORBIDDEN, 'Akses keanggotaan staf UMKM Anda telah dinonaktifkan atau tidak ditemukan.');
         }
 
-        if (! in_array($membership->role, $roles, true)) {
+        if (! in_array($role, $roles, true)) {
             abort(Response::HTTP_FORBIDDEN, 'Akses tidak diizinkan. Tindakan ini memerlukan hak akses Pemilik (Owner).');
         }
 
         return $next($request);
     }
 }
-

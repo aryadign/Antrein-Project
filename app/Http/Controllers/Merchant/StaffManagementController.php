@@ -78,15 +78,21 @@ class StaffManagementController extends Controller
             return back()->withErrors(['email' => 'Pengguna dengan email ini sudah terdaftar sebagai anggota pada usaha Anda.'])->withInput();
         }
 
-        // 3. Prevent inviting someone already registered in another business (Single business per user rule)
+        // 3. Prevent inviting a user who already belongs to a different organization
         $existingUser = User::where('email', $email)->first();
         if ($existingUser) {
             if ($existingUser->isAdmin()) {
                 return back()->withErrors(['email' => 'Akun Administrator tidak dapat diundang sebagai staf UMKM.'])->withInput();
             }
 
-            if ($existingUser->businessMembership()->exists()) {
-                return back()->withErrors(['email' => 'Pengguna ini sudah terdaftar pada UMKM lain. Satu akun hanya dapat terhubung ke satu UMKM.'])->withInput();
+            $belongsToOtherOrganization = $existingUser->businessMemberships()
+                ->whereHas('business', function ($query) use ($business) {
+                    $query->where('organization_id', '!=', $business->organization_id);
+                })
+                ->exists();
+
+            if ($belongsToOtherOrganization) {
+                return back()->withErrors(['email' => 'Pengguna ini sudah terdaftar pada organisasi usaha lain. Satu akun hanya dapat terhubung ke satu organisasi multi-cabang.'])->withInput();
             }
         }
 

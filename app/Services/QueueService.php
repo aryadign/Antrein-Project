@@ -87,6 +87,10 @@ class QueueService
         ?\DateTimeInterface $customerEmailConsentedAt = null
     ): QueueTicket {
         // 1. Business Operational Validation
+        if (! $business->isActive()) {
+            throw new DomainException('Pendaftaran antrean tidak dapat dilakukan karena cabang ini sedang dinonaktifkan oleh pengelola organisasi.');
+        }
+
         if ($business->is_suspended) {
             throw new DomainException('Pendaftaran antrean tidak dapat dilakukan karena akun usaha sedang ditangguhkan oleh administrator.');
         }
@@ -223,6 +227,10 @@ class QueueService
         bool $confirmedPaused = false,
         ?User $operator = null
     ): QueueTicket {
+        if (! $business->isActive()) {
+            throw new DomainException('Pendaftaran antrean walk-in tidak dapat dilakukan karena cabang ini sedang dinonaktifkan.');
+        }
+
         if ($business->is_suspended) {
             throw new DomainException('Pendaftaran antrean walk-in tidak dapat dilakukan karena akun usaha sedang disuspend.');
         }
@@ -326,6 +334,10 @@ class QueueService
      */
     public function callNext(Business $business, User $operator, ?BusinessCounter $counter = null): QueueTicket
     {
+        if (! $business->isActive()) {
+            throw new DomainException('Cabang ini sedang dinonaktifkan sehingga antrean tidak dapat dipanggil.');
+        }
+
         // 1. Resolve counter if not explicitly provided
         if ($counter === null) {
             $counter = $operator->assignedCounters()->first();

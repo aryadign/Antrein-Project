@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use Database\Factories\UserFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasOneThrough;
@@ -18,6 +20,20 @@ class User extends Authenticatable
 
     public const string ROLE_ADMIN = 'admin';
     public const string ROLE_MERCHANT = 'merchant';
+
+    /**
+     * Cached active branch resolution for the current request.
+     */
+    protected bool $activeBusinessResolved = false;
+
+    protected ?Business $activeBusinessCache = null;
+
+    /**
+     * Cached active branch membership resolution for the current request.
+     */
+    protected bool $activeMembershipResolved = false;
+
+    protected ?BusinessMembership $activeMembershipCache = null;
 
     /**
      * The attributes that are mass assignable.
@@ -73,7 +89,10 @@ class User extends Authenticatable
     }
 
     /**
-     * Determine whether the user is an owner of their associated business.
+     * Determine whether the user is an owner/manager of the active branch.
+     *
+     * Organization owners and administrators are treated as branch owners because
+     * they have organization-level authority over every branch in the organization.
      */
     public function isOwner(): bool
     {
@@ -81,7 +100,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Determine whether the user is an operator staff member of their associated business.
+     * Determine whether the user is an operator staff member of the active branch.
      */
     public function isOperator(): bool
     {
@@ -89,17 +108,36 @@ class User extends Authenticatable
     }
 
     /**
-     * Get the business membership role ('owner' or 'operator') of this user.
+     * Get the effective role ('owner' or 'operator') of this user in the active branch.
      */
     public function businessRole(): ?string
     {
-        $membership = $this->businessMembership;
+        $business = $this->business;
+
+        return $business ? $this->roleInBusiness($business) : null;
+    }
+
+    /**
+     * Resolve the effective branch-scoped role for a specific branch.
+     */
+    public function roleInBusiness(Business $business): ?string
+    {
+        if ($business->user_id === $this->id) {
+            return BusinessMembership::ROLE_OWNER;
+        }
+
+        $membership = $this->businessMemberships()
+            ->where('business_id', $business->id)
+            ->where('is_active', true)
+            ->first();
+
         if ($membership) {
             return $membership->role;
         }
 
-        // Fallback for direct owner (M3 compatibility)
-        if ($this->ownedBusiness()->exists()) {
+        $organization = $business->organization;
+
+        if ($organization && $organization->canManageBranches($this)) {
             return BusinessMembership::ROLE_OWNER;
         }
 
@@ -107,20 +145,25 @@ class User extends Authenticatable
     }
 
     /**
-     * Determine whether the user's business membership is currently active.
+     * Determine whether this user may access the given branch (explicitly or through organization scope).
      */
-    public function isBusinessMemberActive(): bool
+    public function canAccessBusiness(Business $business): bool
     {
-        $membership = $this->businessMembership;
-        if ($membership) {
-            return $membership->is_active;
-        }
-
-        return $this->isMerchant() && $this->ownedBusiness()->exists();
+        return $this->roleInBusiness($business) !== null;
     }
 
     /**
-     * Determine whether the merchant has completed the onboarding flow.
+     * Determine whether the user's active branch membership is currently active.
+     */
+    public function isBusinessMemberActive(): bool
+    {
+        $business = $this->business;
+
+        return $business !== null && $this->roleInBusiness($business) !== null;
+    }
+
+    /**
+     * Determine whether the merchant has completed onboarding for the active branch.
      */
     public function hasCompletedOnboarding(): bool
     {
@@ -128,7 +171,7 @@ class User extends Authenticatable
             return true;
         }
 
-        // Operators join an already-onboarded business, so onboarding is considered complete
+        // Operators join an already-onboarded branch, so onboarding is considered complete
         if ($this->isOperator()) {
             return true;
         }
@@ -142,20 +185,30 @@ class User extends Authenticatable
     }
 
     /**
-     * Get the counters that this user can operate (active counters).
+     * Get the counters that this user can operate on the active branch.
      *
      * @return Collection<int, BusinessCounter>
      */
     public function assignedCounters(): Collection
     {
+        $business = $this->business;
+
+        if (! $business) {
+            return collect();
+        }
+
         if ($this->isOwner()) {
-            return $this->business?->activeCounters ?? collect();
+            return $business->activeCounters()->get();
         }
 
         if ($this->isOperator()) {
-            return $this->businessMembership?->assignedCounters()
-                ->where('is_active', true)
-                ->get() ?? collect();
+            $membership = $this->businessMembership;
+
+            if ($membership && $membership->business_id === $business->id) {
+                return $membership->assignedCounters()
+                    ->where('is_active', true)
+                    ->get();
+            }
         }
 
         return collect();
@@ -181,52 +234,241 @@ class User extends Authenticatable
             'id',            // Foreign key on Business table
             'id',            // Local key on User table
             'business_id'    // Local key on BusinessMembership table
-        );
+        )->orderBy('business_memberships.id');
     }
 
     /**
-     * Accessor fallback for $user->business to guarantee compatibility if membership is pending.
+     * Get all branches (business units) explicitly joined by this user.
+     */
+    public function businessMemberships(): HasMany
+    {
+        return $this->hasMany(BusinessMembership::class, 'user_id');
+    }
+
+    /**
+     * Get all branches accessible to this user.
+     *
+     * Access is granted by an active branch membership, direct legacy ownership,
+     * or an active owner/admin role in the organization that owns the branch.
+     */
+    public function accessibleBusinessesQuery(): Builder
+    {
+        return Business::query()
+            ->where(function (Builder $query) {
+                $query->where('user_id', $this->id)
+                    ->orWhereHas('memberships', function (Builder $membershipQuery) {
+                        $membershipQuery->where('user_id', $this->id)
+                            ->where('is_active', true);
+                    })
+                    ->orWhereHas('organization.memberships', function (Builder $organizationQuery) {
+                        $organizationQuery->where('user_id', $this->id)
+                            ->where('is_active', true)
+                            ->whereIn('role', [
+                                OrganizationMembership::ROLE_OWNER,
+                                OrganizationMembership::ROLE_ADMIN,
+                            ]);
+                    });
+            })
+            ->orderByDesc('is_active')
+            ->orderBy('id');
+    }
+
+    /**
+     * Get all accessible branches as a collection (eager-load friendly, deterministic order).
+     *
+     * @return Collection<int, Business>
+     */
+    public function accessibleBusinesses(): Collection
+    {
+        return $this->accessibleBusinessesQuery()->get();
+    }
+
+    /**
+     * Resolve the active branch for the current request/session.
+     */
+    public function activeBusiness(): ?Business
+    {
+        if ($this->activeBusinessResolved) {
+            return $this->activeBusinessCache;
+        }
+
+        $candidateId = null;
+
+        if (app()->bound('request') && request()->hasSession()) {
+            $candidateId = request()->session()->get('active_business_id');
+        }
+
+        $business = null;
+
+        if ($candidateId) {
+            $business = $this->accessibleBusinessesQuery()
+                ->whereKey((int) $candidateId)
+                ->first();
+        }
+
+        if (! $business) {
+            $business = $this->accessibleBusinessesQuery()->first();
+        }
+
+        $this->activeBusinessCache = $business;
+        $this->activeBusinessResolved = true;
+
+        return $business;
+    }
+
+    /**
+     * Forget the cached active branch (used after switching branches).
+     */
+    public function forgetActiveBusiness(): void
+    {
+        $this->activeBusinessResolved = false;
+        $this->activeBusinessCache = null;
+        $this->activeMembershipResolved = false;
+        $this->activeMembershipCache = null;
+    }
+
+    /**
+     * Accessor for $user->business — resolves the active branch.
      */
     public function getBusinessAttribute(): ?Business
     {
-        if ($this->relationLoaded('business')) {
-            $business = $this->getRelation('business');
-            if ($business) {
-                return $business;
-            }
-        }
-
-        // 1. Through membership
-        $membership = $this->businessMembership()->with('business')->first();
-        if ($membership && $membership->business) {
-            $this->setRelation('business', $membership->business);
-            return $membership->business;
-        }
-
-        // 2. Direct owner fallback (MVP compatibility)
-        $owned = $this->ownedBusiness()->first();
-        if ($owned) {
-            $this->setRelation('business', $owned);
-            return $owned;
-        }
-
-        return null;
+        return $this->activeBusiness();
     }
 
     /**
      * Get the directly owned business (where businesses.user_id = users.id).
+     *
+     * Retained for backward compatibility with legacy single-business records.
      */
     public function ownedBusiness(): HasOne
     {
-        return $this->hasOne(Business::class, 'user_id');
+        return $this->hasOne(Business::class, 'user_id')->orderBy('id');
     }
 
     /**
-     * Get the business membership record for this user.
+     * Get all branches directly owned by this user (legacy primary ownership).
      */
-    public function businessMembership(): HasOne
+    public function ownedBusinesses(): HasMany
     {
-        return $this->hasOne(BusinessMembership::class, 'user_id');
+        return $this->hasMany(Business::class, 'user_id');
+    }
+
+    /**
+     * Get the business membership record for the active branch.
+     */
+    public function getBusinessMembershipAttribute(): ?BusinessMembership
+    {
+        if ($this->activeMembershipResolved) {
+            return $this->activeMembershipCache;
+        }
+
+        $business = $this->business;
+        $membership = null;
+
+        if ($business) {
+            $membership = $this->businessMemberships()
+                ->where('business_id', $business->id)
+                ->where('is_active', true)
+                ->first();
+        }
+
+        $membership ??= $this->businessMemberships()
+            ->where('is_active', true)
+            ->orderBy('business_id')
+            ->first();
+
+        $this->activeMembershipCache = $membership;
+        $this->activeMembershipResolved = true;
+
+        return $membership;
+    }
+
+    /**
+     * Get the business membership relation (per-branch memberships).
+     */
+    public function businessMembershipRecord(): HasOne
+    {
+        return $this->hasOne(BusinessMembership::class, 'user_id')->orderBy('id');
+    }
+
+    /**
+     * Get all organization memberships held by this user.
+     */
+    public function organizationMemberships(): HasMany
+    {
+        return $this->hasMany(OrganizationMembership::class, 'user_id');
+    }
+
+    /**
+     * Get all organizations this user is a member of.
+     */
+    public function organizations(): BelongsToMany
+    {
+        return $this->belongsToMany(BusinessOrganization::class, 'organization_memberships')
+            ->withPivot(['role', 'is_active', 'joined_at'])
+            ->withTimestamps();
+    }
+
+    /**
+     * Get organizations directly owned by this user.
+     */
+    public function ownedOrganizations(): HasMany
+    {
+        return $this->hasMany(BusinessOrganization::class, 'owner_user_id');
+    }
+
+    /**
+     * Resolve the organization this user primarily manages/belongs to.
+     *
+     * AntreIn intentionally keeps a user within one organization (multi-branch, not multi-group)
+     * to preserve tenant isolation.
+     */
+    public function primaryOrganization(): ?BusinessOrganization
+    {
+        $organizationId = $this->organizationMemberships()
+            ->where('is_active', true)
+            ->orderBy('id')
+            ->value('organization_id');
+
+        if ($organizationId) {
+            return BusinessOrganization::find($organizationId);
+        }
+
+        return $this->ownedOrganizations()->orderBy('id')->first();
+    }
+
+    /**
+     * Resolve the organization this user may manage (owner/admin).
+     */
+    public function managedOrganization(): ?BusinessOrganization
+    {
+        $organizationId = $this->organizationMemberships()
+            ->where('is_active', true)
+            ->whereIn('role', [OrganizationMembership::ROLE_OWNER, OrganizationMembership::ROLE_ADMIN])
+            ->orderBy('id')
+            ->value('organization_id');
+
+        if ($organizationId) {
+            return BusinessOrganization::find($organizationId);
+        }
+
+        return $this->ownedOrganizations()->orderBy('id')->first();
+    }
+
+    /**
+     * Determine whether this user can manage organization-level settings.
+     */
+    public function canManageOrganization(): bool
+    {
+        return $this->managedOrganization() !== null;
+    }
+
+    /**
+     * Resolve the active organization role for this user.
+     */
+    public function organizationRole(): ?string
+    {
+        return $this->primaryOrganization()?->roleOf($this);
     }
 
     /**

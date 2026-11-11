@@ -150,6 +150,86 @@ class MerchantReportService
     }
 
     /**
+     * Build an organization-level summary by aggregating each branch's report.
+     *
+     * Each branch keeps its own timezone and tenant scope; totals are sums of the
+     * already-scoped branch reports, never a cross-tenant raw ticket query.
+     *
+     * @param  Collection<int, Business>  $branches
+     * @return array<string, mixed>
+     */
+    public function getOrganizationSummary(
+        Collection $branches,
+        string $period = '7_days',
+        ?string $startDate = null,
+        ?string $endDate = null
+    ): array {
+        $rows = [];
+        $totalTickets = 0;
+        $completedCount = 0;
+        $skippedCount = 0;
+        $cancelledCount = 0;
+        $waitingWeight = 0.0;
+        $waitingSamples = 0;
+        $serviceWeight = 0.0;
+        $serviceSamples = 0;
+
+        foreach ($branches as $branch) {
+            $report = $this->getReportData($branch, $period, $startDate, $endDate);
+
+            $rows[] = [
+                'branch_id' => $branch->id,
+                'branch_name' => $branch->name,
+                'branch_slug' => $branch->slug,
+                'is_active' => (bool) $branch->is_active,
+                'timezone' => $report['timezone'],
+                'period_label' => $report['periodLabel'],
+                'total_tickets' => $report['totalTickets'],
+                'completed_count' => $report['completedCount'],
+                'skipped_count' => $report['skippedCount'],
+                'cancelled_count' => $report['cancelledCount'],
+                'avg_waiting_minutes' => $report['avgWaitingMinutes'],
+                'avg_service_minutes' => $report['avgServiceMinutes'],
+                'has_data' => $report['hasData'],
+            ];
+
+            $totalTickets += $report['totalTickets'];
+            $completedCount += $report['completedCount'];
+            $skippedCount += $report['skippedCount'];
+            $cancelledCount += $report['cancelledCount'];
+
+            if ($report['avgWaitingMinutes'] !== null && $report['waitingSamples'] > 0) {
+                $waitingWeight += $report['avgWaitingMinutes'] * $report['waitingSamples'];
+                $waitingSamples += $report['waitingSamples'];
+            }
+
+            if ($report['avgServiceMinutes'] !== null && $report['serviceSamples'] > 0) {
+                $serviceWeight += $report['avgServiceMinutes'] * $report['serviceSamples'];
+                $serviceSamples += $report['serviceSamples'];
+            }
+        }
+
+        return [
+            'period' => $period,
+            'rows' => $rows,
+            'totals' => [
+                'branches' => count($rows),
+                'total_tickets' => $totalTickets,
+                'completed_count' => $completedCount,
+                'skipped_count' => $skippedCount,
+                'cancelled_count' => $cancelledCount,
+                'avg_waiting_minutes' => $waitingSamples > 0
+                    ? round($waitingWeight / $waitingSamples, 1)
+                    : null,
+                'avg_service_minutes' => $serviceSamples > 0
+                    ? round($serviceWeight / $serviceSamples, 1)
+                    : null,
+            ],
+            'hasData' => $totalTickets > 0,
+        ];
+    }
+
+    /**
      * Resolve the calendar start and end dates based on user selection in local business timezone.
      *
      * @return array{0: Carbon, 1: Carbon, 2: string}
