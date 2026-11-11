@@ -29,8 +29,8 @@ AntreIn adalah aplikasi web terintegrasi untuk manajemen antrean bisnis UMKM (Us
 
 ### 1. Kloning Repositori
 ```bash
-git clone https://github.com/aryadigunaa/antrein.git
-cd antrein
+git clone https://github.com/aryadign/Antrein-Project.git
+cd Antrein-Project
 ```
 
 ### 2. Instalasi Dependensi Backend & Frontend
@@ -75,7 +75,7 @@ php artisan storage:link
 ```
 
 ### 6. Kompilasi Aset Frontend
-Untuk mode pengembangan:
+Untuk mode pengembangan (terminal terpisah):
 ```bash
 npm run dev
 ```
@@ -83,6 +83,23 @@ Untuk produksi:
 ```bash
 npm run build
 ```
+
+### 7. Menjalankan Server Pengembangan Laravel
+Jalankan server aplikasi lokal (default `http://127.0.0.1:8000`):
+```bash
+php artisan serve
+```
+Atau jalankan skrip pengembangan terpadu via Composer:
+```bash
+composer run dev
+```
+
+### 8. Akun Demo Development (`local` / `testing`)
+Ketika `php artisan migrate --seed` dijalankan di luar environment `production`, `AdminUserSeeder` dan `DevelopmentMerchantSeeder` menyiapkan akun demo berikut (yang juga dapat diakses instan melalui panel **Akses Cepat Pengujian** di `/login` dan *role switcher* pada mode lokal):
+- **Admin AntreIn:** `admin@antrein.id` / `AdminAntreIn#2026` (dapat dikustomisasi lewat `INITIAL_ADMIN_EMAIL` / `INITIAL_ADMIN_PASSWORD` di `.env`)
+- **Owner UMKM (Barbershop Garasi):** `owner@garasi.id` / `merchant12345`
+- **Operator Loket 1:** `operator@garasi.id` / `operator12345`
+- **Pelanggan (Tamu):** Akses publik tanpa login melalui `/q/barbershop-garasi-demo`
 
 ---
 
