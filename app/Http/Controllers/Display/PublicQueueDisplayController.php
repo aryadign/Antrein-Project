@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Display;
 
 use App\Http\Controllers\Controller;
 use App\Services\DisplayService;
+use App\Services\QrCodeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -12,11 +13,15 @@ use Illuminate\View\View;
 class PublicQueueDisplayController extends Controller
 {
     public function __construct(
-        protected DisplayService $displayService
+        protected DisplayService $displayService,
+        protected QrCodeService $qrCodeService
     ) {}
 
     /**
      * Display the public TV/monitor queue screen for a business.
+     *
+     * The screen also renders a QR code pointing to the public take-queue form,
+     * so walk-in visitors can join the queue from their own phone.
      */
     public function show(Request $request, string $token): View|Response
     {
@@ -29,12 +34,15 @@ class PublicQueueDisplayController extends Controller
 
         $tokenHash = hash('sha256', $token);
         $displayData = $this->displayService->formatDisplayData($business);
+        $takeQueueUrl = route('customer.queue.create', ['slug' => $business->slug]);
 
         return response()->view('display.show', [
             'business' => $business,
             'token' => $token,
             'tokenHash' => $tokenHash,
             'displayData' => $displayData,
+            'takeQueueUrl' => $takeQueueUrl,
+            'takeQueueQrSvg' => $this->qrCodeService->generateSvg($takeQueueUrl, 256),
         ])->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
     }
 
@@ -48,7 +56,7 @@ class PublicQueueDisplayController extends Controller
         if (! $business) {
             return response()->json([
                 'success' => false,
-                'message' => 'Layar antrean publik tidak aktif atau tautan tidak valid.',
+                'message' => 'Layar antrean publik tidak aktif atau akses tidak valid.',
             ], 404)->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
         }
 
@@ -60,4 +68,3 @@ class PublicQueueDisplayController extends Controller
         ])->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
     }
 }
-

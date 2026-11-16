@@ -1,22 +1,41 @@
-<x-layouts.merchant 
-    title="Meja Operasional Antrean" 
+@php
+    $canCallNext = ! $nowServing && $stats['menunggu'] > 0;
+    $callNextHint = $nowServing
+        ? 'Selesaikan atau lewati tiket aktif terlebih dahulu'
+        : ($stats['menunggu'] === 0 ? 'Tidak ada tiket menunggu' : 'Panggil nomor antrean berikutnya');
+    $hasActiveFilters = $search || $selectedStatus || $selectedService || $selectedSource || $selectedCounterFilter || $selectedDate !== $operatingDate;
+    $statusTiles = [
+        ['key' => null, 'label' => 'Semua Status', 'count' => $stats['total'], 'active' => 'border-brand-500 bg-brand-50 ring-1 ring-brand-500', 'label_class' => 'text-neutral-500', 'count_class' => 'text-neutral-900'],
+        ['key' => 'menunggu', 'label' => 'Menunggu', 'count' => $stats['menunggu'], 'active' => 'border-amber-500 bg-amber-50 ring-1 ring-amber-500', 'label_class' => 'text-amber-700', 'count_class' => 'text-amber-900'],
+        ['key' => 'dipanggil', 'label' => 'Dipanggil', 'count' => $stats['dipanggil'], 'active' => 'border-blue-500 bg-blue-50 ring-1 ring-blue-500', 'label_class' => 'text-blue-700', 'count_class' => 'text-blue-900'],
+        ['key' => 'sedang_dilayani', 'label' => 'Sedang Dilayani', 'count' => $stats['sedang_dilayani'], 'active' => 'border-indigo-500 bg-indigo-50 ring-1 ring-indigo-500', 'label_class' => 'text-indigo-700', 'count_class' => 'text-indigo-900'],
+        ['key' => 'selesai', 'label' => 'Selesai', 'count' => $stats['selesai'], 'active' => 'border-emerald-500 bg-emerald-50 ring-1 ring-emerald-500', 'label_class' => 'text-emerald-700', 'count_class' => 'text-emerald-900'],
+        ['key' => 'tidak_hadir', 'label' => 'Tidak Hadir', 'count' => $stats['tidak_hadir'] ?? 0, 'active' => 'border-rose-500 bg-rose-50 ring-1 ring-rose-500', 'label_class' => 'text-rose-700', 'count_class' => 'text-rose-900'],
+        ['key' => 'dilewati', 'label' => 'Dilewati', 'count' => $stats['dilewati'], 'active' => 'border-neutral-500 bg-neutral-100 ring-1 ring-neutral-500', 'label_class' => 'text-neutral-600', 'count_class' => 'text-neutral-800'],
+        ['key' => 'dibatalkan', 'label' => 'Dibatalkan', 'count' => $stats['dibatalkan'], 'active' => 'border-rose-500 bg-rose-50 ring-1 ring-rose-500', 'label_class' => 'text-rose-700', 'count_class' => 'text-rose-900'],
+    ];
+    $sourceLabel = fn (string $source): string => $source === 'online' ? 'Online' : 'Walk-in';
+    $sourceClasses = fn (string $source): string => $source === 'online' ? 'bg-blue-50 text-blue-700 ring-blue-600/20' : 'bg-neutral-100 text-neutral-700 ring-neutral-500/20';
+    $controlClasses = 'h-11 w-full rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500';
+@endphp
+
+<x-layouts.merchant
+    title="Meja Operasional Antrean"
     :businessName="$business->name"
     :businessStatus="$business->status"
     :businessSlug="$business->slug"
 >
-    <div class="space-y-6" x-data="{ walkInModalOpen: false, cancelModalOpen: false, cancelTicketId: null, cancelTicketNumber: '' }">
+    <div class="space-y-5 pb-36 sm:space-y-6 sm:pb-0" x-data="{ walkInModalOpen: false, cancelModalOpen: false, cancelTicketId: null, cancelTicketNumber: '', filtersOpen: {{ $hasActiveFilters ? 'true' : 'false' }} }">
         {{-- Flash Messages --}}
         @if (session('status'))
-            <div class="rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-sm font-medium text-emerald-800 flex items-center justify-between shadow-xs">
-                <div class="flex items-center gap-2">
-                    <svg class="w-5 h-5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    <span>{{ session('status') }}</span>
-                </div>
+            <div class="rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-sm font-medium text-emerald-800 flex items-center gap-2 shadow-xs" role="status">
+                <svg class="w-5 h-5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <span>{{ session('status') }}</span>
             </div>
         @endif
 
         @if ($errors->any())
-            <div class="rounded-xl bg-rose-50 border border-rose-200 p-4 text-sm text-rose-800 shadow-xs">
+            <div class="rounded-xl bg-rose-50 border border-rose-200 p-4 text-sm text-rose-800 shadow-xs" role="alert">
                 <div class="flex items-start gap-2">
                     <svg class="w-5 h-5 text-rose-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     <div>
@@ -32,174 +51,179 @@
         @endif
 
         {{-- Page Header --}}
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-neutral-200">
-            <div>
+        <div class="flex flex-col gap-4 border-b border-neutral-200 pb-4 lg:flex-row lg:items-center lg:justify-between">
+            <div class="min-w-0">
                 <h1 class="text-h2 font-bold text-neutral-950">Meja Operasional Antrean</h1>
                 <p class="text-body text-neutral-500 mt-1">
                     Kelola antrean pelanggan secara real-time dengan pemanggilan berurutan (FIFO).
                 </p>
             </div>
 
-            <div class="flex flex-wrap items-center gap-3">
-                @if (isset($availableCounters) && $availableCounters->isNotEmpty())
-                    <form method="POST" action="{{ route('merchant.queues.select-counter') }}" class="inline-flex items-center gap-2 bg-neutral-100 rounded-lg p-1 border border-neutral-300">
+            <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+                @if ($business->usesStations() && $availableCounters->isNotEmpty())
+                    <form method="POST" action="{{ route('merchant.queues.select-counter') }}" class="flex items-center gap-2 rounded-lg border border-neutral-300 bg-neutral-100 p-1">
                         @csrf
-                        <label for="queues_header_counter_select" class="text-xs font-bold text-neutral-600 pl-2 flex items-center gap-1">
-                            <svg class="w-3.5 h-3.5 text-neutral-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                            Loket:
+                        <label for="queues_header_counter_select" class="flex shrink-0 items-center gap-1 pl-2 text-xs font-bold text-neutral-600">
+                            <svg class="w-3.5 h-3.5 text-neutral-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                            Loket Saya
                         </label>
                         <select
                             id="queues_header_counter_select"
                             name="counter_id"
                             onchange="this.form.submit()"
-                            class="text-xs font-semibold rounded-md border-neutral-300 py-1.5 pl-2.5 pr-8 bg-white text-neutral-900 focus:border-brand-500 focus:ring-brand-500 shadow-2xs"
+                            class="h-10 min-w-0 flex-1 rounded-md border-neutral-300 bg-white py-0 pl-2.5 pr-8 text-sm font-semibold text-neutral-900 shadow-2xs focus:border-brand-500 focus:ring-brand-500"
                         >
-                            @foreach ($availableCounters as $c)
-                                <option value="{{ $c->id }}" {{ isset($selectedCounter) && $selectedCounter && $selectedCounter->id === $c->id ? 'selected' : '' }}>
-                                    {{ $c->name }} ({{ $c->code }})
+                            @foreach ($availableCounters as $counterOption)
+                                <option value="{{ $counterOption->id }}" @selected($activeCounter?->id === $counterOption->id)>
+                                    {{ $counterOption->name }} ({{ $counterOption->code }})
                                 </option>
                             @endforeach
                         </select>
                     </form>
+                @elseif (! $business->usesStations())
+                    <span class="inline-flex h-10 items-center gap-1.5 rounded-lg border border-neutral-200 bg-neutral-100 px-3 text-xs font-bold text-neutral-700">
+                        <svg class="size-3.5 text-brand-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                        1 Station Utama
+                    </span>
                 @endif
 
-                <button 
-                    type="button" 
-                    @click="walkInModalOpen = true"
-                    class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-neutral-900 text-white text-sm font-semibold hover:bg-neutral-800 transition shadow-xs focus:ring-2 focus:ring-offset-2 focus:ring-neutral-900"
-                >
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                    <span>Tambah Walk-in</span>
-                </button>
-
-                <form method="POST" action="{{ route('merchant.queues.call-next') }}" x-data="{ submitting: false }" @submit="submitting = true">
-                    @csrf
-                    @if (isset($selectedCounter) && $selectedCounter)
-                        <input type="hidden" name="counter_id" value="{{ $selectedCounter->id }}">
-                    @endif
-                    <button 
-                        type="submit" 
-                        :disabled="submitting || {{ $nowServing ? 'true' : 'false' }} || {{ $stats['menunggu'] === 0 ? 'true' : 'false' }}"
-                        class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-brand-700 text-white text-sm font-bold hover:bg-brand-800 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-md focus:ring-2 focus:ring-offset-2 focus:ring-brand-700"
-                        title="{{ $nowServing ? 'Selesaikan atau lewati tiket aktif terlebih dahulu' : ($stats['menunggu'] === 0 ? 'Tidak ada tiket menunggu' : 'Panggil nomor antrean berikutnya') }}"
+                {{-- Desktop / tablet actions (mobile uses the thumb-zone dock) --}}
+                <div class="hidden items-center gap-3 sm:flex">
+                    <button
+                        type="button"
+                        @click="walkInModalOpen = true"
+                        class="inline-flex h-11 items-center gap-2 rounded-lg bg-neutral-900 px-4 text-sm font-semibold text-white shadow-xs transition hover:bg-neutral-800 focus:ring-2 focus:ring-neutral-900 focus:ring-offset-2"
                     >
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
-                        <span>Panggil Berikutnya @if(isset($selectedCounter) && $selectedCounter) ke {{ $selectedCounter->name }} @endif</span>
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        <span>Tambah Walk-in</span>
                     </button>
-                </form>
+
+                    <form method="POST" action="{{ route('merchant.queues.call-next') }}" x-data="{ submitting: false }" @submit="submitting = true">
+                        @csrf
+                        @if ($activeCounter)
+                            <input type="hidden" name="counter_id" value="{{ $activeCounter->id }}">
+                        @endif
+                        <button
+                            type="submit"
+                            @disabled(! $canCallNext)
+                            :disabled="submitting || {{ $canCallNext ? 'false' : 'true' }}"
+                            class="inline-flex h-11 items-center gap-2 rounded-lg bg-brand-700 px-5 text-sm font-bold text-white shadow-md transition hover:bg-brand-800 focus:ring-2 focus:ring-brand-700 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            title="{{ $callNextHint }}"
+                        >
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
+                            <span>Panggil Berikutnya @if ($activeCounter) ke {{ $activeCounter->name }} @endif</span>
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
 
         {{-- Now Serving Arena (M7-15) --}}
-        <div class="bg-white rounded-2xl border-2 {{ $nowServing ? 'border-brand-300 bg-gradient-to-b from-brand-50/30 to-white' : 'border-neutral-200' }} p-6 shadow-sm">
-            <div class="flex items-center justify-between border-b border-neutral-200 pb-4 mb-6">
-                <div class="flex items-center gap-2.5">
-                    @if ($nowServing)
-                        <span class="w-3.5 h-3.5 rounded-full bg-brand-600 animate-ping"></span>
-                    @else
-                        <span class="w-3.5 h-3.5 rounded-full bg-neutral-300"></span>
-                    @endif
-                    <h2 class="text-h3 font-bold text-neutral-900 tracking-tight">Sedang Berlangsung (Now Serving)</h2>
+        <section class="rounded-2xl border-2 p-4 shadow-sm sm:p-6 {{ $nowServing ? 'border-brand-300 bg-linear-to-b from-brand-50/40 to-white' : 'border-neutral-200 bg-white' }}" aria-labelledby="now-serving-heading">
+            <div class="mb-5 flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 pb-4">
+                <div class="flex min-w-0 items-center gap-2.5">
+                    <span class="flex size-8 shrink-0 items-center justify-center rounded-lg {{ $nowServing ? 'bg-brand-700 text-white' : 'bg-neutral-100 text-neutral-500' }}">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
+                    </span>
+                    <h2 id="now-serving-heading" class="text-base font-bold tracking-tight text-neutral-900 sm:text-h3">Sedang Berlangsung (Now Serving)</h2>
                 </div>
                 @if ($nowServing)
                     <x-status-badge :status="$nowServing->status" size="md" />
                 @else
-                    <span class="text-caption font-semibold px-3 py-1 rounded-full bg-neutral-100 text-neutral-600">
+                    <span class="rounded-full bg-neutral-100 px-3 py-1 text-caption font-semibold text-neutral-600">
                         Loket Siap Melayani
                     </span>
                 @endif
             </div>
 
             @if ($nowServing)
-                <div class="py-4 text-center">
-                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-100 text-brand-900 text-xs font-bold mb-2">
-                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                        <span>{{ $nowServing->counter ? $nowServing->counter->name : ($selectedCounter ? $selectedCounter->name : 'Loket 1') }}</span>
-                    </div>
-                    <span class="text-caption text-neutral-500 font-semibold uppercase tracking-wider block mb-1">
-                        Nomor Antrean Dipanggil
+                <div class="text-center">
+                    <span class="mb-2 inline-flex items-center gap-1.5 rounded-full bg-brand-100 px-3 py-1 text-xs font-bold text-brand-900">
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                        {{ $nowServing->counter?->name ?? $activeCounter?->name ?? 'Loket 1' }}
                     </span>
-                    <div class="text-5xl sm:text-6xl font-extrabold text-neutral-950 font-sans tabular-nums tracking-tight">
+                    <span class="mb-1 block text-caption font-semibold uppercase tracking-wider text-neutral-500">Nomor Antrean Dipanggil</span>
+                    <div class="text-5xl font-extrabold tracking-tight text-neutral-950 tabular-nums sm:text-6xl">
                         {{ $nowServing->ticket_number }}
                     </div>
 
-                    <div class="mt-3 flex items-center justify-center gap-3 text-body text-neutral-700">
-                        <span class="font-bold text-neutral-900 text-lg">{{ $nowServing->customer_name }}</span>
+                    <p class="mt-3 text-lg font-bold text-neutral-900">{{ $nowServing->customer_name }}</p>
+                    <div class="mt-2 flex flex-wrap items-center justify-center gap-2 text-sm">
+                        <span class="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 font-medium text-neutral-800 ring-1 ring-neutral-200">
+                            {{ $nowServing->service->name }}
+                            <span class="text-neutral-500 tabular-nums">{{ $nowServing->service->duration_minutes }} mnt</span>
+                        </span>
                         @if ($nowServing->customer_phone)
-                            <span class="text-neutral-400">•</span>
-                            <span class="text-neutral-500">{{ $nowServing->customer_phone }}</span>
+                            <span class="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-neutral-600 ring-1 ring-neutral-200 tabular-nums">
+                                <x-customer.icon name="phone" class="size-3.5" />
+                                {{ $nowServing->customer_phone }}
+                            </span>
                         @endif
-                        <span class="text-neutral-400">•</span>
-                        <span class="font-medium text-neutral-800">{{ $nowServing->service->name }} ({{ $nowServing->service->duration_minutes }} mnt)</span>
-                        <span class="text-neutral-400">•</span>
-                        <span class="text-xs px-2 py-0.5 rounded font-medium {{ $nowServing->source === 'online' ? 'bg-blue-50 text-blue-700' : 'bg-neutral-100 text-neutral-700' }}">
-                            {{ $nowServing->source === 'online' ? 'Online' : 'Walk-in' }}
+                        <span class="rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset {{ $sourceClasses($nowServing->source) }}">
+                            {{ $sourceLabel($nowServing->source) }}
                         </span>
                     </div>
 
                     @if ($nowServing->called_at)
-                        <div class="mt-2 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-brand-800 text-caption font-medium border border-blue-200">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            Dipanggil sejak: {{ $nowServing->called_at->format('H:i') }} WITA
+                        <div class="mt-3 inline-flex flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-caption font-medium text-brand-800">
+                            <x-customer.icon name="clock" class="size-4" />
+                            <span class="tabular-nums">Dipanggil pukul {{ $nowServing->called_at->format('H:i') }}</span>
                             @if ($nowServing->recalled_at)
-                                (Dipanggil ulang: {{ $nowServing->recalled_at->format('H:i') }})
+                                <span class="tabular-nums">(ulang {{ $nowServing->recalled_at->format('H:i') }})</span>
                             @endif
                         </div>
                     @endif
 
                     {{-- Lifecycle Action Buttons for Active Ticket (M7-17 to M7-21) --}}
-                    <div class="border-t border-neutral-200 pt-6 mt-6 flex flex-wrap items-center justify-center sm:justify-between gap-3">
-                        <div class="flex items-center gap-2">
-                            {{-- Recall Button (M7-17) --}}
+                    <div class="mt-5 flex flex-col gap-3 border-t border-neutral-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
+                        <div class="grid grid-cols-3 gap-2 sm:flex sm:items-center">
                             @if ($nowServing->status === 'dipanggil')
+                                {{-- Recall Button (M7-17) --}}
                                 <form method="POST" action="{{ route('merchant.queues.recall', $nowServing) }}">
                                     @csrf
-                                    <button type="submit" class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg border border-neutral-300 bg-white text-neutral-700 text-sm font-semibold hover:bg-neutral-50 shadow-xs transition">
-                                        <svg class="w-4 h-4 text-neutral-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
+                                    <button type="submit" class="inline-flex h-11 w-full items-center justify-center gap-1.5 rounded-lg border border-neutral-300 bg-white px-3 text-sm font-semibold text-neutral-700 shadow-xs transition hover:bg-neutral-50 sm:px-4">
+                                        <svg class="hidden w-4 h-4 text-neutral-500 sm:block" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                                         Panggil Ulang
                                     </button>
                                 </form>
-                            @endif
 
-                            {{-- Skip Button (M7-20) --}}
-                            @if ($nowServing->status === 'dipanggil')
+                                {{-- Skip Button (M7-20) --}}
                                 <form method="POST" action="{{ route('merchant.queues.skip', $nowServing) }}" onsubmit="return confirm('Apakah Anda yakin ingin melewati nomor antrean ini?');">
                                     @csrf
-                                    <button type="submit" class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg border border-neutral-300 bg-white text-neutral-700 text-sm font-semibold hover:bg-neutral-50 shadow-xs transition">
-                                        <svg class="w-4 h-4 text-neutral-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
-                                        Lewati Antrean
+                                    <button type="submit" class="inline-flex h-11 w-full items-center justify-center gap-1.5 rounded-lg border border-neutral-300 bg-white px-3 text-sm font-semibold text-neutral-700 shadow-xs transition hover:bg-neutral-50 sm:px-4">
+                                        <svg class="hidden w-4 h-4 text-neutral-500 sm:block" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
+                                        Lewati
                                     </button>
                                 </form>
                             @endif
 
                             {{-- Cancel Button --}}
-                            <button 
-                                type="button" 
+                            <button
+                                type="button"
                                 @click="cancelTicketId = {{ $nowServing->id }}; cancelTicketNumber = '{{ $nowServing->ticket_number }}'; cancelModalOpen = true;"
-                                class="inline-flex items-center gap-1.5 px-3 py-2 text-rose-600 hover:text-rose-800 text-sm font-semibold transition"
+                                class="inline-flex h-11 items-center justify-center rounded-lg px-3 text-sm font-semibold text-rose-600 transition hover:bg-rose-50 hover:text-rose-800 {{ $nowServing->status === 'dipanggil' ? '' : 'col-span-3 sm:col-span-1' }}"
                             >
                                 Batalkan
                             </button>
                         </div>
 
-                        <div class="flex items-center gap-3">
-                            {{-- Start Service Button (M7-18) --}}
+                        {{-- Primary lifecycle action (on mobile this lives in the thumb-zone dock) --}}
+                        <div class="hidden items-center gap-3 sm:flex">
                             @if ($nowServing->status === 'dipanggil')
+                                {{-- Start Service Button (M7-18) --}}
                                 <form method="POST" action="{{ route('merchant.queues.start-service', $nowServing) }}">
                                     @csrf
-                                    <button type="submit" class="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-brand-700 text-white text-sm font-bold hover:bg-brand-800 shadow-md transition">
-                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    <button type="submit" class="inline-flex h-11 items-center gap-2 rounded-lg bg-brand-700 px-6 text-sm font-bold text-white shadow-md transition hover:bg-brand-800">
+                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                         Mulai Melayani
                                     </button>
                                 </form>
-                            @endif
-
-                            {{-- Complete Button (M7-19) --}}
-                            @if ($nowServing->status === 'sedang_dilayani')
+                            @elseif ($nowServing->status === 'sedang_dilayani')
+                                {{-- Complete Button (M7-19) --}}
                                 <form method="POST" action="{{ route('merchant.queues.complete', $nowServing) }}">
                                     @csrf
-                                    <button type="submit" class="inline-flex items-center gap-2 px-8 py-3 rounded-lg bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 shadow-md transition">
-                                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                    <button type="submit" class="inline-flex h-12 items-center gap-2 rounded-lg bg-emerald-600 px-8 text-sm font-bold text-white shadow-md transition hover:bg-emerald-700">
+                                        <x-customer.icon name="check" class="size-5" />
                                         Selesaikan Pelayanan
                                     </button>
                                 </form>
@@ -208,152 +232,157 @@
                     </div>
                 </div>
             @else
-                <div class="py-8 text-center">
-                    <div class="w-12 h-12 rounded-full bg-neutral-100 text-neutral-400 mx-auto flex items-center justify-center mb-3">
-                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"/></svg>
+                <div class="py-6 text-center sm:py-8">
+                    <div class="mx-auto mb-3 flex size-12 items-center justify-center rounded-full bg-neutral-100 text-neutral-400">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"/></svg>
                     </div>
                     <h3 class="text-h3 font-bold text-neutral-800">Meja Operasional Kosong</h3>
-                    <p class="text-caption text-neutral-500 mt-1 max-w-sm mx-auto">
+                    <p class="mx-auto mt-1 max-w-sm text-caption text-neutral-500">
                         Tekan tombol <strong>"Panggil Berikutnya"</strong> untuk memanggil antrean tertua yang sedang menunggu secara otomatis.
+                    </p>
+                    <p class="mt-3 inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-caption font-semibold text-amber-800 ring-1 ring-amber-600/20 tabular-nums">
+                        {{ $stats['menunggu'] }} pelanggan menunggu
                     </p>
                 </div>
             @endif
-        </div>
+        </section>
 
-        {{-- Status Filter Badges Strip (M7-09) --}}
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
-            <a href="{{ route('merchant.queues', array_merge(request()->query(), ['status' => null])) }}" class="p-3 rounded-xl border {{ empty($selectedStatus) ? 'border-brand-500 bg-brand-50/50 ring-1 ring-brand-500' : 'border-neutral-200 bg-white hover:bg-neutral-50' }} transition">
-                <span class="text-caption font-semibold text-neutral-500 block truncate">Semua Status</span>
-                <span class="text-xl font-extrabold text-neutral-900 tabular-nums block mt-1">{{ $stats['total'] }}</span>
-            </a>
-            <a href="{{ route('merchant.queues', array_merge(request()->query(), ['status' => 'menunggu'])) }}" class="p-3 rounded-xl border {{ $selectedStatus === 'menunggu' ? 'border-amber-500 bg-amber-50 ring-1 ring-amber-500' : 'border-neutral-200 bg-white hover:bg-neutral-50' }} transition">
-                <span class="text-caption font-semibold text-amber-700 block truncate">Menunggu</span>
-                <span class="text-xl font-extrabold text-amber-900 tabular-nums block mt-1">{{ $stats['menunggu'] }}</span>
-            </a>
-            <a href="{{ route('merchant.queues', array_merge(request()->query(), ['status' => 'dipanggil'])) }}" class="p-3 rounded-xl border {{ $selectedStatus === 'dipanggil' ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500' : 'border-neutral-200 bg-white hover:bg-neutral-50' }} transition">
-                <span class="text-caption font-semibold text-blue-700 block truncate">Dipanggil</span>
-                <span class="text-xl font-extrabold text-blue-900 tabular-nums block mt-1">{{ $stats['dipanggil'] }}</span>
-            </a>
-            <a href="{{ route('merchant.queues', array_merge(request()->query(), ['status' => 'sedang_dilayani'])) }}" class="p-3 rounded-xl border {{ $selectedStatus === 'sedang_dilayani' ? 'border-indigo-500 bg-indigo-50 ring-1 ring-indigo-500' : 'border-neutral-200 bg-white hover:bg-neutral-50' }} transition">
-                <span class="text-caption font-semibold text-indigo-700 block truncate">Sedang Dilayani</span>
-                <span class="text-xl font-extrabold text-indigo-900 tabular-nums block mt-1">{{ $stats['sedang_dilayani'] }}</span>
-            </a>
-            <a href="{{ route('merchant.queues', array_merge(request()->query(), ['status' => 'selesai'])) }}" class="p-3 rounded-xl border {{ $selectedStatus === 'selesai' ? 'border-emerald-500 bg-emerald-50 ring-1 ring-emerald-500' : 'border-neutral-200 bg-white hover:bg-neutral-50' }} transition">
-                <span class="text-caption font-semibold text-emerald-700 block truncate">Selesai</span>
-                <span class="text-xl font-extrabold text-emerald-900 tabular-nums block mt-1">{{ $stats['selesai'] }}</span>
-            </a>
-            <a href="{{ route('merchant.queues', array_merge(request()->query(), ['status' => 'dilewati'])) }}" class="p-3 rounded-xl border {{ $selectedStatus === 'dilewati' ? 'border-neutral-500 bg-neutral-100 ring-1 ring-neutral-500' : 'border-neutral-200 bg-white hover:bg-neutral-50' }} transition">
-                <span class="text-caption font-semibold text-neutral-600 block truncate">Dilewati</span>
-                <span class="text-xl font-extrabold text-neutral-800 tabular-nums block mt-1">{{ $stats['dilewati'] }}</span>
-            </a>
-            <a href="{{ route('merchant.queues', array_merge(request()->query(), ['status' => 'dibatalkan'])) }}" class="p-3 rounded-xl border {{ $selectedStatus === 'dibatalkan' ? 'border-rose-500 bg-rose-50 ring-1 ring-rose-500' : 'border-neutral-200 bg-white hover:bg-neutral-50' }} transition">
-                <span class="text-caption font-semibold text-rose-700 block truncate">Dibatalkan</span>
-                <span class="text-xl font-extrabold text-rose-900 tabular-nums block mt-1">{{ $stats['dibatalkan'] }}</span>
-            </a>
-        </div>
+        {{-- Status Filter Strip (M7-09): horizontal scroll on mobile, grid on larger screens --}}
+        <nav class="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0" aria-label="Filter status antrean">
+            <div class="flex snap-x gap-2 sm:grid sm:grid-cols-4 sm:gap-3 lg:grid-cols-7">
+                @foreach ($statusTiles as $tile)
+                    @php($isSelected = $tile['key'] === null ? empty($selectedStatus) : $selectedStatus === $tile['key'])
+                    <a
+                        href="{{ route('merchant.queues', array_merge(request()->query(), ['status' => $tile['key'], 'page' => null])) }}"
+                        class="min-w-[7.25rem] shrink-0 snap-start rounded-xl border p-3 transition sm:min-w-0 {{ $isSelected ? $tile['active'] : 'border-neutral-200 bg-white hover:bg-neutral-50' }}"
+                        @if ($isSelected) aria-current="true" @endif
+                    >
+                        <span class="block truncate text-caption font-semibold {{ $tile['label_class'] }}">{{ $tile['label'] }}</span>
+                        <span class="mt-1 block text-xl font-extrabold tabular-nums {{ $tile['count_class'] }}">{{ $tile['count'] }}</span>
+                    </a>
+                @endforeach
+            </div>
+        </nav>
 
         {{-- Search & Multi-Filter Bar (M7-11, M7-12) --}}
-        <div class="bg-white rounded-xl border border-neutral-200 p-4 shadow-xs">
-            <form method="GET" action="{{ route('merchant.queues') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 items-end">
+        <div class="rounded-xl border border-neutral-200 bg-white p-4 shadow-xs">
+            <form method="GET" action="{{ route('merchant.queues') }}" class="grid grid-cols-1 items-end gap-3 sm:grid-cols-2 lg:grid-cols-6">
+                @if ($selectedStatus)
+                    <input type="hidden" name="status" value="{{ $selectedStatus }}">
+                @endif
+
                 {{-- Search Box --}}
-                <div class="lg:col-span-2">
-                    <label class="block text-caption font-semibold text-neutral-700 mb-1">Cari Nomor / Nama</label>
-                    <div class="relative">
-                        <input 
-                            type="text" 
-                            name="search" 
-                            value="{{ $search }}" 
-                            placeholder="Cari nomor tiket atau nama..." 
-                            class="w-full pl-9 pr-3 py-2 rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500"
+                <div class="sm:col-span-2">
+                    <label for="queue_search" class="mb-1 block text-caption font-semibold text-neutral-700">Cari Nomor / Nama</label>
+                    <div class="flex gap-2">
+                        <div class="relative flex-1">
+                            <input
+                                id="queue_search"
+                                type="search"
+                                name="search"
+                                value="{{ $search }}"
+                                placeholder="Cari nomor tiket atau nama..."
+                                class="{{ $controlClasses }} pl-9 pr-3"
+                            >
+                            <svg class="pointer-events-none absolute left-3 top-3.5 w-4 h-4 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        </div>
+                        <button
+                            type="button"
+                            @click="filtersOpen = ! filtersOpen"
+                            class="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-lg border px-3 text-sm font-semibold transition sm:hidden"
+                            :class="filtersOpen ? 'border-brand-300 bg-brand-50 text-brand-700' : 'border-neutral-300 bg-white text-neutral-700'"
+                            :aria-expanded="filtersOpen.toString()"
+                            aria-controls="queue-extra-filters"
                         >
-                        <svg class="w-4 h-4 text-neutral-400 absolute left-3 top-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h18l-7 8v6l-4 2v-8L3 4z"/></svg>
+                            Filter
+                        </button>
                     </div>
                 </div>
 
-                {{-- Counter Filter --}}
-                <div>
-                    <label class="block text-caption font-semibold text-neutral-700 mb-1">Loket</label>
-                    <select name="counter_id" class="w-full rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500">
-                        <option value="">Semua Loket</option>
-                        @if (isset($counters))
-                            @foreach ($counters as $cnt)
-                                <option value="{{ $cnt->id }}" {{ isset($selectedCounterId) && $selectedCounterId == $cnt->id ? 'selected' : '' }}>
-                                    {{ $cnt->name }}
-                                </option>
+                <div id="queue-extra-filters" class="contents">
+                    {{-- Counter Filter --}}
+                    @if ($business->usesStations())
+                        <div class="{{ $hasActiveFilters ? '' : 'max-sm:hidden' }}" :class="{ 'max-sm:hidden': ! filtersOpen }">
+                            <label for="queue_counter_filter" class="mb-1 block text-caption font-semibold text-neutral-700">Loket</label>
+                            <select id="queue_counter_filter" name="counter_id" class="{{ $controlClasses }}">
+                                <option value="">Semua Loket</option>
+                                @foreach ($counters as $counterFilter)
+                                    <option value="{{ $counterFilter->id }}" @selected((string) $selectedCounterFilter === (string) $counterFilter->id)>
+                                        {{ $counterFilter->name }}
+                                    </option>
+                                @endforeach
+                                <option value="unassigned" @selected($selectedCounterFilter === 'unassigned')>Belum ada loket</option>
+                            </select>
+                        </div>
+                    @endif
+
+                    {{-- Service Filter --}}
+                    <div class="{{ $hasActiveFilters ? '' : 'max-sm:hidden' }}" :class="{ 'max-sm:hidden': ! filtersOpen }">
+                        <label for="queue_service_filter" class="mb-1 block text-caption font-semibold text-neutral-700">Layanan</label>
+                        <select id="queue_service_filter" name="service_id" class="{{ $controlClasses }}">
+                            <option value="">Semua Layanan</option>
+                            @foreach ($services as $srv)
+                                <option value="{{ $srv->id }}" @selected($selectedService == $srv->id)>{{ $srv->name }}</option>
                             @endforeach
-                        @endif
-                    </select>
-                </div>
+                        </select>
+                    </div>
 
-                {{-- Service Filter --}}
-                <div>
-                    <label class="block text-caption font-semibold text-neutral-700 mb-1">Layanan</label>
-                    <select name="service_id" class="w-full rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500">
-                        <option value="">Semua Layanan</option>
-                        @foreach ($services as $srv)
-                            <option value="{{ $srv->id }}" {{ $selectedService == $srv->id ? 'selected' : '' }}>
-                                {{ $srv->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
+                    {{-- Source Filter --}}
+                    <div class="{{ $hasActiveFilters ? '' : 'max-sm:hidden' }}" :class="{ 'max-sm:hidden': ! filtersOpen }">
+                        <label for="queue_source_filter" class="mb-1 block text-caption font-semibold text-neutral-700">Sumber</label>
+                        <select id="queue_source_filter" name="source" class="{{ $controlClasses }}">
+                            <option value="">Semua Sumber</option>
+                            <option value="online" @selected($selectedSource === 'online')>Online</option>
+                            <option value="walk_in" @selected($selectedSource === 'walk_in')>Walk-in</option>
+                        </select>
+                    </div>
 
-                {{-- Source Filter --}}
-                <div>
-                    <label class="block text-caption font-semibold text-neutral-700 mb-1">Sumber</label>
-                    <select name="source" class="w-full rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500">
-                        <option value="">Semua Sumber</option>
-                        <option value="online" {{ $selectedSource === 'online' ? 'selected' : '' }}>Online</option>
-                        <option value="walk_in" {{ $selectedSource === 'walk_in' ? 'selected' : '' }}>Walk-in</option>
-                    </select>
-                </div>
-
-                {{-- Date / History Filter --}}
-                <div>
-                    <label class="block text-caption font-semibold text-neutral-700 mb-1">Periode Tanggal</label>
-                    <select name="date" class="w-full rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500">
-                        <option value="{{ $operatingDate }}" {{ $selectedDate === $operatingDate ? 'selected' : '' }}>Hari Ini</option>
-                        <option value="all" {{ $selectedDate === 'all' ? 'selected' : '' }}>Semua Riwayat</option>
-                    </select>
+                    {{-- Date / History Filter --}}
+                    <div class="{{ $hasActiveFilters ? '' : 'max-sm:hidden' }}" :class="{ 'max-sm:hidden': ! filtersOpen }">
+                        <label for="queue_date_filter" class="mb-1 block text-caption font-semibold text-neutral-700">Periode Tanggal</label>
+                        <select id="queue_date_filter" name="date" class="{{ $controlClasses }}">
+                            <option value="{{ $operatingDate }}" @selected($selectedDate === $operatingDate)>Hari Ini</option>
+                            <option value="all" @selected($selectedDate === 'all')>Semua Riwayat</option>
+                        </select>
+                    </div>
                 </div>
 
                 {{-- Action Filter Buttons --}}
-                <div class="sm:col-span-2 lg:col-span-6 flex items-center justify-between pt-2 border-t border-neutral-100">
-                    <div class="flex items-center gap-2">
-                        <button type="submit" class="px-4 py-2 rounded-lg bg-brand-700 text-white text-xs font-bold hover:bg-brand-800 transition shadow-xs">
+                <div class="flex flex-col gap-3 border-t border-neutral-100 pt-3 sm:col-span-2 sm:flex-row sm:items-center sm:justify-between lg:col-span-6">
+                    <div class="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+                        <button type="submit" class="inline-flex h-11 items-center justify-center rounded-lg bg-brand-700 px-4 text-sm font-bold text-white shadow-xs transition hover:bg-brand-800">
                             Terapkan Filter
                         </button>
-                        <a href="{{ route('merchant.queues') }}" class="px-3 py-2 rounded-lg border border-neutral-300 text-neutral-700 text-xs font-medium hover:bg-neutral-50 transition">
+                        <a href="{{ route('merchant.queues') }}" class="inline-flex h-11 items-center justify-center rounded-lg border border-neutral-300 px-4 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50">
                             Reset
                         </a>
                     </div>
 
                     <span class="text-caption text-neutral-500">
-                        Menampilkan <strong>{{ $tickets->total() }}</strong> tiket antrean
+                        Menampilkan <strong class="tabular-nums">{{ $tickets->total() }}</strong> tiket antrean
                     </span>
                 </div>
             </form>
         </div>
 
         {{-- Queue List Section --}}
-        <div class="bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-xs">
-            <div class="p-4 sm:p-5 border-b border-neutral-200 flex items-center justify-between">
-                <div>
-                    <h3 class="text-h3 font-bold text-neutral-900">Daftar Antrean</h3>
-                    <p class="text-caption text-neutral-500">
-                        {{ $selectedDate === $operatingDate ? 'Antrean sesi operasional hari ini.' : 'Riwayat arsip antrean usaha.' }}
-                    </p>
-                </div>
+        <section class="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-xs" aria-labelledby="queue-list-heading">
+            <div class="border-b border-neutral-200 p-4 sm:p-5">
+                <h3 id="queue-list-heading" class="text-h3 font-bold text-neutral-900">Daftar Antrean</h3>
+                <p class="text-caption text-neutral-500">
+                    {{ $selectedDate === $operatingDate ? 'Antrean sesi operasional hari ini.' : 'Riwayat arsip antrean usaha.' }}
+                </p>
             </div>
 
             @if ($tickets->isEmpty())
-                <div class="p-12 text-center">
-                    <div class="w-12 h-12 rounded-full bg-neutral-100 text-neutral-400 mx-auto flex items-center justify-center mb-3">
-                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
+                <div class="p-10 text-center sm:p-12">
+                    <div class="mx-auto mb-3 flex size-12 items-center justify-center rounded-full bg-neutral-100 text-neutral-400">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
                     </div>
                     <h3 class="text-h3 font-semibold text-neutral-900">Tidak Ada Antrean Ditemukan</h3>
-                    <p class="text-caption text-neutral-500 mt-1 max-w-sm mx-auto">
-                        @if ($search || $selectedStatus || $selectedService || $selectedSource)
+                    <p class="mx-auto mt-1 max-w-sm text-caption text-neutral-500">
+                        @if ($hasActiveFilters)
                             Tidak ada tiket yang sesuai dengan filter pencarian Anda.
                         @else
                             Belum ada tiket antrean yang tercatat pada sesi ini.
@@ -361,91 +390,92 @@
                     </p>
                 </div>
             @else
-                {{-- Desktop Table View (M7-10, M7-14) --}}
-                <div class="hidden md:block overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
+                {{-- Table View: tablet & desktop (M7-10, M7-14) --}}
+                <div class="hidden overflow-x-auto sm:block">
+                    <table class="w-full border-collapse text-left">
                         <thead>
                             <tr class="border-b border-neutral-200 bg-neutral-50/70 text-caption font-semibold text-neutral-600">
-                                <th class="py-3 px-4">No. Tiket</th>
-                                <th class="py-3 px-4">Pelanggan</th>
-                                <th class="py-3 px-4">Layanan</th>
-                                <th class="py-3 px-4">Sumber</th>
-                                <th class="py-3 px-4">Waktu Dibuat</th>
-                                <th class="py-3 px-4">Status</th>
-                                <th class="py-3 px-4 text-right">Aksi</th>
+                                <th scope="col" class="px-4 py-3">No. Tiket</th>
+                                <th scope="col" class="px-4 py-3">Pelanggan</th>
+                                <th scope="col" class="px-4 py-3">Layanan</th>
+                                <th scope="col" class="hidden px-4 py-3 lg:table-cell">Sumber</th>
+                                <th scope="col" class="hidden px-4 py-3 md:table-cell">Dibuat</th>
+                                <th scope="col" class="px-4 py-3">Status</th>
+                                <th scope="col" class="px-4 py-3 text-right">Aksi</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-neutral-100 text-body">
                             @foreach ($tickets as $t)
-                                <tr class="hover:bg-neutral-50/80 transition {{ in_array($t->status, ['dipanggil', 'sedang_dilayani']) ? 'bg-brand-50/30' : '' }}">
-                                    <td class="py-3.5 px-4">
-                                        <div class="flex items-center gap-1.5">
-                                            <a href="{{ route('merchant.queues.show', $t) }}" class="font-bold text-neutral-950 hover:text-brand-700 tabular-nums">
-                                                {{ $t->ticket_number }}
-                                            </a>
-                                            @if ($t->counter)
-                                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-neutral-100 text-neutral-700 border border-neutral-200" title="Dilayani di {{ $t->counter->name }}">
-                                                    {{ $t->counter->name }}
-                                                </span>
-                                            @endif
-                                        </div>
-                                    </td>
-                                    <td class="py-3.5 px-4">
-                                        <div class="font-medium text-neutral-900">{{ $t->customer_name }}</div>
-                                        @if ($t->customer_phone)
-                                            <div class="text-[11px] text-neutral-500">{{ $t->customer_phone }}</div>
+                                <tr class="transition hover:bg-neutral-50/80 {{ in_array($t->status, ['dipanggil', 'sedang_dilayani']) ? 'bg-brand-50/30' : '' }}">
+                                    <td class="px-4 py-3.5 align-top">
+                                        <a href="{{ route('merchant.queues.show', $t) }}" class="font-bold text-neutral-950 tabular-nums hover:text-brand-700">
+                                            {{ $t->ticket_number }}
+                                        </a>
+                                        @if ($t->counter)
+                                            <span class="mt-1 block w-fit rounded border border-neutral-200 bg-neutral-100 px-1.5 py-0.5 text-[10px] font-semibold text-neutral-700" title="Dilayani di {{ $t->counter->name }}">
+                                                {{ $t->counter->name }}
+                                            </span>
                                         @endif
                                     </td>
-                                    <td class="py-3.5 px-4 text-neutral-700">
-                                        {{ $t->service->name }}
+                                    <td class="px-4 py-3.5 align-top">
+                                        <div class="font-medium text-neutral-900">{{ $t->customer_name }}</div>
+                                        @if ($t->customer_phone)
+                                            <div class="text-[11px] text-neutral-500 tabular-nums">{{ $t->customer_phone }}</div>
+                                        @endif
+                                        <span class="mt-1 inline-flex rounded px-1.5 py-0.5 text-[10px] font-semibold ring-1 ring-inset lg:hidden {{ $sourceClasses($t->source) }}">{{ $sourceLabel($t->source) }}</span>
                                     </td>
-                                    <td class="py-3.5 px-4">
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium {{ $t->source === 'online' ? 'bg-blue-50 text-blue-700' : 'bg-neutral-100 text-neutral-700' }}">
-                                            {{ $t->source === 'online' ? 'Online' : 'Walk-in' }}
-                                        </span>
+                                    <td class="px-4 py-3.5 align-top text-neutral-700">
+                                        <div>{{ $t->service->name }}</div>
+                                        @if ($t->bookingSlotWindowLabel())
+                                            <span class="mt-1 inline-flex items-center rounded border border-brand-200 bg-brand-50 px-1.5 py-0.5 text-[10px] font-semibold text-brand-700 tabular-nums">
+                                                Slot {{ $t->bookingSlotWindowLabel() }}
+                                            </span>
+                                        @endif
                                     </td>
-                                    <td class="py-3.5 px-4 text-caption text-neutral-500 tabular-nums">
+                                    <td class="hidden px-4 py-3.5 align-top lg:table-cell">
+                                        <span class="inline-flex rounded px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset {{ $sourceClasses($t->source) }}">{{ $sourceLabel($t->source) }}</span>
+                                    </td>
+                                    <td class="hidden px-4 py-3.5 align-top text-caption text-neutral-500 tabular-nums md:table-cell">
                                         {{ $t->created_at->format('H:i') }}
                                         @if ($selectedDate === 'all')
                                             <span class="block text-[11px] text-neutral-400">{{ $t->created_at->format('d/m/y') }}</span>
                                         @endif
                                     </td>
-                                    <td class="py-3.5 px-4">
+                                    <td class="px-4 py-3.5 align-top">
                                         <x-status-badge :status="$t->status" size="sm" />
                                     </td>
-                                    <td class="py-3.5 px-4 text-right">
-                                        <div class="inline-flex items-center gap-1.5 justify-end">
-                                            <a href="{{ route('merchant.queues.show', $t) }}" class="px-2.5 py-1 rounded text-xs font-medium text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 transition" title="Lihat detail">
+                                    <td class="px-4 py-3.5 text-right align-top">
+                                        <div class="inline-flex items-center justify-end gap-1.5">
+                                            <a href="{{ route('merchant.queues.show', $t) }}" class="inline-flex h-9 items-center rounded-md px-2.5 text-xs font-medium text-neutral-600 transition hover:bg-neutral-100 hover:text-neutral-900">
                                                 Detail
                                             </a>
 
                                             {{-- Status-Appropriate Actions (M7-21) --}}
                                             @if ($t->status === 'menunggu')
-                                                <button 
-                                                    type="button" 
+                                                <button
+                                                    type="button"
                                                     @click="cancelTicketId = {{ $t->id }}; cancelTicketNumber = '{{ $t->ticket_number }}'; cancelModalOpen = true;"
-                                                    class="px-2 py-1 rounded text-xs font-medium text-rose-600 hover:text-rose-800 hover:bg-rose-50 transition"
-                                                    title="Batalkan tiket"
+                                                    class="inline-flex h-9 items-center rounded-md px-2.5 text-xs font-medium text-rose-600 transition hover:bg-rose-50 hover:text-rose-800"
                                                 >
                                                     Batalkan
                                                 </button>
                                             @elseif ($t->status === 'dipanggil')
-                                                <form method="POST" action="{{ route('merchant.queues.start-service', $t) }}">
-                                                    @csrf
-                                                    <button type="submit" class="px-2.5 py-1 rounded text-xs font-bold bg-brand-700 text-white hover:bg-brand-800 transition">
-                                                        Layani
-                                                    </button>
-                                                </form>
                                                 <form method="POST" action="{{ route('merchant.queues.recall', $t) }}">
                                                     @csrf
-                                                    <button type="submit" class="p-1 rounded text-neutral-500 hover:text-neutral-900 transition" title="Panggil Ulang">
-                                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
+                                                    <button type="submit" class="inline-flex size-9 items-center justify-center rounded-md text-neutral-500 transition hover:bg-neutral-100 hover:text-neutral-900" title="Panggil Ulang" aria-label="Panggil ulang {{ $t->ticket_number }}">
+                                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                                    </button>
+                                                </form>
+                                                <form method="POST" action="{{ route('merchant.queues.start-service', $t) }}">
+                                                    @csrf
+                                                    <button type="submit" class="inline-flex h-9 items-center rounded-md bg-brand-700 px-3 text-xs font-bold text-white transition hover:bg-brand-800">
+                                                        Layani
                                                     </button>
                                                 </form>
                                             @elseif ($t->status === 'sedang_dilayani')
                                                 <form method="POST" action="{{ route('merchant.queues.complete', $t) }}">
                                                     @csrf
-                                                    <button type="submit" class="px-2.5 py-1 rounded text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-700 transition">
+                                                    <button type="submit" class="inline-flex h-9 items-center rounded-md bg-emerald-600 px-3 text-xs font-bold text-white transition hover:bg-emerald-700">
                                                         Selesai
                                                     </button>
                                                 </form>
@@ -458,174 +488,163 @@
                     </table>
                 </div>
 
-                {{-- Mobile Card View (M7-14) --}}
-                <div class="md:hidden divide-y divide-neutral-100">
+                {{-- Card View: mobile 390px (M7-14) --}}
+                <ul class="divide-y divide-neutral-100 sm:hidden">
                     @foreach ($tickets as $t)
-                        <div class="p-4 space-y-3 {{ in_array($t->status, ['dipanggil', 'sedang_dilayani']) ? 'bg-brand-50/20' : '' }}">
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center gap-2">
-                                    <span class="text-lg font-bold text-neutral-950 tabular-nums">{{ $t->ticket_number }}</span>
-                                    @if ($t->counter)
-                                        <span class="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-neutral-100 text-neutral-700 border border-neutral-200">
-                                            {{ $t->counter->name }}
-                                        </span>
-                                    @endif
-                                    <span class="text-[11px] px-2 py-0.5 rounded font-medium {{ $t->source === 'online' ? 'bg-blue-50 text-blue-700' : 'bg-neutral-100 text-neutral-700' }}">
-                                        {{ $t->source === 'online' ? 'Online' : 'Walk-in' }}
-                                    </span>
+                        <li class="flex flex-col gap-3 p-4 {{ in_array($t->status, ['dipanggil', 'sedang_dilayani']) ? 'bg-brand-50/30' : '' }}">
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="min-w-0">
+                                    <a href="{{ route('merchant.queues.show', $t) }}" class="text-xl font-extrabold text-neutral-950 tabular-nums">{{ $t->ticket_number }}</a>
+                                    <p class="truncate text-sm font-semibold text-neutral-900">{{ $t->customer_name }}</p>
                                 </div>
-                                <x-status-badge :status="$t->status" size="sm" />
+                                <x-status-badge :status="$t->status" size="sm" class="shrink-0" />
                             </div>
 
-                            <div>
-                                <h4 class="text-sm font-semibold text-neutral-900">{{ $t->customer_name }}</h4>
-                                <p class="text-xs text-neutral-500 mt-0.5">{{ $t->service->name }} • Dibuat: {{ $t->created_at->format('H:i') }}</p>
+                            <div class="flex flex-wrap gap-1.5 text-[11px] font-medium">
+                                <span class="rounded-md bg-neutral-100 px-2 py-1 text-neutral-700">{{ $t->service->name }}</span>
+                                @if ($t->bookingSlotWindowLabel())
+                                    <span class="rounded-md border border-brand-200 bg-brand-50 px-2 py-1 font-semibold text-brand-700 tabular-nums">Slot {{ $t->bookingSlotWindowLabel() }}</span>
+                                @endif
+                                <span class="rounded-md px-2 py-1 ring-1 ring-inset {{ $sourceClasses($t->source) }}">{{ $sourceLabel($t->source) }}</span>
+                                <span class="rounded-md bg-neutral-100 px-2 py-1 text-neutral-600 tabular-nums">Dibuat {{ $t->created_at->format($selectedDate === 'all' ? 'd/m H:i' : 'H:i') }}</span>
+                                @if ($t->counter)
+                                    <span class="rounded-md border border-neutral-200 bg-white px-2 py-1 text-neutral-700">{{ $t->counter->name }}</span>
+                                @endif
                             </div>
 
-                            <div class="flex items-center justify-between pt-2 border-t border-neutral-100">
-                                <a href="{{ route('merchant.queues.show', $t) }}" class="text-xs font-semibold text-brand-700">
-                                    Lihat Riwayat &rarr;
+                            <div class="grid grid-cols-2 gap-2">
+                                <a href="{{ route('merchant.queues.show', $t) }}" class="inline-flex h-11 items-center justify-center rounded-lg border border-neutral-300 bg-white text-sm font-semibold text-neutral-700">
+                                    Detail Tiket
                                 </a>
 
-                                <div class="flex items-center gap-2">
-                                    @if ($t->status === 'menunggu')
-                                        <button 
-                                            type="button" 
-                                            @click="cancelTicketId = {{ $t->id }}; cancelTicketNumber = '{{ $t->ticket_number }}'; cancelModalOpen = true;"
-                                            class="px-2.5 py-1 rounded text-xs font-semibold text-rose-600 bg-rose-50"
-                                        >
-                                            Batalkan
+                                @if ($t->status === 'menunggu')
+                                    <button
+                                        type="button"
+                                        @click="cancelTicketId = {{ $t->id }}; cancelTicketNumber = '{{ $t->ticket_number }}'; cancelModalOpen = true;"
+                                        class="inline-flex h-11 items-center justify-center rounded-lg bg-rose-50 text-sm font-semibold text-rose-700"
+                                    >
+                                        Batalkan
+                                    </button>
+                                @elseif ($t->status === 'dipanggil')
+                                    <form method="POST" action="{{ route('merchant.queues.start-service', $t) }}">
+                                        @csrf
+                                        <button type="submit" class="inline-flex h-11 w-full items-center justify-center rounded-lg bg-brand-700 text-sm font-bold text-white">
+                                            Mulai Layani
                                         </button>
-                                    @elseif ($t->status === 'dipanggil')
-                                        <form method="POST" action="{{ route('merchant.queues.start-service', $t) }}">
-                                            @csrf
-                                            <button type="submit" class="px-3 py-1.5 rounded text-xs font-bold bg-brand-700 text-white">
-                                                Mulai Layani
-                                            </button>
-                                        </form>
-                                    @elseif ($t->status === 'sedang_dilayani')
-                                        <form method="POST" action="{{ route('merchant.queues.complete', $t) }}">
-                                            @csrf
-                                            <button type="submit" class="px-3 py-1.5 rounded text-xs font-bold bg-emerald-600 text-white">
-                                                Selesaikan
-                                            </button>
-                                        </form>
-                                    @endif
-                                </div>
+                                    </form>
+                                @elseif ($t->status === 'sedang_dilayani')
+                                    <form method="POST" action="{{ route('merchant.queues.complete', $t) }}">
+                                        @csrf
+                                        <button type="submit" class="inline-flex h-11 w-full items-center justify-center rounded-lg bg-emerald-600 text-sm font-bold text-white">
+                                            Selesaikan
+                                        </button>
+                                    </form>
+                                @endif
                             </div>
-                        </div>
+                        </li>
                     @endforeach
-                </div>
+                </ul>
 
                 {{-- Pagination (M7-13) --}}
-                <div class="p-4 border-t border-neutral-200">
+                <div class="border-t border-neutral-200 p-4">
                     {{ $tickets->links() }}
                 </div>
             @endif
-        </div>
+        </section>
 
-        {{-- Walk-In Modal (M7-24, M7-25) --}}
-        <div 
-            x-show="walkInModalOpen" 
-            x-transition:enter="transition ease-out duration-200"
-            x-transition:enter-start="opacity-0"
-            x-transition:enter-end="opacity-100"
-            x-transition:leave="transition ease-in duration-150"
-            x-transition:leave-start="opacity-100"
-            x-transition:leave-end="opacity-0"
-            class="fixed inset-0 z-50 overflow-y-auto bg-neutral-950/60 flex items-center justify-center p-4"
-            style="display: none;"
-            @keydown.escape.window="walkInModalOpen = false"
+        {{-- Mobile Thumb-Zone Action Dock --}}
+        <div
+            class="fixed inset-x-0 bottom-0 z-30 border-t border-neutral-200 bg-white/95 px-4 pt-3 shadow-[0_-8px_24px_-12px_rgba(15,23,42,0.25)] backdrop-blur sm:hidden"
+            style="padding-bottom: max(0.75rem, env(safe-area-inset-bottom));"
+            data-testid="queue-thumb-dock"
+            aria-label="Kontrol antrean kasir"
         >
-            <div 
-                @click.outside="walkInModalOpen = false"
-                class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-neutral-200 relative"
-            >
-                <div class="flex items-center justify-between border-b border-neutral-100 pb-4 mb-5">
-                    <div>
-                        <h3 class="text-h3 font-bold text-neutral-900">Terbitkan Tiket Walk-in</h3>
-                        <p class="text-caption text-neutral-500">Pelanggan langsung di lokasi usaha.</p>
-                    </div>
-                    <button @click="walkInModalOpen = false" class="text-neutral-400 hover:text-neutral-600 p-1">
-                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                    </button>
+            @if ($nowServing)
+                <div class="mb-2 flex items-center justify-between gap-2 text-xs">
+                    <span class="truncate text-neutral-600">
+                        <span class="font-extrabold text-neutral-950 tabular-nums">{{ $nowServing->ticket_number }}</span>
+                        {{ $nowServing->customer_name }}
+                    </span>
+                    <x-status-badge :status="$nowServing->status" size="sm" class="shrink-0" />
                 </div>
+            @else
+                <p class="mb-2 text-xs text-neutral-600">
+                    <span class="font-bold text-neutral-900 tabular-nums">{{ $stats['menunggu'] }}</span> menunggu
+                    @if ($activeCounter)
+                        di antrean, memanggil ke <span class="font-semibold text-neutral-900">{{ $activeCounter->name }}</span>
+                    @endif
+                </p>
+            @endif
 
-                @if ($services->isEmpty())
-                    <div class="p-4 bg-amber-50 rounded-xl text-amber-800 text-xs mb-4">
-                        Belum ada layanan aktif. Silakan tambahkan layanan terlebih dahulu.
-                    </div>
-                @else
-                    <form method="POST" action="{{ route('merchant.queues.walk-in') }}" class="space-y-4">
+            <div class="grid grid-cols-[auto_1fr] gap-2">
+                <button
+                    type="button"
+                    @click="walkInModalOpen = true"
+                    class="inline-flex h-12 items-center justify-center gap-1.5 rounded-xl border border-neutral-300 bg-white px-4 text-sm font-semibold text-neutral-800"
+                >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                    Walk-in
+                </button>
+
+                @if ($nowServing && $nowServing->status === 'dipanggil')
+                    <form method="POST" action="{{ route('merchant.queues.start-service', $nowServing) }}">
                         @csrf
-
-                        @if ($business->status === 'jeda')
-                            <div class="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900">
-                                <label class="flex items-start gap-2 cursor-pointer">
-                                    <input type="checkbox" name="confirmed_paused" value="1" required class="mt-0.5 rounded border-amber-300 text-amber-600 focus:ring-amber-500">
-                                    <span>Konfirmasi penerbitan tiket walk-in saat usaha dalam status Jeda.</span>
-                                </label>
-                            </div>
+                        <button type="submit" class="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand-700 text-base font-bold text-white shadow-md">
+                            Mulai Melayani {{ $nowServing->ticket_number }}
+                        </button>
+                    </form>
+                @elseif ($nowServing && $nowServing->status === 'sedang_dilayani')
+                    <form method="POST" action="{{ route('merchant.queues.complete', $nowServing) }}">
+                        @csrf
+                        <button type="submit" class="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 text-base font-bold text-white shadow-md">
+                            <x-customer.icon name="check" class="size-5" />
+                            Selesaikan {{ $nowServing->ticket_number }}
+                        </button>
+                    </form>
+                @else
+                    <form method="POST" action="{{ route('merchant.queues.call-next') }}" x-data="{ submitting: false }" @submit="submitting = true">
+                        @csrf
+                        @if ($activeCounter)
+                            <input type="hidden" name="counter_id" value="{{ $activeCounter->id }}">
                         @endif
-
-                        <div>
-                            <label class="block text-label text-neutral-700 font-semibold mb-1.5">Layanan Antrean <span class="text-rose-500">*</span></label>
-                            <select name="service_id" required class="w-full rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500">
-                                <option value="">-- Pilih Layanan --</option>
-                                @foreach ($services as $srv)
-                                    <option value="{{ $srv->id }}">{{ $srv->name }} (Estimasi: {{ $srv->duration_minutes }} mnt)</option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        <div>
-                            <label class="block text-label text-neutral-700 font-semibold mb-1.5">Nama Pelanggan <span class="text-rose-500">*</span></label>
-                            <input type="text" name="customer_name" required maxlength="100" placeholder="Contoh: Budi Santoso" class="w-full rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500">
-                        </div>
-
-                        <div>
-                            <label class="block text-label text-neutral-700 font-semibold mb-1.5">Nomor WhatsApp / HP (Opsional)</label>
-                            <input type="text" name="customer_phone" maxlength="30" placeholder="08xxxxxxxxxx" class="w-full rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500">
-                        </div>
-
-                        <div>
-                            <label class="block text-label text-neutral-700 font-semibold mb-1.5">Catatan Tambahan (Opsional)</label>
-                            <textarea name="notes" rows="2" maxlength="255" placeholder="Catatan preferensi atau kebutuhan khusus..." class="w-full rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500"></textarea>
-                        </div>
-
-                        <div class="pt-3 border-t border-neutral-100 flex items-center justify-end gap-3">
-                            <button type="button" @click="walkInModalOpen = false" class="px-4 py-2 rounded-lg border border-neutral-300 text-sm font-semibold text-neutral-700 hover:bg-neutral-50 transition">
-                                Batal
-                            </button>
-                            <button type="submit" class="px-5 py-2 rounded-lg bg-neutral-900 text-white text-sm font-bold hover:bg-neutral-800 transition shadow-sm">
-                                Terbitkan Tiket
-                            </button>
-                        </div>
+                        <button
+                            type="submit"
+                            @disabled(! $canCallNext)
+                            :disabled="submitting || {{ $canCallNext ? 'false' : 'true' }}"
+                            class="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand-700 text-base font-bold text-white shadow-md disabled:cursor-not-allowed disabled:bg-neutral-300 disabled:text-neutral-600 disabled:shadow-none"
+                        >
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
+                            {{ $canCallNext ? 'Panggil Berikutnya' : 'Tidak Ada Antrean' }}
+                        </button>
                     </form>
                 @endif
             </div>
         </div>
 
+        <x-merchant.walk-in-modal :business="$business" :services="$services" />
+
         {{-- Cancellation Reason Modal --}}
-        <div 
-            x-show="cancelModalOpen" 
+        <div
+            x-show="cancelModalOpen"
             x-transition:enter="transition ease-out duration-200"
             x-transition:enter-start="opacity-0"
             x-transition:enter-end="opacity-100"
             x-transition:leave="transition ease-in duration-150"
             x-transition:leave-start="opacity-100"
             x-transition:leave-end="opacity-0"
-            class="fixed inset-0 z-50 overflow-y-auto bg-neutral-950/60 flex items-center justify-center p-4"
+            class="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-neutral-950/60 sm:items-center sm:p-4"
             style="display: none;"
             @keydown.escape.window="cancelModalOpen = false"
+            role="dialog"
+            aria-modal="true"
         >
-            <div 
+            <div
                 @click.outside="cancelModalOpen = false"
-                class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-neutral-200 relative"
+                class="relative w-full max-w-md rounded-t-2xl border border-neutral-200 bg-white p-5 shadow-2xl sm:rounded-2xl sm:p-6"
             >
-                <div class="flex items-center justify-between border-b border-neutral-100 pb-3 mb-4">
-                    <h3 class="text-h3 font-bold text-neutral-900">Batalkan Antrean <span x-text="cancelTicketNumber" class="text-rose-600"></span></h3>
-                    <button @click="cancelModalOpen = false" class="text-neutral-400 hover:text-neutral-600 p-1">
+                <div class="mb-4 flex items-center justify-between border-b border-neutral-100 pb-3">
+                    <h3 class="text-h3 font-bold text-neutral-900">Batalkan Antrean <span x-text="cancelTicketNumber" class="text-rose-600 tabular-nums"></span></h3>
+                    <button type="button" @click="cancelModalOpen = false" class="-mr-2 flex size-11 items-center justify-center rounded-lg text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600" aria-label="Tutup">
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
                 </div>
@@ -633,25 +652,26 @@
                 <form :action="'{{ url('/umkm/queues') }}/' + cancelTicketId + '/cancel'" method="POST" class="space-y-4">
                     @csrf
                     <div>
-                        <label class="block text-caption font-semibold text-neutral-700 mb-1">
+                        <label for="cancel_reason" class="mb-1 block text-caption font-semibold text-neutral-700">
                             Alasan Pembatalan <span class="text-rose-500">*</span>
                         </label>
-                        <textarea 
-                            name="reason" 
-                            required 
-                            rows="3" 
+                        <textarea
+                            id="cancel_reason"
+                            name="reason"
+                            required
+                            rows="3"
                             maxlength="255"
                             placeholder="Tuliskan alasan pembatalan tiket antrean ini..."
                             class="w-full rounded-lg border-neutral-300 text-sm focus:border-rose-500 focus:ring-rose-500"
                         ></textarea>
                     </div>
 
-                    <div class="flex items-center justify-end gap-2 pt-2 border-t border-neutral-100">
-                        <button type="button" @click="cancelModalOpen = false" class="px-4 py-2 rounded-lg border border-neutral-300 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 transition">
+                    <div class="grid grid-cols-2 gap-2 border-t border-neutral-100 pt-3 sm:flex sm:justify-end">
+                        <button type="button" @click="cancelModalOpen = false" class="inline-flex h-11 items-center justify-center rounded-lg border border-neutral-300 px-4 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50">
                             Tutup
                         </button>
-                        <button type="submit" class="px-4 py-2 rounded-lg bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 transition shadow-xs">
-                            Konfirmasi Batalkan Tiket
+                        <button type="submit" class="inline-flex h-11 items-center justify-center rounded-lg bg-rose-600 px-4 text-sm font-bold text-white shadow-xs transition hover:bg-rose-700">
+                            Konfirmasi Batalkan
                         </button>
                     </div>
                 </form>
@@ -659,64 +679,5 @@
         </div>
     </div>
 
-    @push('scripts')
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            if (window.Echo && {{ $business->id }}) {
-                const businessId = {{ $business->id }};
-                window.Echo.private('business.' + businessId)
-                    .listen('.QueueTicketCreated', function (e) {
-                        showRealtimeToast('Tiket Masuk', 'Nomor ' + e.ticket_number + ' (' + e.customer_name + ') baru terdaftar.');
-                    })
-                    .listen('.QueueTicketStatusChanged', function (e) {
-                        showRealtimeToast('Status Antrean', 'Tiket ' + e.ticket_number + ' kini ' + e.status + (e.counter_name ? ' di ' + e.counter_name : '') + '.');
-                    })
-                    .listen('.QueueTicketCounterAssigned', function (e) {
-                        showRealtimeToast('Penugasan Loket', 'Tiket ' + e.ticket_number + ' dipanggil ke ' + e.counter_name + '.');
-                    })
-                    .listen('.CounterStatusChanged', function (e) {
-                        showRealtimeToast('Status Loket', 'Loket ' + e.counter_name + (e.is_active ? ' aktif' : ' nonaktif') + '.');
-                    });
-
-                @if (isset($selectedCounter) && $selectedCounter)
-                    window.Echo.private('counter.{{ $selectedCounter->id }}')
-                        .listen('.QueueTicketCounterAssigned', function (e) {
-                            showRealtimeToast('Loket Anda', 'Tiket ' + e.ticket_number + ' dialihkan ke loket ini.');
-                        });
-                @endif
-            }
-
-            function showRealtimeToast(title, message) {
-                let container = document.getElementById('queues-realtime-toast-container');
-                if (!container) {
-                    container = document.createElement('div');
-                    container.id = 'queues-realtime-toast-container';
-                    container.className = 'fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm pointer-events-none';
-                    document.body.appendChild(container);
-                }
-
-                const toast = document.createElement('div');
-                toast.className = 'pointer-events-auto bg-neutral-900 text-white text-xs font-medium px-4 py-3 rounded-xl shadow-xl border border-neutral-700 flex items-start justify-between gap-3 transition-opacity duration-300';
-                toast.innerHTML = `
-                    <div class="flex items-start gap-2.5">
-                        <span class="w-2 h-2 rounded-full bg-emerald-400 mt-1 shrink-0 animate-ping"></span>
-                        <div>
-                            <div class="font-bold text-neutral-200">${title}</div>
-                            <div class="text-neutral-400 mt-0.5">${message}</div>
-                        </div>
-                    </div>
-                    <button type="button" class="text-neutral-400 hover:text-white shrink-0 ml-2" onclick="this.parentElement.remove()">&times;</button>
-                `;
-                container.appendChild(toast);
-
-                setTimeout(() => {
-                    if (toast && toast.parentElement) {
-                        toast.remove();
-                    }
-                }, 6000);
-            }
-        });
-    </script>
-    @endpush
+    <x-merchant.realtime-toasts :business-id="$business->id" :counter-id="$activeCounter?->id" />
 </x-layouts.merchant>
-

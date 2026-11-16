@@ -73,12 +73,12 @@ class SendQueueNotificationListener implements ShouldQueue
                         'body' => sprintf('Layanan: %s (%s)', $ticket->service?->name ?? 'Layanan', $business->name),
                         'data' => [
                             'url' => route('merchant.queues'),
-                            'tag' => 'merchant-ticket-' . $ticket->id,
+                            'tag' => 'merchant-ticket-'.$ticket->id,
                         ],
                     ]);
                 }
             } catch (\Throwable $e) {
-                Log::warning('Failed sending merchant notification: ' . $e->getMessage(), [
+                Log::warning('Failed sending merchant notification: '.$e->getMessage(), [
                     'user_id' => $user->id,
                     'ticket_id' => $ticket->id,
                 ]);
@@ -99,6 +99,7 @@ class SendQueueNotificationListener implements ShouldQueue
             QueueTicket::STATUS_SEDANG_DILAYANI,
             QueueTicket::STATUS_SELESAI,
             QueueTicket::STATUS_DILEWATI,
+            QueueTicket::STATUS_TIDAK_HADIR,
             QueueTicket::STATUS_DIBATALKAN,
         ];
 
@@ -120,7 +121,7 @@ class SendQueueNotificationListener implements ShouldQueue
                 Notification::route('mail', $ticket->customer_email)
                     ->notify(new CustomerTicketStatusNotification($ticket, $status));
             } catch (\Throwable $e) {
-                Log::warning('Failed sending customer email notification: ' . $e->getMessage(), [
+                Log::warning('Failed sending customer email notification: '.$e->getMessage(), [
                     'ticket_id' => $ticket->id,
                 ]);
             }
@@ -134,18 +135,20 @@ class SendQueueNotificationListener implements ShouldQueue
                     QueueTicket::STATUS_SEDANG_DILAYANI => 'Sedang Dilayani',
                     QueueTicket::STATUS_SELESAI => 'Pelayanan Selesai',
                     QueueTicket::STATUS_DILEWATI => 'Dilewati',
+                    QueueTicket::STATUS_TIDAK_HADIR => 'Tidak hadir',
                     QueueTicket::STATUS_DIBATALKAN => 'Dibatalkan',
                     default => ucfirst($status),
                 };
 
                 $counterName = $ticket->counter?->name;
-                $counterInfo = $counterName ? ' di ' . $counterName : '';
+                $counterInfo = $counterName ? ' di '.$counterName : '';
 
                 $body = match ($status) {
                     QueueTicket::STATUS_DIPANGGIL => sprintf('Nomor antrean Anda telah dipanggil%s. Silakan segera menuju loket.', $counterInfo),
                     QueueTicket::STATUS_SEDANG_DILAYANI => sprintf('Nomor antrean Anda saat ini sedang dilayani%s.', $counterInfo),
                     QueueTicket::STATUS_SELESAI => 'Pelayanan antrean Anda telah selesai. Terima kasih!',
                     QueueTicket::STATUS_DILEWATI => 'Nomor antrean Anda dilewati karena belum hadir saat dipanggil.',
+                    QueueTicket::STATUS_TIDAK_HADIR => 'Tiket Anda otomatis ditandai Tidak hadir karena melebihi batas waktu 15 menit setelah dipanggil.',
                     QueueTicket::STATUS_DIBATALKAN => sprintf('Nomor antrean dibatalkan: %s', $ticket->cancellation_reason ?: 'Pembatalan'),
                     default => sprintf('Pembaruan status antrean Anda: %s', $statusLabel),
                 };
@@ -155,7 +158,7 @@ class SendQueueNotificationListener implements ShouldQueue
                     'body' => $body,
                     'data' => [
                         'url' => route('customer.queue.track', ['token' => $ticket->access_token]),
-                        'tag' => 'ticket-status-' . $ticket->id,
+                        'tag' => 'ticket-status-'.$ticket->id,
                     ],
                 ]);
 
@@ -164,7 +167,7 @@ class SendQueueNotificationListener implements ShouldQueue
                     $ticket->pushSubscriptions()->delete();
                 }
             } catch (\Throwable $e) {
-                Log::warning('Failed sending customer push notification: ' . $e->getMessage(), [
+                Log::warning('Failed sending customer push notification: '.$e->getMessage(), [
                     'ticket_id' => $ticket->id,
                 ]);
             }

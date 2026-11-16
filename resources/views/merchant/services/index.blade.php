@@ -1,31 +1,39 @@
-<x-layouts.merchant title="Manajemen Layanan — AntreIn">
-    <div class="space-y-6">
-        <!-- Page Header -->
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
+@php
+    $editPayloadFor = fn ($service): array => array_merge($service->toArray(), ['image_url' => $service->imageUrl()]);
+    $priceLabelFor = fn ($service): string => $service->price > 0 ? 'Rp '.number_format($service->price, 0, ',', '.') : 'Gratis';
+    $deleteConfirmation = 'Hapus layanan ini? (Riwayat tiket terdahulu tetap disimpan aman di sistem)';
+@endphp
+
+<x-layouts.merchant title="Manajemen Layanan">
+    <div class="space-y-5 sm:space-y-6">
+        {{-- Page Header --}}
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div class="min-w-0">
                 <h1 class="text-h2 font-bold text-neutral-950">Layanan Usaha</h1>
-                <p class="text-body text-neutral-600 mt-1">Daftar layanan yang dapat dipilih pelanggan saat mengambil tiket antrean.</p>
+                <p class="mt-1 text-body text-neutral-600">Daftar layanan yang dapat dipilih pelanggan saat mengambil tiket antrean.</p>
             </div>
-            <div>
-                <x-button variant="primary" onclick="document.getElementById('modal-add-service').showModal()" class="flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                    Tambah Layanan
-                </x-button>
-            </div>
+            <button
+                type="button"
+                onclick="document.getElementById('modal-add-service').showModal()"
+                class="inline-flex h-11 w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-brand-700 px-4 text-sm font-bold text-white shadow-sm transition hover:bg-brand-800 sm:w-auto"
+            >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                Tambah Layanan
+            </button>
         </div>
 
-        <!-- Notifications -->
+        {{-- Notifications --}}
         @if (session('status'))
-            <div class="rounded-lg bg-emerald-50 border border-emerald-200 p-4 text-sm font-medium text-emerald-800 flex items-center gap-2">
-                <svg class="w-5 h-5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <div class="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-800" role="status">
+                <svg class="w-5 h-5 shrink-0 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 <span>{{ session('status') }}</span>
             </div>
         @endif
 
         @if ($errors->any())
-            <div class="rounded-lg bg-rose-50 border border-rose-200 p-4 text-sm text-rose-800">
-                <p class="font-semibold mb-1">Periksa kembali data layanan yang dimasukkan:</p>
-                <ul class="list-disc list-inside space-y-0.5">
+            <div class="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800" role="alert">
+                <p class="mb-1 font-semibold">Periksa kembali data layanan yang dimasukkan:</p>
+                <ul class="list-inside list-disc space-y-0.5">
                     @foreach ($errors->all() as $error)
                         <li>{{ $error }}</li>
                     @endforeach
@@ -33,45 +41,104 @@
             </div>
         @endif
 
-        <!-- Stats Grid -->
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <x-stat-card label="Total Layanan" :value="$stats['total']" icon="scissors" />
-            <x-stat-card label="Layanan Aktif" :value="$stats['active']" trend="Tersedia di antrean" icon="check" />
-            <x-stat-card label="Layanan Nonaktif" :value="$stats['inactive']" trend="Disembunyikan" icon="clock" />
-            <x-stat-card label="Rata-rata Durasi" :value="$stats['avg_duration'] . ' mnt'" icon="clock" />
+        {{-- Stats --}}
+        <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <x-stat-tile label="Total Layanan" :value="$stats['total']" icon="layers" />
+            <x-stat-tile label="Layanan Aktif" :value="$stats['active']" hint="Tersedia di antrean" tone="success" icon="check" />
+            <x-stat-tile label="Layanan Nonaktif" :value="$stats['inactive']" hint="Disembunyikan" tone="muted" icon="pause" />
+            <x-stat-tile label="Rata-rata Durasi" :value="$stats['avg_duration'].' mnt'" tone="brand" icon="clock" />
         </div>
 
-        <!-- Search & Filter Bar -->
-        <x-card padding="md">
-            <form method="GET" action="{{ route('merchant.services.index') }}" class="flex flex-col sm:flex-row gap-3">
-                <div class="flex-1">
-                    <x-input
-                        name="search"
-                        placeholder="Cari nama atau deskripsi layanan..."
-                        :value="$search"
-                    />
-                </div>
-                <div class="w-full sm:w-48">
-                    <x-select name="status" onchange="this.form.submit()">
-                        <option value="">Semua Status</option>
-                        <option value="active" @selected($status === 'active')>Aktif Saja</option>
-                        <option value="inactive" @selected($status === 'inactive')>Nonaktif Saja</option>
-                    </x-select>
-                </div>
-                <div class="flex gap-2">
-                    <x-button type="submit" variant="secondary">Filter</x-button>
-                    @if ($search || $status)
-                        <a href="{{ route('merchant.services.index') }}" class="inline-flex items-center px-3 py-2 border border-neutral-300 rounded-lg text-sm font-medium text-neutral-600 bg-white hover:bg-neutral-50">
-                            Reset
-                        </a>
-                    @endif
-                </div>
-            </form>
-        </x-card>
+        {{-- Search & Filter --}}
+        <form method="GET" action="{{ route('merchant.services.index') }}" class="flex flex-col gap-2 rounded-xl border border-neutral-200 bg-white p-3 shadow-xs sm:flex-row sm:items-center sm:gap-3">
+            <label for="service-search" class="sr-only">Cari layanan</label>
+            <input
+                id="service-search"
+                type="search"
+                name="search"
+                value="{{ $search }}"
+                placeholder="Cari nama atau deskripsi layanan..."
+                class="h-11 w-full min-w-0 flex-1 rounded-lg border-neutral-300 px-3 text-sm focus:border-brand-500 focus:ring-brand-500"
+            >
+            <div class="grid grid-cols-[minmax(0,1fr)_auto] gap-2 sm:flex">
+                <label for="service-status" class="sr-only">Status layanan</label>
+                <select id="service-status" name="status" onchange="this.form.submit()" class="h-11 min-w-0 rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500 sm:w-44">
+                    <option value="">Semua Status</option>
+                    <option value="active" @selected($status === 'active')>Aktif Saja</option>
+                    <option value="inactive" @selected($status === 'inactive')>Nonaktif Saja</option>
+                </select>
+                <button type="submit" class="inline-flex h-11 items-center justify-center rounded-lg border border-neutral-300 bg-white px-4 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50">Filter</button>
+                @if ($search || $status)
+                    <a href="{{ route('merchant.services.index') }}" class="col-span-2 inline-flex h-11 items-center justify-center rounded-lg px-3 text-sm font-semibold text-neutral-600 transition hover:bg-neutral-100 sm:col-span-1">
+                        Reset
+                    </a>
+                @endif
+            </div>
+        </form>
 
-        <!-- Services Table -->
-        <x-card padding="none" class="overflow-hidden">
-            <div class="overflow-x-auto">
+        @if ($services->isEmpty())
+            <x-empty-state
+                title="Belum Ada Layanan"
+                description="Tambahkan layanan yang ditawarkan usaha Anda agar pelanggan dapat memilih jenis layanan saat mengambil nomor antrean."
+            />
+        @else
+            {{-- Mobile: card list --}}
+            <ul class="space-y-3 md:hidden" aria-label="Daftar layanan">
+                @foreach ($services as $svc)
+                    <li class="rounded-xl border border-neutral-200 bg-white p-4 shadow-xs {{ $svc->is_active ? '' : 'opacity-90' }}">
+                        <div class="flex items-start gap-3">
+                            <x-customer.service-thumb :service="$svc" :category="$business->category" class="size-14" />
+                            <div class="min-w-0 flex-1">
+                                <div class="flex items-start justify-between gap-2">
+                                    <p class="min-w-0 font-bold text-neutral-900">{{ $svc->name }}</p>
+                                    <x-status-badge :status="$svc->is_active ? 'aktif' : 'nonaktif'" size="sm" />
+                                </div>
+                                @if ($svc->description)
+                                    <p class="mt-0.5 line-clamp-2 text-xs text-neutral-500">{{ $svc->description }}</p>
+                                @endif
+                            </div>
+                        </div>
+
+                        <dl class="mt-3 grid grid-cols-3 gap-2 text-center">
+                            <div class="rounded-lg bg-neutral-50 px-2 py-1.5">
+                                <dt class="text-[11px] text-neutral-500">Durasi</dt>
+                                <dd class="text-sm font-bold text-neutral-900 tabular-nums">{{ $svc->duration_minutes }} mnt</dd>
+                            </div>
+                            <div class="rounded-lg bg-neutral-50 px-2 py-1.5">
+                                <dt class="text-[11px] text-neutral-500">Harga</dt>
+                                <dd class="truncate text-sm font-bold tabular-nums {{ $svc->price > 0 ? 'text-neutral-900' : 'text-emerald-700' }}">{{ $priceLabelFor($svc) }}</dd>
+                            </div>
+                            <div class="rounded-lg bg-neutral-50 px-2 py-1.5">
+                                <dt class="text-[11px] text-neutral-500">Kuota</dt>
+                                <dd class="truncate text-sm font-bold text-neutral-900 tabular-nums">{{ $svc->daily_quota ? $svc->daily_quota.'/hari' : 'Bebas' }}</dd>
+                            </div>
+                        </dl>
+
+                        <div class="mt-3 grid grid-cols-3 gap-2">
+                            <form method="POST" action="{{ route('merchant.services.toggle-status', $svc) }}">
+                                @csrf
+                                @method('PATCH')
+                                <button type="submit" class="inline-flex h-11 w-full items-center justify-center rounded-lg border px-2 text-xs font-semibold transition {{ $svc->is_active ? 'border-neutral-300 text-neutral-700 hover:bg-neutral-100' : 'border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100' }}">
+                                    {{ $svc->is_active ? 'Nonaktifkan' : 'Aktifkan' }}
+                                </button>
+                            </form>
+                            <button type="button" onclick="openEditServiceModal({{ json_encode($editPayloadFor($svc)) }})" class="inline-flex h-11 items-center justify-center rounded-lg border border-neutral-300 px-2 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-100">
+                                Edit
+                            </button>
+                            <form method="POST" action="{{ route('merchant.services.destroy', $svc) }}" onsubmit="return confirm(@js($deleteConfirmation))">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="inline-flex h-11 w-full items-center justify-center rounded-lg border border-rose-200 px-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50">
+                                    Hapus
+                                </button>
+                            </form>
+                        </div>
+                    </li>
+                @endforeach
+            </ul>
+
+            {{-- Tablet & desktop: table --}}
+            <div class="hidden md:block">
                 <x-table>
                     <x-slot:header>
                         <tr>
@@ -84,119 +151,85 @@
                         </tr>
                     </x-slot:header>
 
-                    @forelse ($services as $svc)
-                        <tr class="hover:bg-neutral-50/60 transition-colors">
+                    @foreach ($services as $svc)
+                        <tr class="transition-colors hover:bg-neutral-50/60">
                             <x-table.td>
-                                <div class="font-bold text-neutral-900">{{ $svc->name }}</div>
-                                @if ($svc->description)
-                                    <p class="text-xs text-neutral-500 mt-0.5 max-w-sm truncate">{{ $svc->description }}</p>
-                                @endif
+                                <div class="flex items-center gap-3">
+                                    <x-customer.service-thumb :service="$svc" :category="$business->category" class="size-10 rounded-lg" />
+                                    <div class="min-w-0">
+                                        <div class="font-bold text-neutral-900">{{ $svc->name }}</div>
+                                        @if ($svc->description)
+                                            <p class="mt-0.5 max-w-xs truncate text-xs text-neutral-500 lg:max-w-sm">{{ $svc->description }}</p>
+                                        @endif
+                                    </div>
+                                </div>
                             </x-table.td>
                             <x-table.td class="text-center whitespace-nowrap">
-                                <span class="inline-flex items-center gap-1 text-xs font-semibold text-neutral-700 bg-neutral-100 px-2 py-0.5 rounded-full">
-                                    <svg class="w-3 h-3 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                <span class="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-semibold text-neutral-700 tabular-nums">
+                                    <x-customer.icon name="clock" class="size-3 text-neutral-500" />
                                     {{ $svc->duration_minutes }} menit
                                 </span>
                             </x-table.td>
-                            <x-table.td class="text-right whitespace-nowrap font-medium text-neutral-900">
-                                @if ($svc->price > 0)
-                                    Rp {{ number_format($svc->price, 0, ',', '.') }}
-                                @else
-                                    <span class="text-emerald-700 font-semibold">Gratis</span>
-                                @endif
+                            <x-table.td class="text-right whitespace-nowrap font-medium tabular-nums {{ $svc->price > 0 ? 'text-neutral-900' : 'font-semibold text-emerald-700' }}">
+                                {{ $priceLabelFor($svc) }}
                             </x-table.td>
                             <x-table.td class="text-center whitespace-nowrap">
                                 @if ($svc->daily_quota)
-                                    <span class="text-xs font-semibold text-neutral-800 bg-neutral-100 px-2.5 py-0.5 rounded-full">
-                                        {{ $svc->daily_quota }} tiket/hari
-                                    </span>
+                                    <span class="rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-semibold text-neutral-800 tabular-nums">{{ $svc->daily_quota }} tiket/hari</span>
                                 @else
                                     <span class="text-xs text-neutral-400">Tidak dibatasi</span>
                                 @endif
                             </x-table.td>
                             <x-table.td class="text-center whitespace-nowrap">
-                                @if ($svc->is_active)
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
-                                        Aktif
-                                    </span>
-                                @else
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-neutral-100 text-neutral-600">
-                                        Nonaktif
-                                    </span>
-                                @endif
+                                <x-status-badge :status="$svc->is_active ? 'aktif' : 'nonaktif'" size="sm" />
                             </x-table.td>
                             <x-table.td class="text-right whitespace-nowrap">
                                 <div class="inline-flex items-center gap-1.5">
-                                    <!-- Toggle Status Button -->
-                                    <form method="POST" action="{{ route('merchant.services.toggle-status', $svc) }}" class="inline">
+                                    <form method="POST" action="{{ route('merchant.services.toggle-status', $svc) }}">
                                         @csrf
                                         @method('PATCH')
                                         <button
                                             type="submit"
-                                            class="text-xs px-2.5 py-1 rounded-md border font-medium transition-colors {{ $svc->is_active ? 'border-neutral-300 text-neutral-700 hover:bg-neutral-100' : 'border-emerald-300 text-emerald-700 bg-emerald-50 hover:bg-emerald-100' }}"
+                                            class="inline-flex h-9 items-center rounded-md border px-2.5 text-xs font-semibold transition-colors {{ $svc->is_active ? 'border-neutral-300 text-neutral-700 hover:bg-neutral-100' : 'border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100' }}"
                                             title="{{ $svc->is_active ? 'Sembunyikan dari pilihan tiket baru' : 'Aktifkan layanan ini' }}"
                                         >
                                             {{ $svc->is_active ? 'Nonaktifkan' : 'Aktifkan' }}
                                         </button>
                                     </form>
-
-                                    <!-- Edit Trigger Button -->
-                                    <button
-                                        type="button"
-                                        onclick="openEditServiceModal({{ json_encode($svc) }})"
-                                        class="text-xs px-2.5 py-1 rounded-md border border-neutral-300 text-neutral-700 hover:bg-neutral-100 font-medium transition-colors"
-                                    >
+                                    <button type="button" onclick="openEditServiceModal({{ json_encode($editPayloadFor($svc)) }})" class="inline-flex h-9 items-center rounded-md border border-neutral-300 px-2.5 text-xs font-semibold text-neutral-700 transition-colors hover:bg-neutral-100">
                                         Edit
                                     </button>
-
-                                    <!-- Delete Button (Soft delete) -->
-                                    <form method="POST" action="{{ route('merchant.services.destroy', $svc) }}" class="inline" onsubmit="return confirm('Hapus layanan ini? (Riwayat tiket terdahulu tetap disimpan aman di sistem)')">
+                                    <form method="POST" action="{{ route('merchant.services.destroy', $svc) }}" onsubmit="return confirm(@js($deleteConfirmation))">
                                         @csrf
                                         @method('DELETE')
-                                        <button
-                                            type="submit"
-                                            class="text-xs px-2.5 py-1 rounded-md border border-rose-200 text-rose-700 hover:bg-rose-50 font-medium transition-colors"
-                                            title="Hapus Layanan"
-                                        >
+                                        <button type="submit" class="inline-flex h-9 items-center rounded-md border border-rose-200 px-2.5 text-xs font-semibold text-rose-700 transition-colors hover:bg-rose-50" title="Hapus Layanan">
                                             Hapus
                                         </button>
                                     </form>
                                 </div>
                             </x-table.td>
                         </tr>
-                    @empty
-                        <tr>
-                            <x-table.td colspan="6" class="text-center py-12">
-                                <x-empty-state
-                                    title="Belum Ada Layanan"
-                                    description="Tambahkan layanan yang ditawarkan usaha Anda agar pelanggan dapat memilih jenis layanan saat mengambil nomor antrean."
-                                    icon="scissors"
-                                />
-                            </x-table.td>
-                        </tr>
-                    @endforelse
+                    @endforeach
                 </x-table>
             </div>
 
             @if ($services->hasPages())
-                <div class="p-4 border-t border-neutral-200">
-                    {{ $services->links() }}
-                </div>
+                <div>{{ $services->links() }}</div>
             @endif
-        </x-card>
+        @endif
     </div>
 
-    <!-- MODAL ADD SERVICE -->
-    <dialog id="modal-add-service" class="rounded-xl shadow-xl p-0 w-full max-w-lg backdrop:bg-neutral-900/50">
-        <div class="bg-white rounded-xl overflow-hidden border border-neutral-200">
-            <div class="px-6 py-4 border-b border-neutral-200 flex items-center justify-between">
+    {{-- Modal: Add Service --}}
+    <dialog id="modal-add-service" class="m-auto max-h-[92dvh] w-[calc(100%-1.5rem)] max-w-lg rounded-2xl p-0 shadow-xl backdrop:bg-neutral-900/50 max-sm:mb-0 max-sm:rounded-b-none">
+        <div class="bg-white">
+            <div class="sticky top-0 z-10 flex items-center justify-between border-b border-neutral-200 bg-white py-2 pl-5 pr-2 sm:pl-6">
                 <h3 class="text-h3 font-bold text-neutral-900">Tambah Layanan Baru</h3>
-                <button type="button" onclick="document.getElementById('modal-add-service').close()" class="text-neutral-400 hover:text-neutral-600">
+                <button type="button" onclick="document.getElementById('modal-add-service').close()" class="inline-flex size-11 items-center justify-center rounded-lg text-neutral-400 transition hover:bg-neutral-100 hover:text-neutral-600" aria-label="Tutup">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
 
-            <form method="POST" action="{{ route('merchant.services.store') }}" class="p-6 space-y-4">
+            <form method="POST" action="{{ route('merchant.services.store') }}" enctype="multipart/form-data" class="space-y-4 p-5 sm:p-6">
                 @csrf
 
                 <div>
@@ -207,6 +240,13 @@
                 <div>
                     <x-form-label for="add_svc_description" value="Deskripsi Layanan (Opsional)" />
                     <x-textarea id="add_svc_description" name="description" rows="2" placeholder="Penjelasan mengenai cakupan pelayanan ini..." />
+                </div>
+
+                <div>
+                    <x-form-label for="add_svc_image" value="Foto Layanan (Opsional)" />
+                    <input id="add_svc_image" name="image" type="file" accept="image/jpeg,image/png,image/webp" class="block w-full text-sm text-neutral-700 file:mr-3 file:rounded-lg file:border-0 file:bg-neutral-100 file:px-3 file:py-2.5 file:text-sm file:font-semibold file:text-neutral-700 hover:file:bg-neutral-200" />
+                    <p class="text-caption text-neutral-500 mt-1">JPG, PNG, atau WEBP, maks. 2 MB. Foto membantu pelanggan memilih layanan.</p>
+                    <x-input-error for="image" />
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -231,11 +271,11 @@
                     <x-checkbox id="add_svc_is_active" name="is_active" value="1" :checked="true" label="Aktifkan layanan ini sekarang" />
                 </div>
 
-                <div class="pt-4 flex justify-end gap-3 border-t border-neutral-200">
-                    <x-button type="button" variant="secondary" onclick="document.getElementById('modal-add-service').close()">
+                <div class="grid grid-cols-2 gap-3 border-t border-neutral-200 pt-4 sm:flex sm:justify-end">
+                    <x-button type="button" variant="secondary" class="h-11" onclick="document.getElementById('modal-add-service').close()">
                         Batal
                     </x-button>
-                    <x-button type="submit" variant="primary">
+                    <x-button type="submit" variant="primary" class="h-11">
                         Simpan Layanan
                     </x-button>
                 </div>
@@ -243,17 +283,17 @@
         </div>
     </dialog>
 
-    <!-- MODAL EDIT SERVICE -->
-    <dialog id="modal-edit-service" class="rounded-xl shadow-xl p-0 w-full max-w-lg backdrop:bg-neutral-900/50">
-        <div class="bg-white rounded-xl overflow-hidden border border-neutral-200">
-            <div class="px-6 py-4 border-b border-neutral-200 flex items-center justify-between">
+    {{-- Modal: Edit Service --}}
+    <dialog id="modal-edit-service" class="m-auto max-h-[92dvh] w-[calc(100%-1.5rem)] max-w-lg rounded-2xl p-0 shadow-xl backdrop:bg-neutral-900/50 max-sm:mb-0 max-sm:rounded-b-none">
+        <div class="bg-white">
+            <div class="sticky top-0 z-10 flex items-center justify-between border-b border-neutral-200 bg-white py-2 pl-5 pr-2 sm:pl-6">
                 <h3 class="text-h3 font-bold text-neutral-900">Edit Layanan</h3>
-                <button type="button" onclick="document.getElementById('modal-edit-service').close()" class="text-neutral-400 hover:text-neutral-600">
+                <button type="button" onclick="document.getElementById('modal-edit-service').close()" class="inline-flex size-11 items-center justify-center rounded-lg text-neutral-400 transition hover:bg-neutral-100 hover:text-neutral-600" aria-label="Tutup">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
 
-            <form id="form-edit-service" method="POST" action="" class="p-6 space-y-4">
+            <form id="form-edit-service" method="POST" action="" enctype="multipart/form-data" class="space-y-4 p-5 sm:p-6">
                 @csrf
                 @method('PUT')
 
@@ -265,6 +305,17 @@
                 <div>
                     <x-form-label for="edit_svc_description" value="Deskripsi Layanan (Opsional)" />
                     <x-textarea id="edit_svc_description" name="description" rows="2" />
+                </div>
+
+                <div>
+                    <x-form-label for="edit_svc_image" value="Foto Layanan (Opsional)" />
+                    <div id="edit_svc_image_current" class="mb-2 hidden items-center gap-3">
+                        <img id="edit_svc_image_preview" src="" alt="Foto layanan saat ini" class="size-16 rounded-lg object-cover border border-neutral-200" />
+                        <x-checkbox id="edit_svc_remove_image" name="remove_image" value="1" label="Hapus foto ini" />
+                    </div>
+                    <input id="edit_svc_image" name="image" type="file" accept="image/jpeg,image/png,image/webp" class="block w-full text-sm text-neutral-700 file:mr-3 file:rounded-lg file:border-0 file:bg-neutral-100 file:px-3 file:py-2.5 file:text-sm file:font-semibold file:text-neutral-700 hover:file:bg-neutral-200" />
+                    <p class="text-caption text-neutral-500 mt-1">JPG, PNG, atau WEBP, maks. 2 MB. Foto membantu pelanggan memilih layanan.</p>
+                    <x-input-error for="image" />
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -288,11 +339,11 @@
                     <x-checkbox id="edit_svc_is_active" name="is_active" value="1" label="Layanan Aktif" />
                 </div>
 
-                <div class="pt-4 flex justify-end gap-3 border-t border-neutral-200">
-                    <x-button type="button" variant="secondary" onclick="document.getElementById('modal-edit-service').close()">
+                <div class="grid grid-cols-2 gap-3 border-t border-neutral-200 pt-4 sm:flex sm:justify-end">
+                    <x-button type="button" variant="secondary" class="h-11" onclick="document.getElementById('modal-edit-service').close()">
                         Batal
                     </x-button>
-                    <x-button type="submit" variant="primary">
+                    <x-button type="submit" variant="primary" class="h-11">
                         Simpan Perubahan
                     </x-button>
                 </div>
@@ -310,6 +361,12 @@
             document.getElementById('edit_svc_price').value = Math.round(service.price);
             document.getElementById('edit_svc_quota').value = service.daily_quota || '';
             document.getElementById('edit_svc_is_active').checked = !!service.is_active;
+            document.getElementById('edit_svc_image').value = '';
+            document.getElementById('edit_svc_remove_image').checked = false;
+            const currentImage = document.getElementById('edit_svc_image_current');
+            currentImage.classList.toggle('hidden', !service.image_url);
+            currentImage.classList.toggle('flex', !!service.image_url);
+            document.getElementById('edit_svc_image_preview').src = service.image_url || '';
 
             document.getElementById('modal-edit-service').showModal();
         }

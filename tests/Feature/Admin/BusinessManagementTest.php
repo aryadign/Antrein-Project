@@ -4,6 +4,7 @@ namespace Tests\Feature\Admin;
 
 use App\Models\Business;
 use App\Models\BusinessCategory;
+use App\Models\BusinessMembership;
 use App\Models\DailyQueue;
 use App\Models\QueueTicket;
 use App\Models\Service;
@@ -20,7 +21,7 @@ class BusinessManagementTest extends TestCase
     {
         $category = BusinessCategory::create([
             'name' => 'Barbershop',
-            'slug' => 'barbershop-' . uniqid(),
+            'slug' => 'barbershop-'.uniqid(),
             'is_active' => true,
         ]);
 
@@ -30,7 +31,7 @@ class BusinessManagementTest extends TestCase
             'user_id' => $owner->id,
             'category_id' => $category->id,
             'name' => $name,
-            'slug' => str($name)->slug()->value() . '-' . uniqid(),
+            'slug' => str($name)->slug()->value().'-'.uniqid(),
             'phone' => '081234567890',
             'address' => 'Jl. Gatot Subroto No. 10',
             'timezone' => 'Asia/Makassar',
@@ -179,7 +180,8 @@ class BusinessManagementTest extends TestCase
         $this->assertTrue($business->is_suspended);
 
         // Attempting to register new ticket online fails because business is suspended
-        $joinResponse = $this->post(route('customer.queue.take', ['slug' => $business->slug]), [
+        $customer = User::factory()->customer()->create();
+        $joinResponse = $this->actingAs($customer)->post(route('customer.queue.take', ['slug' => $business->slug]), [
             'service_id' => $service->id,
             'customer_name' => 'Calon Pelanggan Baru',
             'customer_phone' => '081233334444',
@@ -187,12 +189,61 @@ class BusinessManagementTest extends TestCase
         $joinResponse->assertRedirect();
         $joinResponse->assertSessionHasErrors();
 
-        // OQ-07: Merchant can still service existing active ticket
-        $callResponse = $this->actingAs($owner)->post(route('merchant.queues.call-next'));
+        // OQ-07: Operator can still service existing active ticket
+        $operator = User::factory()->merchant()->create();
+        BusinessMembership::create([
+            'business_id' => $business->id,
+            'user_id' => $operator->id,
+            'role' => BusinessMembership::ROLE_OPERATOR,
+            'is_active' => true,
+        ]);
+
+        $callResponse = $this->actingAs($operator)->post(route('merchant.queues.call-next'));
         $callResponse->assertRedirect();
 
         $activeTicket->refresh();
         $this->assertEquals(QueueTicket::STATUS_DIPANGGIL, $activeTicket->status);
     }
-}
 
+    public function test_admin_business_detail_displays_service_photos_for_pending_umkm(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $category = BusinessCategory::create([
+            'name' => 'Minuman & Kafe',
+            'slug' => 'minuman-kafe',
+            'is_active' => true,
+        ]);
+        $owner = User::factory()->merchant()->create();
+
+        $pendingBusiness = Business::create([
+            'user_id' => $owner->id,
+            'category_id' => $category->id,
+            'name' => 'Warung Teh Rimbun',
+            'slug' => 'warung-teh-rimbun-test',
+            'phone' => '081234567891',
+            'address' => 'Jl. Raya Ubud No. 99',
+            'timezone' => 'Asia/Makassar',
+            'approval_status' => Business::APPROVAL_PENDING,
+            'is_active' => false,
+            'is_suspended' => false,
+        ]);
+
+        Service::create([
+            'business_id' => $pendingBusiness->id,
+            'name' => 'Seduhan Matcha Ceremonial',
+            'description' => 'Seduhan teh hijau pilihan dengan susu oat.',
+            'duration_minutes' => 15,
+            'price' => 38000,
+            'image_path' => 'images/services/teh-artisan.jpg',
+            'is_active' => true,
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('admin.businesses.show', $pendingBusiness));
+
+        $response->assertOk()
+            ->assertSee('Warung Teh Rimbun')
+            ->assertSee('Seduhan Matcha Ceremonial')
+            ->assertSee('Seduhan teh hijau pilihan dengan susu oat.')
+            ->assertSee('images/services/teh-artisan.jpg');
+    }
+}

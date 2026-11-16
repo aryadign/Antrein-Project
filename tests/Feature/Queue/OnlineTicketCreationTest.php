@@ -4,7 +4,6 @@ namespace Tests\Feature\Queue;
 
 use App\Models\Business;
 use App\Models\BusinessCategory;
-use App\Models\DailyQueue;
 use App\Models\QueueTicket;
 use App\Models\Service;
 use App\Models\User;
@@ -17,7 +16,10 @@ class OnlineTicketCreationTest extends TestCase
     use RefreshDatabase;
 
     private Business $business;
+
     private Service $service;
+
+    private User $customer;
 
     protected function setUp(): void
     {
@@ -30,6 +32,7 @@ class OnlineTicketCreationTest extends TestCase
         ]);
 
         $merchant = User::factory()->merchant()->create();
+        $this->customer = User::factory()->customer()->create();
 
         $this->business = Business::create([
             'user_id' => $merchant->id,
@@ -54,7 +57,7 @@ class OnlineTicketCreationTest extends TestCase
     {
         $idempotencyKey = (string) Str::uuid();
 
-        $response = $this->postJson(route('customer.queue.take', ['slug' => $this->business->slug]), [
+        $response = $this->actingAs($this->customer)->postJson(route('customer.queue.take', ['slug' => $this->business->slug]), [
             'service_id' => $this->service->id,
             'customer_name' => 'Dewi Lestari',
             'customer_phone' => '081234567888',
@@ -73,22 +76,25 @@ class OnlineTicketCreationTest extends TestCase
                 'status',
                 'queue_position',
                 'estimated_wait_minutes',
+                'estimated_wait_min_minutes',
+                'estimated_wait_max_minutes',
+                'estimated_wait_range',
                 'tracking_token',
                 'tracking_url',
             ],
         ]);
 
-        $this->assertEquals('A-001', $response->json('data.ticket_number'));
+        $this->assertEquals('TKT-001', $response->json('data.ticket_number'));
         $this->assertEquals(1, $response->json('data.queue_position'));
-        // M18 / P1-10: a fresh business has no historical service data, so no
-        // estimate may be fabricated — null instead of a zero substitution.
         $this->assertNull($response->json('data.estimated_wait_minutes'));
+        $this->assertNull($response->json('data.estimated_wait_range'));
         $this->assertEquals('insufficient_history', $response->json('data.estimated_wait_reason'));
 
         $this->assertDatabaseHas('queue_tickets', [
             'business_id' => $this->business->id,
             'service_id' => $this->service->id,
-            'ticket_number' => 'A-001',
+            'user_id' => $this->customer->id,
+            'ticket_number' => 'TKT-001',
             'customer_name' => 'Dewi Lestari',
             'source' => QueueTicket::SOURCE_ONLINE,
             'status' => QueueTicket::STATUS_WAITING,
@@ -100,7 +106,7 @@ class OnlineTicketCreationTest extends TestCase
     {
         $this->business->update(['status' => Business::STATUS_TUTUP]);
 
-        $response = $this->postJson(route('customer.queue.take', ['slug' => $this->business->slug]), [
+        $response = $this->actingAs($this->customer)->postJson(route('customer.queue.take', ['slug' => $this->business->slug]), [
             'service_id' => $this->service->id,
             'customer_name' => 'Wayan Sukadana',
             'customer_phone' => '081234567899',
@@ -117,7 +123,7 @@ class OnlineTicketCreationTest extends TestCase
     {
         $this->business->update(['status' => Business::STATUS_JEDA]);
 
-        $response = $this->postJson(route('customer.queue.take', ['slug' => $this->business->slug]), [
+        $response = $this->actingAs($this->customer)->postJson(route('customer.queue.take', ['slug' => $this->business->slug]), [
             'service_id' => $this->service->id,
             'customer_name' => 'Made Sudira',
             'customer_phone' => '081234567899',
@@ -134,7 +140,7 @@ class OnlineTicketCreationTest extends TestCase
     {
         $this->service->update(['is_active' => false]);
 
-        $response = $this->postJson(route('customer.queue.take', ['slug' => $this->business->slug]), [
+        $response = $this->actingAs($this->customer)->postJson(route('customer.queue.take', ['slug' => $this->business->slug]), [
             'service_id' => $this->service->id,
             'customer_name' => 'Ketut Ardana',
             'customer_phone' => '081234567899',
@@ -162,7 +168,7 @@ class OnlineTicketCreationTest extends TestCase
             'is_active' => true,
         ]);
 
-        $response = $this->postJson(route('customer.queue.take', ['slug' => $this->business->slug]), [
+        $response = $this->actingAs($this->customer)->postJson(route('customer.queue.take', ['slug' => $this->business->slug]), [
             'service_id' => $otherService->id,
             'customer_name' => 'Gede Agus',
             'customer_phone' => '081234567899',
@@ -182,17 +188,17 @@ class OnlineTicketCreationTest extends TestCase
             'idempotency_key' => $idempotencyKey,
         ];
 
-        $response1 = $this->postJson(route('customer.queue.take', ['slug' => $this->business->slug]), $payload);
+        $response1 = $this->actingAs($this->customer)->postJson(route('customer.queue.take', ['slug' => $this->business->slug]), $payload);
         $response1->assertCreated();
         $ticketId1 = $response1->json('data.ticket_number');
 
         // Retry same request
-        $response2 = $this->postJson(route('customer.queue.take', ['slug' => $this->business->slug]), $payload);
+        $response2 = $this->actingAs($this->customer)->postJson(route('customer.queue.take', ['slug' => $this->business->slug]), $payload);
         $response2->assertSuccessful();
         $ticketId2 = $response2->json('data.ticket_number');
 
         $this->assertEquals($ticketId1, $ticketId2);
-        $this->assertEquals('A-001', $ticketId2);
+        $this->assertEquals('TKT-001', $ticketId2);
         $this->assertEquals(1, QueueTicket::count());
     }
 
@@ -200,7 +206,7 @@ class OnlineTicketCreationTest extends TestCase
     {
         $idempotencyKey = (string) Str::uuid();
 
-        $response1 = $this->postJson(route('customer.queue.take', ['slug' => $this->business->slug]), [
+        $response1 = $this->actingAs($this->customer)->postJson(route('customer.queue.take', ['slug' => $this->business->slug]), [
             'service_id' => $this->service->id,
             'customer_name' => 'Original Customer',
             'customer_phone' => '081234567111',
@@ -209,7 +215,7 @@ class OnlineTicketCreationTest extends TestCase
         $response1->assertCreated();
 
         // Second request with altered payload
-        $response2 = $this->postJson(route('customer.queue.take', ['slug' => $this->business->slug]), [
+        $response2 = $this->actingAs($this->customer)->postJson(route('customer.queue.take', ['slug' => $this->business->slug]), [
             'service_id' => $this->service->id,
             'customer_name' => 'Different Customer',
             'customer_phone' => '081234567222',
@@ -219,17 +225,17 @@ class OnlineTicketCreationTest extends TestCase
         $response2->assertStatus(422);
     }
 
-    public function test_session_cannot_take_duplicate_active_ticket_for_same_service(): void
+    public function test_customer_cannot_take_duplicate_active_ticket_for_same_service(): void
     {
-        $response1 = $this->postJson(route('customer.queue.take', ['slug' => $this->business->slug]), [
+        $response1 = $this->actingAs($this->customer)->postJson(route('customer.queue.take', ['slug' => $this->business->slug]), [
             'service_id' => $this->service->id,
             'customer_name' => 'Nyoman Rai',
             'customer_phone' => '081234567333',
         ]);
         $response1->assertCreated();
 
-        // Attempting another ticket for the same service within the same session
-        $response2 = $this->postJson(route('customer.queue.take', ['slug' => $this->business->slug]), [
+        // Attempting another ticket for the same service for the same customer
+        $response2 = $this->actingAs($this->customer)->postJson(route('customer.queue.take', ['slug' => $this->business->slug]), [
             'service_id' => $this->service->id,
             'customer_name' => 'Nyoman Rai 2',
             'customer_phone' => '081234567333',
@@ -242,7 +248,7 @@ class OnlineTicketCreationTest extends TestCase
         $this->assertStringContainsString('aktif untuk layanan ini', $response2->json('message'));
     }
 
-    public function test_session_cannot_exceed_max_three_active_tickets(): void
+    public function test_customer_cannot_exceed_max_three_active_tickets(): void
     {
         $services = [];
         for ($i = 1; $i <= 4; $i++) {
@@ -255,9 +261,9 @@ class OnlineTicketCreationTest extends TestCase
             ]);
         }
 
-        // Take 3 tickets for 3 different services in the same session
+        // Take 3 tickets for 3 different services as the same authenticated customer
         for ($i = 0; $i < 3; $i++) {
-            $res = $this->postJson(route('customer.queue.take', ['slug' => $this->business->slug]), [
+            $res = $this->actingAs($this->customer)->postJson(route('customer.queue.take', ['slug' => $this->business->slug]), [
                 'service_id' => $services[$i]->id,
                 'customer_name' => "Customer {$i}",
                 'customer_phone' => '081234567444',
@@ -266,7 +272,7 @@ class OnlineTicketCreationTest extends TestCase
         }
 
         // Attempt 4th ticket
-        $res4 = $this->postJson(route('customer.queue.take', ['slug' => $this->business->slug]), [
+        $res4 = $this->actingAs($this->customer)->postJson(route('customer.queue.take', ['slug' => $this->business->slug]), [
             'service_id' => $services[3]->id,
             'customer_name' => 'Customer 4',
             'customer_phone' => '081234567444',

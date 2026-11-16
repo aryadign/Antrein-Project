@@ -4,11 +4,9 @@ namespace Tests\Feature\Customer;
 
 use App\Models\Business;
 use App\Models\BusinessCategory;
-use App\Models\DailyQueue;
 use App\Models\QueueTicket;
 use App\Models\Service;
 use App\Models\User;
-use App\Services\QueueService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -18,7 +16,10 @@ class OnlineQueueFormTest extends TestCase
     use RefreshDatabase;
 
     private Business $business;
+
     private Service $service;
+
+    private User $customer;
 
     protected function setUp(): void
     {
@@ -31,6 +32,7 @@ class OnlineQueueFormTest extends TestCase
         ]);
 
         $merchant = User::factory()->merchant()->create();
+        $this->customer = User::factory()->customer()->create(['name' => 'Pelanggan Uji']);
 
         $this->business = Business::create([
             'user_id' => $merchant->id,
@@ -52,21 +54,34 @@ class OnlineQueueFormTest extends TestCase
         ]);
     }
 
+    public function test_guest_is_redirected_to_login_when_accessing_queue_intake(): void
+    {
+        $this->get(route('customer.queue.create', ['slug' => $this->business->slug]))
+            ->assertRedirect(route('login'));
+
+        $this->post(route('customer.queue.take', ['slug' => $this->business->slug]), [
+            'service_id' => $this->service->id,
+            'customer_name' => 'Tamu',
+        ])->assertRedirect(route('login'));
+    }
+
     public function test_intake_form_page_renders_successfully(): void
     {
-        $response = $this->get(route('customer.queue.create', ['slug' => $this->business->slug]));
+        $response = $this->actingAs($this->customer)->get(route('customer.queue.create', ['slug' => $this->business->slug]));
 
         $response->assertOk();
         $response->assertSee('Ambil Nomor Antrean');
         $response->assertSee('Smile Dental Care');
         $response->assertSee('Cabut Gigi Dewasa');
-        $response->assertSee('Nama Lengkap / Panggilan');
-        $response->assertSee('Nomor WhatsApp / HP');
+        $response->assertSeeInOrder(['Nama lengkap', 'Wajib']);
+        $response->assertSeeInOrder(['Nomor WhatsApp', 'Opsional']);
+        $response->assertSee('Layanan Dipilih');
+        $response->assertDontSee('·');
     }
 
     public function test_form_preselects_service_from_query_parameter(): void
     {
-        $response = $this->get(route('customer.queue.create', [
+        $response = $this->actingAs($this->customer)->get(route('customer.queue.create', [
             'slug' => $this->business->slug,
             'service_id' => $this->service->id,
         ]));
@@ -79,7 +94,7 @@ class OnlineQueueFormTest extends TestCase
     {
         $idempotencyKey = (string) Str::uuid();
 
-        $response = $this->post(route('customer.queue.take', ['slug' => $this->business->slug]), [
+        $response = $this->actingAs($this->customer)->post(route('customer.queue.take', ['slug' => $this->business->slug]), [
             'service_id' => $this->service->id,
             'customer_name' => 'Wayan Sudarma',
             'customer_phone' => '081234567890',
@@ -91,14 +106,21 @@ class OnlineQueueFormTest extends TestCase
         $response->assertRedirect(route('customer.queue.track', ['token' => $ticket->access_token]));
         $response->assertSessionHas('status', 'Tiket antrean Anda berhasil dibuat!');
 
-        $this->assertEquals('A-001', $ticket->ticket_number);
+        $this->get(route('customer.queue.track', ['token' => $ticket->access_token]))
+            ->assertSee('Anda berhasil masuk antrean!')
+            ->assertSee('Lihat Tiket Saya');
+
+        $this->get(route('customer.queue.track', ['token' => $ticket->access_token]))
+            ->assertDontSee('Anda berhasil masuk antrean!');
+
+        $this->assertEquals('TKT-001', $ticket->ticket_number);
         $this->assertEquals(QueueTicket::SOURCE_ONLINE, $ticket->source);
         $this->assertEquals(QueueTicket::STATUS_WAITING, $ticket->status);
     }
 
     public function test_phone_number_is_strictly_optional(): void
     {
-        $response = $this->post(route('customer.queue.take', ['slug' => $this->business->slug]), [
+        $response = $this->actingAs($this->customer)->post(route('customer.queue.take', ['slug' => $this->business->slug]), [
             'service_id' => $this->service->id,
             'customer_name' => 'Tanpa Nomor HP',
             'customer_phone' => null,
@@ -112,7 +134,7 @@ class OnlineQueueFormTest extends TestCase
 
     public function test_submission_fails_when_customer_name_is_missing(): void
     {
-        $response = $this->post(route('customer.queue.take', ['slug' => $this->business->slug]), [
+        $response = $this->actingAs($this->customer)->post(route('customer.queue.take', ['slug' => $this->business->slug]), [
             'service_id' => $this->service->id,
             'customer_name' => '',
         ]);
@@ -123,7 +145,7 @@ class OnlineQueueFormTest extends TestCase
 
     public function test_submission_fails_when_service_is_missing(): void
     {
-        $response = $this->post(route('customer.queue.take', ['slug' => $this->business->slug]), [
+        $response = $this->actingAs($this->customer)->post(route('customer.queue.take', ['slug' => $this->business->slug]), [
             'service_id' => '',
             'customer_name' => 'Budi Santoso',
         ]);
@@ -136,7 +158,7 @@ class OnlineQueueFormTest extends TestCase
     {
         $this->business->update(['status' => Business::STATUS_JEDA]);
 
-        $response = $this->post(route('customer.queue.take', ['slug' => $this->business->slug]), [
+        $response = $this->actingAs($this->customer)->post(route('customer.queue.take', ['slug' => $this->business->slug]), [
             'service_id' => $this->service->id,
             'customer_name' => 'Budi Santoso',
         ]);
@@ -149,7 +171,7 @@ class OnlineQueueFormTest extends TestCase
     {
         $this->business->update(['status' => Business::STATUS_TUTUP]);
 
-        $response = $this->post(route('customer.queue.take', ['slug' => $this->business->slug]), [
+        $response = $this->actingAs($this->customer)->post(route('customer.queue.take', ['slug' => $this->business->slug]), [
             'service_id' => $this->service->id,
             'customer_name' => 'Budi Santoso',
         ]);
@@ -162,14 +184,15 @@ class OnlineQueueFormTest extends TestCase
     {
         $this->service->update(['daily_quota' => 1]);
 
-        // Consume 1 ticket
-        $this->post(route('customer.queue.take', ['slug' => $this->business->slug]), [
+        // Consume 1 ticket as another customer
+        $otherCustomer = User::factory()->customer()->create();
+        $this->actingAs($otherCustomer)->post(route('customer.queue.take', ['slug' => $this->business->slug]), [
             'service_id' => $this->service->id,
             'customer_name' => 'Patient 1',
         ]);
 
         // Attempt second ticket
-        $response = $this->post(route('customer.queue.take', ['slug' => $this->business->slug]), [
+        $response = $this->actingAs($this->customer)->post(route('customer.queue.take', ['slug' => $this->business->slug]), [
             'service_id' => $this->service->id,
             'customer_name' => 'Patient 2',
         ]);
@@ -190,15 +213,14 @@ class OnlineQueueFormTest extends TestCase
         ];
 
         // 1st submit
-        $res1 = $this->post(route('customer.queue.take', ['slug' => $this->business->slug]), $payload);
+        $res1 = $this->actingAs($this->customer)->post(route('customer.queue.take', ['slug' => $this->business->slug]), $payload);
         $res1->assertRedirect();
         $this->assertEquals(1, QueueTicket::count());
         $ticket1 = QueueTicket::first();
 
         // 2nd submit (retry)
-        $res2 = $this->post(route('customer.queue.take', ['slug' => $this->business->slug]), $payload);
+        $res2 = $this->actingAs($this->customer)->post(route('customer.queue.take', ['slug' => $this->business->slug]), $payload);
         $res2->assertRedirect(route('customer.queue.track', ['token' => $ticket1->access_token]));
         $this->assertEquals(1, QueueTicket::count());
     }
 }
-

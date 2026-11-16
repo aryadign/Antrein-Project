@@ -6,12 +6,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Facades\Crypt;
 
 class BusinessMembership extends Model
 {
     use HasFactory;
 
     public const string ROLE_OWNER = 'owner';
+
     public const string ROLE_OPERATOR = 'operator';
 
     /**
@@ -24,8 +26,18 @@ class BusinessMembership extends Model
         'business_id',
         'user_id',
         'role',
+        'staff_password_encrypted',
         'is_active',
         'joined_at',
+    ];
+
+    /**
+     * Hide raw encrypted cipher from generic JSON serialization.
+     *
+     * @var list<string>
+     */
+    protected $hidden = [
+        'staff_password_encrypted',
     ];
 
     /**
@@ -39,6 +51,22 @@ class BusinessMembership extends Model
             'is_active' => 'boolean',
             'joined_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Safely decrypt the stored operator password for owner inspection.
+     */
+    public function getDecryptedStaffPassword(): ?string
+    {
+        if (! $this->staff_password_encrypted) {
+            return null;
+        }
+
+        try {
+            return Crypt::decryptString($this->staff_password_encrypted);
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     /**
@@ -88,9 +116,12 @@ class BusinessMembership extends Model
 
         static::created(function (BusinessMembership $membership) {
             if ($membership->role === self::ROLE_OPERATOR && $membership->business) {
-                $defaultCounter = $membership->business->counters()->where('is_active', true)->first();
-                if ($defaultCounter) {
-                    $defaultCounter->assignedMemberships()->syncWithoutDetaching([$membership->id]);
+                // Only auto-assign default counter if none was assigned right after creation via controller
+                if ($membership->assignedCounters()->count() === 0) {
+                    $defaultCounter = $membership->business->counters()->where('is_active', true)->first();
+                    if ($defaultCounter) {
+                        $defaultCounter->assignedMemberships()->syncWithoutDetaching([$membership->id]);
+                    }
                 }
             }
         });
@@ -112,4 +143,3 @@ class BusinessMembership extends Model
         return $this->role === self::ROLE_OPERATOR;
     }
 }
-

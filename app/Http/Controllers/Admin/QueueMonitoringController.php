@@ -42,6 +42,7 @@ class QueueMonitoringController extends Controller
             QueueTicket::STATUS_SEDANG_DILAYANI,
             QueueTicket::STATUS_SELESAI,
             QueueTicket::STATUS_DILEWATI,
+            QueueTicket::STATUS_TIDAK_HADIR,
             QueueTicket::STATUS_DIBATALKAN,
         ])) {
             $query->where('status', $status);
@@ -74,7 +75,7 @@ class QueueMonitoringController extends Controller
             'dipanggil' => QueueTicket::where('status', QueueTicket::STATUS_DIPANGGIL)->count(),
             'sedang_dilayani' => QueueTicket::where('status', QueueTicket::STATUS_SEDANG_DILAYANI)->count(),
             'selesai' => QueueTicket::where('status', QueueTicket::STATUS_SELESAI)->count(),
-            'dilewati' => QueueTicket::where('status', QueueTicket::STATUS_DILEWATI)->count(),
+            'dilewati' => QueueTicket::whereIn('status', [QueueTicket::STATUS_DILEWATI, QueueTicket::STATUS_TIDAK_HADIR])->count(),
             'dibatalkan' => QueueTicket::where('status', QueueTicket::STATUS_DIBATALKAN)->count(),
         ];
 
@@ -124,11 +125,10 @@ class QueueMonitoringController extends Controller
         }
 
         if ($length <= 8) {
-            return substr($clean, 0, 2) . str_repeat('*', $length - 4) . substr($clean, -2);
+            return substr($clean, 0, 2).str_repeat('*', $length - 4).substr($clean, -2);
         }
 
         // Standard Indonesian numbers (10-13 digits): show first 4 and last 4, mask middle
-        return substr($clean, 0, 4) . '****' . substr($clean, -4);
+        return substr($clean, 0, 4).'****'.substr($clean, -4);
     }
 }
-

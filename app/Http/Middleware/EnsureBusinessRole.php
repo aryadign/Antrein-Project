@@ -14,8 +14,8 @@ class EnsureBusinessRole
      * Handle an incoming request to verify that the user has the required role
      * in the currently active branch.
      *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
-     * @param  string  ...$roles Allowed effective branch roles: 'owner', 'operator'
+     * @param  Closure(Request): (Response)  $next
+     * @param  string  ...$roles  Allowed effective branch roles: 'owner', 'operator'
      */
     public function handle(Request $request, Closure $next, string ...$roles): Response
     {
@@ -61,7 +61,11 @@ class EnsureBusinessRole
         }
 
         if (! in_array($role, $roles, true)) {
-            abort(Response::HTTP_FORBIDDEN, 'Akses tidak diizinkan. Tindakan ini memerlukan hak akses Pemilik (Owner).');
+            $message = in_array(BusinessMembership::ROLE_OPERATOR, $roles, true) && ! in_array(BusinessMembership::ROLE_OWNER, $roles, true)
+                ? 'Akses tidak diizinkan. Tindakan operasional antrean hanya dapat dilakukan oleh Operator Loket.'
+                : 'Akses tidak diizinkan. Tindakan ini memerlukan hak akses Pemilik (Owner).';
+
+            abort(Response::HTTP_FORBIDDEN, $message);
         }
 
         return $next($request);

@@ -17,7 +17,7 @@
         ],
         'dipanggil', 'called' => [
             'label' => 'Dipanggil',
-            'classes' => 'bg-info-100 text-info-700 border-blue-200 animate-pulse',
+            'classes' => 'bg-info-100 text-info-700 border-blue-200 font-semibold',
             'dot' => 'bg-blue-600',
             'icon' => 'megaphone',
         ],
@@ -39,6 +39,12 @@
             'dot' => 'bg-neutral-400',
             'icon' => 'forward',
         ],
+        'tidak_hadir', 'no_show' => [
+            'label' => 'Tidak hadir',
+            'classes' => 'bg-orange-50 text-orange-700 border-orange-200',
+            'dot' => 'bg-orange-500',
+            'icon' => 'x-circle',
+        ],
         'dibatalkan', 'cancelled' => [
             'label' => 'Dibatalkan',
             'classes' => 'bg-danger-100 text-danger-700 border-rose-200',
@@ -51,19 +57,19 @@
             'label' => 'Buka',
             'classes' => 'bg-emerald-50 text-emerald-700 border-emerald-300',
             'dot' => 'bg-emerald-500',
-            'icon' => 'dot',
+            'icon' => 'open-clock',
         ],
         'jeda', 'break' => [
             'label' => 'Jeda',
             'classes' => 'bg-amber-50 text-amber-700 border-amber-300',
             'dot' => 'bg-amber-500',
-            'icon' => 'dot',
+            'icon' => 'pause',
         ],
         'tutup', 'closed' => [
             'label' => 'Tutup',
             'classes' => 'bg-neutral-100 text-neutral-700 border-neutral-300',
             'dot' => 'bg-neutral-500',
-            'icon' => 'dot',
+            'icon' => 'lock',
         ],
 
         // Account Statuses
@@ -71,26 +77,46 @@
             'label' => 'Aktif',
             'classes' => 'bg-emerald-50 text-emerald-700 border-emerald-200',
             'dot' => 'bg-emerald-500',
-            'icon' => 'dot',
+            'icon' => 'check-circle',
         ],
         'nonaktif', 'inactive' => [
             'label' => 'Nonaktif',
             'classes' => 'bg-neutral-100 text-neutral-600 border-neutral-200',
             'dot' => 'bg-neutral-400',
-            'icon' => 'dot',
+            'icon' => 'minus-circle',
         ],
         'suspend', 'suspended' => [
             'label' => 'Ditangguhkan',
             'classes' => 'bg-red-50 text-red-700 border-red-200',
             'dot' => 'bg-red-500',
-            'icon' => 'dot',
+            'icon' => 'alert',
+        ],
+
+        // UMKM Approval Statuses
+        'pending' => [
+            'label' => 'Menunggu Verifikasi',
+            'classes' => 'bg-amber-50 text-amber-800 border-amber-300 font-semibold',
+            'dot' => 'bg-amber-500',
+            'icon' => 'clock',
+        ],
+        'approved' => [
+            'label' => 'Disetujui',
+            'classes' => 'bg-emerald-50 text-emerald-700 border-emerald-200 font-semibold',
+            'dot' => 'bg-emerald-500',
+            'icon' => 'check-circle',
+        ],
+        'rejected' => [
+            'label' => 'Ditolak',
+            'classes' => 'bg-rose-50 text-rose-700 border-rose-200 font-semibold',
+            'dot' => 'bg-rose-500',
+            'icon' => 'x-circle',
         ],
 
         default => [
             'label' => ucfirst($status),
             'classes' => 'bg-neutral-100 text-neutral-700 border-neutral-200',
             'dot' => 'bg-neutral-500',
-            'icon' => 'dot',
+            'icon' => null,
         ],
     };
 
@@ -115,8 +141,16 @@
             <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
         @elseif ($config['icon'] === 'x-circle')
             <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-        @else
-            <span class="w-1.5 h-1.5 rounded-full {{ $config['dot'] }} shrink-0"></span>
+        @elseif ($config['icon'] === 'open-clock')
+            <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        @elseif ($config['icon'] === 'pause')
+            <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        @elseif ($config['icon'] === 'lock')
+            <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0v4"/></svg>
+        @elseif ($config['icon'] === 'minus-circle')
+            <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        @elseif ($config['icon'] === 'alert')
+            <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
         @endif
     @endif
 

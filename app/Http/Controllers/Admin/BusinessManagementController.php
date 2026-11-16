@@ -44,11 +44,15 @@ class BusinessManagementController extends Controller
             $query->where('category_id', (int) $categoryId);
         }
 
-        // Platform suspension status filter
+        // Platform status & approval filter
         if ($status === 'active') {
-            $query->where('is_suspended', false);
+            $query->where('is_suspended', false)->where('approval_status', Business::APPROVAL_APPROVED);
         } elseif ($status === 'suspended') {
             $query->where('is_suspended', true);
+        } elseif ($status === 'pending') {
+            $query->where('approval_status', Business::APPROVAL_PENDING);
+        } elseif ($status === 'rejected') {
+            $query->where('approval_status', Business::APPROVAL_REJECTED);
         }
 
         $businesses = $query->latest('id')->paginate(10)->withQueryString();
@@ -57,7 +61,9 @@ class BusinessManagementController extends Controller
 
         $stats = [
             'total' => Business::count(),
-            'active' => Business::where('is_suspended', false)->count(),
+            'active' => Business::where('is_suspended', false)->where('approval_status', Business::APPROVAL_APPROVED)->count(),
+            'pending' => Business::where('approval_status', Business::APPROVAL_PENDING)->count(),
+            'rejected' => Business::where('approval_status', Business::APPROVAL_REJECTED)->count(),
             'suspended' => Business::where('is_suspended', true)->count(),
         ];
 
@@ -79,6 +85,7 @@ class BusinessManagementController extends Controller
         $business->load([
             'category',
             'user',
+            'reviewedBy',
             'services' => fn ($q) => $q->orderBy('name'),
             'hours' => fn ($q) => $q->orderBy('day_of_week'),
         ]);
@@ -90,7 +97,7 @@ class BusinessManagementController extends Controller
             'dipanggil' => QueueTicket::where('business_id', $business->id)->where('status', QueueTicket::STATUS_DIPANGGIL)->count(),
             'sedang_dilayani' => QueueTicket::where('business_id', $business->id)->where('status', QueueTicket::STATUS_SEDANG_DILAYANI)->count(),
             'selesai' => QueueTicket::where('business_id', $business->id)->where('status', QueueTicket::STATUS_SELESAI)->count(),
-            'dilewati' => QueueTicket::where('business_id', $business->id)->where('status', QueueTicket::STATUS_DILEWATI)->count(),
+            'dilewati' => QueueTicket::where('business_id', $business->id)->whereIn('status', [QueueTicket::STATUS_DILEWATI, QueueTicket::STATUS_TIDAK_HADIR])->count(),
             'dibatalkan' => QueueTicket::where('business_id', $business->id)->where('status', QueueTicket::STATUS_DIBATALKAN)->count(),
         ];
 
@@ -106,6 +113,59 @@ class BusinessManagementController extends Controller
             'queueStats' => $queueStats,
             'recentLogs' => $recentLogs,
         ]);
+    }
+
+    /**
+     * Approve a pending or rejected UMKM registration.
+     */
+    public function approve(Request $request, Business $business): RedirectResponse
+    {
+        $business->update([
+            'approval_status' => Business::APPROVAL_APPROVED,
+            'rejection_reason' => null,
+            'reviewed_at' => now(),
+            'reviewed_by' => $request->user()->id,
+        ]);
+
+        ActivityLog::log(
+            action: 'business_approved',
+            description: sprintf('Pendaftaran UMKM "%s" disetujui (Accept) oleh administrator platform.', $business->name),
+            business: $business,
+            user: $request->user()
+        );
+
+        return back()->with('status', sprintf('Pendaftaran UMKM "%s" telah disetujui dan kini aktif di AntreIn.', $business->name));
+    }
+
+    /**
+     * Reject a pending UMKM registration with an explanation for the owner.
+     */
+    public function reject(Request $request, Business $business): RedirectResponse
+    {
+        $validated = $request->validate([
+            'rejection_reason' => ['required', 'string', 'max:500'],
+        ], [
+            'rejection_reason.required' => 'Alasan penolakan wajib diisi agar pemilik UMKM mengetahui perbaikannya.',
+        ]);
+
+        $reason = trim($validated['rejection_reason']);
+
+        $business->update([
+            'approval_status' => Business::APPROVAL_REJECTED,
+            'rejection_reason' => $reason,
+            'reviewed_at' => now(),
+            'reviewed_by' => $request->user()->id,
+        ]);
+
+        ActivityLog::log(
+            action: 'business_rejected',
+            description: sprintf('Pendaftaran UMKM "%s" ditolak (Reject) oleh administrator: %s', $business->name, $reason),
+            business: $business,
+            user: $request->user(),
+            properties: ['rejection_reason' => $reason]
+        );
+
+        return back()->with('status', sprintf('Pendaftaran UMKM "%s" ditolak dengan catatan untuk pemilik.', $business->name));
     }
 
     /**
@@ -148,4 +208,3 @@ class BusinessManagementController extends Controller
         return back()->with('status', $flashMessage);
     }
 }
-

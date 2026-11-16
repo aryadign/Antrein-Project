@@ -27,6 +27,10 @@ class CustomerReviewController extends Controller
             ->with(['business', 'service'])
             ->firstOrFail();
 
+        if ($ticket->user_id !== null && $request->user() && $ticket->user_id !== $request->user()->id) {
+            abort(403, 'Anda tidak memiliki izin untuk mengulas tiket antrean ini.');
+        }
+
         // 1. Check if token is expired
         if ($this->queueService->isTokenExpired($ticket)) {
             if ($request->wantsJson()) {
@@ -113,4 +117,3 @@ class CustomerReviewController extends Controller
             ->with('status', $message);
     }
 }
-

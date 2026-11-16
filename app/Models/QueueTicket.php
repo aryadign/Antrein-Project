@@ -14,21 +14,36 @@ class QueueTicket extends Model
     use HasFactory;
 
     public const string STATUS_MENUNGGU = 'menunggu';
+
     public const string STATUS_DIPANGGIL = 'dipanggil';
+
     public const string STATUS_SEDANG_DILAYANI = 'sedang_dilayani';
+
     public const string STATUS_SELESAI = 'selesai';
+
     public const string STATUS_DILEWATI = 'dilewati';
+
+    public const string STATUS_TIDAK_HADIR = 'tidak_hadir';
+
     public const string STATUS_DIBATALKAN = 'dibatalkan';
 
     // English constant aliases
     public const string STATUS_WAITING = self::STATUS_MENUNGGU;
+
     public const string STATUS_CALLED = self::STATUS_DIPANGGIL;
+
     public const string STATUS_SERVING = self::STATUS_SEDANG_DILAYANI;
+
     public const string STATUS_COMPLETED = self::STATUS_SELESAI;
+
     public const string STATUS_SKIPPED = self::STATUS_DILEWATI;
+
+    public const string STATUS_NO_SHOW = self::STATUS_TIDAK_HADIR;
+
     public const string STATUS_CANCELLED = self::STATUS_DIBATALKAN;
 
     public const string SOURCE_ONLINE = 'online';
+
     public const string SOURCE_WALK_IN = 'walk_in';
 
     /**
@@ -41,8 +56,11 @@ class QueueTicket extends Model
         'daily_queue_id',
         'service_id',
         'counter_id',
+        'user_id',
         'ticket_number',
         'sequence_number',
+        'booking_slot_start',
+        'booking_slot_end',
         'customer_name',
         'customer_phone',
         'customer_email',
@@ -72,6 +90,8 @@ class QueueTicket extends Model
     {
         return [
             'sequence_number' => 'integer',
+            'booking_slot_start' => 'datetime',
+            'booking_slot_end' => 'datetime',
             'customer_email_consented_at' => 'datetime',
             'called_at' => 'datetime',
             'recalled_at' => 'datetime',
@@ -85,7 +105,7 @@ class QueueTicket extends Model
     /**
      * Scope query to only include active tickets.
      *
-     * @param Builder<QueueTicket> $query
+     * @param  Builder<QueueTicket>  $query
      */
     public function scopeActive(Builder $query): Builder
     {
@@ -99,12 +119,13 @@ class QueueTicket extends Model
     /**
      * Scope query to only include terminal tickets.
      *
-     * @param Builder<QueueTicket> $query
+     * @param  Builder<QueueTicket>  $query
      */
     public function scopeTerminal(Builder $query): Builder
     {
         return $query->whereIn('status', [
             self::STATUS_SELESAI,
+            self::STATUS_TIDAK_HADIR,
             self::STATUS_DILEWATI,
             self::STATUS_DIBATALKAN,
         ]);
@@ -129,9 +150,42 @@ class QueueTicket extends Model
     {
         return in_array($this->status, [
             self::STATUS_SELESAI,
+            self::STATUS_TIDAK_HADIR,
             self::STATUS_DILEWATI,
             self::STATUS_DIBATALKAN,
         ], true);
+    }
+
+    /**
+     * Formatted start time of the customer's booking slot in the business timezone, e.g. "11:00".
+     */
+    public function bookingSlotLabel(?string $timezone = null): ?string
+    {
+        if (! $this->booking_slot_start) {
+            return null;
+        }
+
+        $tz = $timezone ?: ($this->business?->timezone ?: config('app.timezone', 'Asia/Makassar'));
+
+        return $this->booking_slot_start->copy()->setTimezone($tz)->format('H:i');
+    }
+
+    /**
+     * Formatted window label for the customer's booking slot, e.g. "11:00 - 12:00".
+     */
+    public function bookingSlotWindowLabel(?string $timezone = null): ?string
+    {
+        if (! $this->booking_slot_start) {
+            return null;
+        }
+
+        $tz = $timezone ?: ($this->business?->timezone ?: config('app.timezone', 'Asia/Makassar'));
+        $start = $this->booking_slot_start->copy()->setTimezone($tz)->format('H:i');
+        $end = $this->booking_slot_end
+            ? $this->booking_slot_end->copy()->setTimezone($tz)->format('H:i')
+            : $this->booking_slot_start->copy()->addHour()->setTimezone($tz)->format('H:i');
+
+        return "{$start} - {$end}";
     }
 
     /**
@@ -167,6 +221,14 @@ class QueueTicket extends Model
     }
 
     /**
+     * Get the authenticated customer account associated with this ticket, if any.
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    /**
      * Get the audit status histories for this ticket.
      */
     public function statusHistories(): HasMany
@@ -198,4 +260,3 @@ class QueueTicket extends Model
         return $this->review()->exists();
     }
 }
-

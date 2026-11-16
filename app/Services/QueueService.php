@@ -15,19 +15,91 @@ use App\Models\Service;
 use App\Models\User;
 use Carbon\Carbon;
 use DomainException;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class QueueService
 {
+    public const int CALL_TIMEOUT_MINUTES = 15;
+
+    public function __construct(
+        protected ?BookingSlotService $bookingSlotService = null
+    ) {
+        $this->bookingSlotService ??= new BookingSlotService;
+    }
+
+    /**
+     * Transition any 'dipanggil' tickets whose called_at exceeded 15 minutes to 'tidak_hadir'.
+     * Runs safely in a transaction so expired tickets free their counters before new calls.
+     */
+    public function expireStaleCalledTickets(?Business $business = null): int
+    {
+        $cutoff = now()->subMinutes(self::CALL_TIMEOUT_MINUTES);
+
+        $staleQuery = QueueTicket::query()
+            ->where('status', QueueTicket::STATUS_DIPANGGIL)
+            ->whereNotNull('called_at')
+            ->where('called_at', '<=', $cutoff);
+
+        if ($business !== null) {
+            $staleQuery->where('business_id', $business->id);
+        }
+
+        $staleIds = $staleQuery->pluck('id');
+        if ($staleIds->isEmpty()) {
+            return 0;
+        }
+
+        $expiredCount = 0;
+
+        foreach ($staleIds as $ticketId) {
+            $transitioned = DB::transaction(function () use ($ticketId) {
+                /** @var QueueTicket|null $ticket */
+                $ticket = QueueTicket::whereKey($ticketId)->lockForUpdate()->first();
+
+                if (! $ticket || $ticket->status !== QueueTicket::STATUS_DIPANGGIL || ! $ticket->called_at || $ticket->called_at->gt(now()->subMinutes(self::CALL_TIMEOUT_MINUTES))) {
+                    return null;
+                }
+
+                $now = now();
+                $ticket->update([
+                    'status' => QueueTicket::STATUS_TIDAK_HADIR,
+                    'skipped_at' => $now,
+                ]);
+
+                QueueStatusHistory::create([
+                    'queue_ticket_id' => $ticket->id,
+                    'event_type' => QueueStatusHistory::EVENT_TICKET_SKIPPED,
+                    'from_status' => QueueTicket::STATUS_DIPANGGIL,
+                    'to_status' => QueueTicket::STATUS_TIDAK_HADIR,
+                    'actor_type' => QueueStatusHistory::ACTOR_SYSTEM,
+                    'actor_id' => null,
+                    'note' => 'Otomatis ditandai Tidak Hadir karena tidak merespons dalam 15 menit setelah dipanggil',
+                    'created_at' => $now,
+                ]);
+
+                return $ticket;
+            });
+
+            if ($transitioned instanceof QueueTicket) {
+                $expiredCount++;
+                event(new QueueTicketStatusChanged($transitioned, QueueTicket::STATUS_DIPANGGIL));
+                if ($transitioned->counter) {
+                    event(new CounterStatusChanged($transitioned->counter));
+                }
+            }
+        }
+
+        return $expiredCount;
+    }
+
     /**
      * Get or atomically initialize a race-safe daily queue record for a business and date.
      * Uses the business's configured timezone to determine the operating date boundary.
      *
-     * @param  Business  $business
-     * @param  string|null  $date Y-m-d format date string, defaults to current local date
-     * @return DailyQueue
+     * @param  string|null  $date  Y-m-d format date string, defaults to current local date
      */
     public function getOrCreateDailyQueue(Business $business, ?string $date = null): DailyQueue
     {
@@ -64,15 +136,9 @@ class QueueService
     }
 
     /**
-     * Generate an online customer queue ticket with concurrency-safe numbering and quota enforcement.
+     * Generate an online customer queue ticket with concurrency-safe numbering, booking slot validation, and quota enforcement.
      *
-     * @param  Business  $business
-     * @param  Service  $service
-     * @param  string  $customerName
-     * @param  string|null  $customerPhone
-     * @param  string|null  $idempotencyKey
-     * @param  array<int, int>  $activeSessionTicketIds List of ticket IDs held in the customer's browser session
-     * @return QueueTicket
+     * @param  array<int, int>  $activeSessionTicketIds  List of ticket IDs held in the customer's browser session
      *
      * @throws DomainException
      */
@@ -84,7 +150,9 @@ class QueueService
         ?string $idempotencyKey = null,
         array $activeSessionTicketIds = [],
         ?string $customerEmail = null,
-        ?\DateTimeInterface $customerEmailConsentedAt = null
+        ?\DateTimeInterface $customerEmailConsentedAt = null,
+        ?User $customer = null,
+        ?string $bookingSlot = null
     ): QueueTicket {
         // 1. Business Operational Validation
         if (! $business->isActive()) {
@@ -93,6 +161,10 @@ class QueueService
 
         if ($business->is_suspended) {
             throw new DomainException('Pendaftaran antrean tidak dapat dilakukan karena akun usaha sedang ditangguhkan oleh administrator.');
+        }
+
+        if (! $business->isApproved()) {
+            throw new DomainException('Pendaftaran antrean tidak dapat dilakukan karena usaha belum disetujui oleh administrator.');
         }
 
         if ($business->status === Business::STATUS_TUTUP) {
@@ -133,26 +205,37 @@ class QueueService
             }
         }
 
-        // 4. Session Protection (OQ-10 Policy)
-        if (! empty($activeSessionTicketIds)) {
-            $activeSessionTickets = QueueTicket::whereIn('id', $activeSessionTicketIds)
-                ->active()
-                ->get();
+        // 4. Active Ticket Limit Check (Max 3 active tickets simultaneously per customer/session + 1 per service)
+        if ($customer !== null || ! empty($activeSessionTicketIds)) {
+            $activeQuery = QueueTicket::query()->active();
 
-            if ($activeSessionTickets->where('service_id', $service->id)->isNotEmpty()) {
-                throw new DomainException('Anda sudah memiliki tiket antrean aktif untuk layanan ini pada sesi Anda.');
+            if ($customer !== null && ! empty($activeSessionTicketIds)) {
+                $activeQuery->where(function ($query) use ($customer, $activeSessionTicketIds) {
+                    $query->where('user_id', $customer->id)
+                        ->orWhereIn('id', $activeSessionTicketIds);
+                });
+            } elseif ($customer !== null) {
+                $activeQuery->where('user_id', $customer->id);
+            } else {
+                $activeQuery->whereIn('id', $activeSessionTicketIds);
             }
 
-            if ($activeSessionTickets->count() >= 3) {
+            $activeTickets = $activeQuery->get();
+
+            if ($activeTickets->where('service_id', $service->id)->isNotEmpty()) {
+                throw new DomainException('Anda sudah memiliki tiket antrean aktif untuk layanan ini.');
+            }
+
+            if ($activeTickets->count() >= 3) {
                 throw new DomainException('Anda telah mencapai batas maksimal 3 tiket antrean aktif secara bersamaan.');
             }
         }
 
-        // 5. Atomic Transaction: Locking, Quota, Numbering & Insert
-        return DB::transaction(function () use ($business, $service, $trimmedName, $customerPhone, $idempotencyKey, $customerEmail, $customerEmailConsentedAt) {
+        // 5. Atomic Transaction: Locking, Quota, Booking Slot, Numbering & Insert
+        return DB::transaction(function () use ($business, $service, $trimmedName, $customerPhone, $idempotencyKey, $customerEmail, $customerEmailConsentedAt, $customer, $bookingSlot) {
             $dailyQueue = $this->getOrCreateDailyQueue($business);
 
-            // Row-level lock on the daily queue record to serialize numbering and quota checks
+            // Row-level lock on the daily queue record to serialize numbering, slot checks, and quota checks
             /** @var DailyQueue $lockedDailyQueue */
             $lockedDailyQueue = DailyQueue::where('id', $dailyQueue->id)->lockForUpdate()->first();
 
@@ -162,20 +245,26 @@ class QueueService
                 throw new DomainException('Kuota harian untuk layanan ini telah habis.');
             }
 
+            // Resolve and validate booking slot (blocks already-started and full slots)
+            $slot = $this->bookingSlotService->resolveSlotForOnline($business, $service, $lockedDailyQueue, $bookingSlot);
+
             // Atomic Sequence Increment
             $nextSequence = $lockedDailyQueue->current_number + 1;
             $lockedDailyQueue->current_number = $nextSequence;
             $lockedDailyQueue->save();
 
-            $ticketNumber = sprintf('A-%03d', $nextSequence);
+            $ticketNumber = sprintf('TKT-%03d', $nextSequence);
             $accessToken = Str::random(40);
 
             $ticket = QueueTicket::create([
                 'business_id' => $business->id,
                 'daily_queue_id' => $lockedDailyQueue->id,
                 'service_id' => $service->id,
+                'user_id' => $customer?->id,
                 'ticket_number' => $ticketNumber,
                 'sequence_number' => $nextSequence,
+                'booking_slot_start' => $slot['start'],
+                'booking_slot_end' => $slot['end'],
                 'customer_name' => $trimmedName,
                 'customer_phone' => $customerPhone ? trim($customerPhone) : null,
                 'customer_email' => $customerEmail ? trim($customerEmail) : null,
@@ -192,6 +281,7 @@ class QueueService
                 'from_status' => null,
                 'to_status' => QueueTicket::STATUS_MENUNGGU,
                 'actor_type' => QueueStatusHistory::ACTOR_CUSTOMER,
+                'actor_id' => $customer?->id,
                 'note' => 'Pendaftaran antrean online baru',
                 'created_at' => now(),
             ]);
@@ -205,15 +295,7 @@ class QueueService
     /**
      * Generate a merchant-issued walk-in ticket using the shared FIFO sequence and quota rules.
      *
-     * @param  Business  $business
-     * @param  Service  $service
-     * @param  string  $customerName
-     * @param  string|null  $customerPhone
-     * @param  string|null  $notes
-     * @param  string|null  $idempotencyKey
-     * @param  bool  $confirmedPaused Operator explicit confirmation when business status is 'jeda'
-     * @param  User|null  $operator
-     * @return QueueTicket
+     * @param  bool  $confirmedPaused  Operator explicit confirmation when business status is 'jeda'
      *
      * @throws DomainException
      */
@@ -281,11 +363,14 @@ class QueueService
                 throw new DomainException('Kuota harian untuk layanan ini telah habis.');
             }
 
+            // Walk-in tickets are placed in the nearest upcoming available slot (never an already-started or full slot)
+            $slot = $this->bookingSlotService->resolveSlotForWalkIn($business, $service, $lockedDailyQueue);
+
             $nextSequence = $lockedDailyQueue->current_number + 1;
             $lockedDailyQueue->current_number = $nextSequence;
             $lockedDailyQueue->save();
 
-            $ticketNumber = sprintf('A-%03d', $nextSequence);
+            $ticketNumber = sprintf('TKT-%03d', $nextSequence);
             $accessToken = Str::random(40);
 
             $ticket = QueueTicket::create([
@@ -294,6 +379,8 @@ class QueueService
                 'service_id' => $service->id,
                 'ticket_number' => $ticketNumber,
                 'sequence_number' => $nextSequence,
+                'booking_slot_start' => $slot['start'],
+                'booking_slot_end' => $slot['end'],
                 'customer_name' => $trimmedName,
                 'customer_phone' => $customerPhone ? trim($customerPhone) : null,
                 'source' => QueueTicket::SOURCE_WALK_IN,
@@ -321,14 +408,11 @@ class QueueService
     }
 
     /**
-     * Call the next waiting ticket according to strict FIFO sequence order.
-     * Enforces the Single Active Ticket Per Counter rule (M13):
-     * Multiple counters can serve tickets in parallel, but a single counter cannot have multiple active tickets.
+     * Call the next waiting ticket according to strict booking-slot FIFO order:
+     * earlier booking slots (including leftover waiting tickets) always precede later slots,
+     * with sequence_number breaking ties within the same slot.
      *
-     * @param  Business  $business
-     * @param  User  $operator
-     * @param  BusinessCounter|null  $counter
-     * @return QueueTicket
+     * Enforces the Single Active Ticket Per Counter rule (M13) and auto-expires 15-minute no-shows.
      *
      * @throws DomainException
      */
@@ -337,6 +421,9 @@ class QueueService
         if (! $business->isActive()) {
             throw new DomainException('Cabang ini sedang dinonaktifkan sehingga antrean tidak dapat dipanggil.');
         }
+
+        // Sweep any stale 'dipanggil' tickets older than 15 minutes before checking active counter locks
+        $this->expireStaleCalledTickets($business);
 
         // 1. Resolve counter if not explicitly provided
         if ($counter === null) {
@@ -347,17 +434,17 @@ class QueueService
         }
 
         if (! $counter) {
-            throw new DomainException('Tidak ada loket aktif yang tersedia untuk memanggil antrean.');
+            throw new DomainException('Tidak ada unit layanan aktif yang tersedia untuk memanggil antrean.');
         }
 
         // 2. Validate counter belongs to this business
         if ($counter->business_id !== $business->id) {
-            throw new DomainException('Loket tidak terdaftar untuk unit usaha ini.');
+            throw new DomainException('Unit layanan tidak terdaftar untuk usaha ini.');
         }
 
         // 3. Validate counter is active
         if (! $counter->is_active) {
-            throw new DomainException(sprintf('Loket %s sedang nonaktif dan tidak dapat memanggil antrean baru.', $counter->name));
+            throw new DomainException(sprintf('%s sedang nonaktif dan tidak dapat memanggil antrean baru.', $counter->name));
         }
 
         // 4. Validate operator authorization
@@ -395,11 +482,13 @@ class QueueService
                 ));
             }
 
-            // Retrieve the oldest waiting ticket by sequence_number from the unified global FIFO
+            // Retrieve the earliest waiting ticket across all slots: booking_slot_start ASC, sequence_number ASC
             /** @var QueueTicket|null $nextTicket */
             $nextTicket = QueueTicket::where('business_id', $business->id)
                 ->where('daily_queue_id', $dailyQueue->id)
                 ->where('status', QueueTicket::STATUS_MENUNGGU)
+                ->orderByRaw('CASE WHEN booking_slot_start IS NULL THEN 0 ELSE 1 END ASC')
+                ->orderBy('booking_slot_start', 'asc')
                 ->orderBy('sequence_number', 'asc')
                 ->lockForUpdate()
                 ->first();
@@ -527,12 +616,12 @@ class QueueService
     }
 
     /**
-     * Transition ticket lifecycle from 'sedang_dilayani' to terminal 'selesai'.
+     * Transition ticket lifecycle from 'dipanggil' or 'sedang_dilayani' to terminal 'selesai'.
      */
     public function completeTicket(QueueTicket $ticket, User $operator, ?string $note = null, ?BusinessCounter $counter = null): QueueTicket
     {
-        if ($ticket->status !== QueueTicket::STATUS_SEDANG_DILAYANI) {
-            throw new DomainException('Penyelesaian pelayanan hanya dapat dilakukan untuk tiket yang berstatus Sedang Dilayani.');
+        if (! in_array($ticket->status, [QueueTicket::STATUS_DIPANGGIL, QueueTicket::STATUS_SEDANG_DILAYANI], true)) {
+            throw new DomainException('Penyelesaian pelayanan hanya dapat dilakukan untuk tiket yang berstatus Dipanggil atau Sedang Dilayani.');
         }
 
         $ticketCounter = $ticket->counter;
@@ -546,9 +635,11 @@ class QueueService
         }
 
         return DB::transaction(function () use ($ticket, $operator, $note, $effectiveCounter) {
+            $previousStatus = $ticket->status;
             $now = now();
             $ticket->update([
                 'status' => QueueTicket::STATUS_SELESAI,
+                'service_started_at' => $ticket->service_started_at ?? $now,
                 'completed_at' => $now,
             ]);
 
@@ -556,7 +647,7 @@ class QueueService
             QueueStatusHistory::create([
                 'queue_ticket_id' => $ticket->id,
                 'event_type' => QueueStatusHistory::EVENT_STATUS_CHANGED,
-                'from_status' => QueueTicket::STATUS_SEDANG_DILAYANI,
+                'from_status' => $previousStatus,
                 'to_status' => QueueTicket::STATUS_SELESAI,
                 'actor_type' => QueueStatusHistory::ACTOR_MERCHANT,
                 'actor_id' => $operator->id,
@@ -564,7 +655,7 @@ class QueueService
                 'created_at' => $now,
             ]);
 
-            event(new QueueTicketStatusChanged($ticket, QueueTicket::STATUS_SEDANG_DILAYANI));
+            event(new QueueTicketStatusChanged($ticket, $previousStatus));
             if ($effectiveCounter) {
                 event(new CounterStatusChanged($effectiveCounter));
             }
@@ -668,7 +759,107 @@ class QueueService
     }
 
     /**
-     * Calculate 1-based queue position for a waiting customer ticket.
+     * Cancel a waiting ticket on behalf of the customer who holds its access token.
+     *
+     * @throws DomainException when the ticket is no longer waiting.
+     */
+    public function cancelTicketByCustomer(QueueTicket $ticket, ?string $reason = null): QueueTicket
+    {
+        if ($ticket->status !== QueueTicket::STATUS_MENUNGGU) {
+            throw new DomainException('Antrean hanya bisa dibatalkan selama statusnya masih Menunggu.');
+        }
+
+        $trimmedReason = trim((string) $reason) ?: 'Dibatalkan oleh pelanggan';
+
+        return DB::transaction(function () use ($ticket, $trimmedReason) {
+            $now = now();
+
+            $ticket->update([
+                'status' => QueueTicket::STATUS_DIBATALKAN,
+                'cancelled_at' => $now,
+                'cancellation_reason' => $trimmedReason,
+            ]);
+
+            QueueStatusHistory::create([
+                'queue_ticket_id' => $ticket->id,
+                'event_type' => QueueStatusHistory::EVENT_TICKET_CANCELLED,
+                'from_status' => QueueTicket::STATUS_MENUNGGU,
+                'to_status' => QueueTicket::STATUS_DIBATALKAN,
+                'actor_type' => QueueStatusHistory::ACTOR_CUSTOMER,
+                'actor_id' => null,
+                'note' => $trimmedReason,
+                'created_at' => $now,
+            ]);
+
+            event(new QueueTicketStatusChanged($ticket, QueueTicket::STATUS_MENUNGGU));
+            if ($ticket->counter) {
+                event(new CounterStatusChanged($ticket->counter));
+            }
+
+            return $ticket;
+        });
+    }
+
+    /**
+     * Expose the booking slot service.
+     */
+    public function slots(): BookingSlotService
+    {
+        return $this->bookingSlotService;
+    }
+
+    /**
+     * Explicitly mark a waiting or called ticket as 'tidak_hadir' (no-show).
+     */
+    public function markNoShowTicket(QueueTicket $ticket, User $operator, ?string $reason = null, ?BusinessCounter $counter = null): QueueTicket
+    {
+        if (! in_array($ticket->status, [QueueTicket::STATUS_MENUNGGU, QueueTicket::STATUS_DIPANGGIL], true)) {
+            throw new DomainException('Hanya tiket dengan status Menunggu atau Dipanggil yang dapat ditandai Tidak Hadir.');
+        }
+
+        $ticketCounter = $ticket->counter;
+        if ($counter !== null && $ticket->counter_id !== null && $ticket->counter_id !== $counter->id) {
+            throw new DomainException('Tiket ini ditugaskan pada loket yang berbeda.');
+        }
+
+        $effectiveCounter = $counter ?? $ticketCounter;
+        if ($effectiveCounter && ! $operator->canOperateCounter($effectiveCounter)) {
+            throw new DomainException('Anda tidak memiliki hak otorisasi untuk mengoperasikan tiket pada loket ini.');
+        }
+
+        return DB::transaction(function () use ($ticket, $operator, $reason, $effectiveCounter) {
+            $previousStatus = $ticket->status;
+            $now = now();
+
+            $ticket->update([
+                'status' => QueueTicket::STATUS_TIDAK_HADIR,
+                'skipped_at' => $now,
+            ]);
+
+            $counterNote = $effectiveCounter ? ' di '.$effectiveCounter->name : '';
+            QueueStatusHistory::create([
+                'queue_ticket_id' => $ticket->id,
+                'event_type' => QueueStatusHistory::EVENT_TICKET_SKIPPED,
+                'from_status' => $previousStatus,
+                'to_status' => QueueTicket::STATUS_TIDAK_HADIR,
+                'actor_type' => QueueStatusHistory::ACTOR_MERCHANT,
+                'actor_id' => $operator->id,
+                'note' => $reason ?: sprintf('Pelanggan ditandai Tidak Hadir oleh operator%s', $counterNote),
+                'created_at' => $now,
+            ]);
+
+            event(new QueueTicketStatusChanged($ticket, $previousStatus));
+            if ($effectiveCounter) {
+                event(new CounterStatusChanged($effectiveCounter));
+            }
+
+            return $ticket;
+        });
+    }
+
+    /**
+     * Calculate 1-based queue position for a waiting customer ticket
+     * respecting the booking-slot FIFO ordering (earlier slot first, then sequence_number).
      * Returns 0 if ticket is not actively waiting.
      */
     public function calculateQueuePosition(QueueTicket $ticket): int
@@ -677,20 +868,40 @@ class QueueService
             return 0;
         }
 
-        $aheadCount = QueueTicket::where('daily_queue_id', $ticket->daily_queue_id)
-            ->where('status', QueueTicket::STATUS_MENUNGGU)
-            ->where('sequence_number', '<', $ticket->sequence_number)
-            ->count();
+        $query = QueueTicket::where('daily_queue_id', $ticket->daily_queue_id)
+            ->where('status', QueueTicket::STATUS_MENUNGGU);
+
+        if ($ticket->booking_slot_start === null) {
+            $aheadCount = $query
+                ->whereNull('booking_slot_start')
+                ->where('sequence_number', '<', $ticket->sequence_number)
+                ->count();
+        } else {
+            $slotStart = $ticket->booking_slot_start;
+            $sequence = $ticket->sequence_number;
+
+            $aheadCount = $query->where(function ($q) use ($slotStart, $sequence) {
+                $q->whereNull('booking_slot_start')
+                    ->orWhere('booking_slot_start', '<', $slotStart)
+                    ->orWhere(function ($sameSlot) use ($slotStart, $sequence) {
+                        $sameSlot->where('booking_slot_start', '=', $slotStart)
+                            ->where('sequence_number', '<', $sequence);
+                    });
+            })->count();
+        }
 
         return $aheadCount + 1;
     }
 
     /**
      * Get the ticket currently being called or served for today's session.
+     * Opportunistically sweeps stale 15-minute 'dipanggil' tickets first.
      * Optionally scoped to a specific counter.
      */
     public function getCurrentServingTicket(Business $business, ?BusinessCounter $counter = null): ?QueueTicket
     {
+        $this->expireStaleCalledTickets($business);
+
         $dailyQueue = $this->getOrCreateDailyQueue($business);
 
         $query = QueueTicket::where('business_id', $business->id)
@@ -707,14 +918,22 @@ class QueueService
     /**
      * Get all active counters for a business along with their currently active serving ticket.
      *
-     * @return \Illuminate\Database\Eloquent\Collection<int, BusinessCounter>
+     * @return Collection<int, BusinessCounter>
      */
     public function getActiveCountersStatus(Business $business)
     {
-        return $business->activeCounters()
+        $counters = $business->activeCounters()
             ->with(['activeTicket.service', 'assignedMemberships.user'])
             ->orderBy('code', 'asc')
             ->get();
+
+        if (! $business->usesStations() && $counters->count() > 1) {
+            $primary = $counters->first(fn ($counter): bool => $counter->activeTicket !== null) ?? $counters->first();
+
+            return $primary ? collect([$primary]) : collect();
+        }
+
+        return $counters;
     }
 
     /**
@@ -740,7 +959,7 @@ class QueueService
 
     /**
      * Get the count of consumed daily quota for a service in a daily queue.
-     * Consumed by statuses: menunggu, dipanggil, sedang_dilayani, selesai, dilewati.
+     * Consumed by statuses: menunggu, dipanggil, sedang_dilayani, selesai, dilewati, tidak_hadir.
      * Released only by: dibatalkan.
      */
     public function getConsumedDailyQuotaCount(Service $service, int $dailyQueueId): int

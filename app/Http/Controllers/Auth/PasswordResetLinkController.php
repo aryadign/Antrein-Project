@@ -23,7 +23,7 @@ class PasswordResetLinkController extends Controller
     /**
      * Handle an incoming password reset link request.
      *
-     * @throws \Illuminate\Validation\ValidationException
+     * @throws ValidationException
      */
     public function store(Request $request): RedirectResponse
     {
@@ -52,6 +52,6 @@ class PasswordResetLinkController extends Controller
         );
 
         // Security Hardening (M10-01): Prevent user enumeration by returning a uniform success message
-        return back()->with('status', 'Jika alamat email Anda terdaftar, kami telah mengirimkan tautan untuk mengatur ulang kata sandi Anda.');
+        return back()->with('status', 'Jika alamat email Anda terdaftar, kami telah mengirimkan instruksi untuk mengatur ulang kata sandi Anda.');
     }
 }

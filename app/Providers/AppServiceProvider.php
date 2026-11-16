@@ -8,7 +8,6 @@ use App\Events\QueueTicketCreated;
 use App\Events\QueueTicketStatusChanged;
 use App\Listeners\BroadcastToPublicDisplayListener;
 use App\Listeners\SendQueueNotificationListener;
-use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use RuntimeException;
@@ -28,8 +27,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        Blade::anonymousComponentPath(resource_path('views/layouts'), 'layouts');
-
         Event::listen(QueueTicketCreated::class, [SendQueueNotificationListener::class, 'handleTicketCreated']);
         Event::listen(QueueTicketStatusChanged::class, [SendQueueNotificationListener::class, 'handleTicketStatusChanged']);
 

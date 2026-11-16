@@ -24,40 +24,22 @@
         @endif
 
         {{-- Header Navigation Tabs --}}
-        <div class="flex items-center gap-2 border-b border-neutral-200 pb-3">
-            <a href="{{ route('merchant.organization.edit') }}" class="px-4 py-2 rounded-xl text-xs font-bold bg-brand-50 text-brand-700 border border-brand-200">
-                Profil Brand & Organisasi
-            </a>
-            <a href="{{ route('merchant.organization.reports') }}" class="px-4 py-2 rounded-xl text-xs font-semibold text-neutral-600 hover:text-neutral-950 hover:bg-neutral-100 transition">
-                Laporan Agregat Organisasi
-            </a>
-            <a href="{{ route('merchant.branches.index') }}" class="px-4 py-2 rounded-xl text-xs font-semibold text-neutral-600 hover:text-neutral-950 hover:bg-neutral-100 transition">
-                Daftar Cabang ({{ $branchesCount }})
-            </a>
-        </div>
+        <x-merchant.organization-tabs active="profile" :branches-count="$branchesCount" />
 
         {{-- Brand Overview Stats --}}
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div class="p-5 rounded-2xl bg-white border border-neutral-200 shadow-xs">
-                <span class="text-xs font-semibold uppercase tracking-wider text-neutral-400">Total Cabang</span>
-                <div class="mt-2 text-2xl font-black text-neutral-900 tabular-nums">{{ $branchesCount }}</div>
-                <p class="text-[11px] text-neutral-500 mt-0.5">Cabang dalam satu brand</p>
-            </div>
-            <div class="p-5 rounded-2xl bg-white border border-neutral-200 shadow-xs">
-                <span class="text-xs font-semibold uppercase tracking-wider text-neutral-400">Cabang Aktif</span>
-                <div class="mt-2 text-2xl font-black text-emerald-700 tabular-nums">{{ $activeBranchesCount }}</div>
-                <p class="text-[11px] text-neutral-500 mt-0.5">Menerima antrean hari ini</p>
-            </div>
-            <div class="p-5 rounded-2xl bg-white border border-neutral-200 shadow-xs">
-                <span class="text-xs font-semibold uppercase tracking-wider text-neutral-400">Cabang Aktif Sesi Ini</span>
-                <div class="mt-2 text-base font-bold text-brand-700 truncate">{{ $activeBranch?->name ?? 'Belum dipilih' }}</div>
-                <p class="text-[11px] text-neutral-500 mt-0.5">Konteks dashboard operasional</p>
+        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <x-stat-tile label="Total Cabang" :value="$branchesCount" hint="Cabang dalam satu brand" />
+            <x-stat-tile label="Cabang Aktif" :value="$activeBranchesCount" hint="Menerima antrean hari ini" tone="success" />
+            <div class="col-span-2 min-w-0 rounded-xl border border-neutral-200 bg-white p-3.5 shadow-xs sm:col-span-1 sm:p-4">
+                <p class="truncate text-caption font-semibold text-neutral-500">Cabang Aktif Sesi Ini</p>
+                <p class="mt-1 truncate text-base font-bold text-brand-700 sm:text-lg">{{ $activeBranch?->name ?? 'Belum dipilih' }}</p>
+                <p class="mt-0.5 truncate text-[11px] text-neutral-500">Konteks dashboard operasional</p>
             </div>
         </div>
 
         {{-- Organization Settings Form --}}
         <div class="bg-white rounded-2xl border border-neutral-200 shadow-xs overflow-hidden">
-            <form method="POST" action="{{ route('merchant.organization.update') }}" class="p-6 sm:p-8 space-y-6">
+            <form method="POST" action="{{ route('merchant.organization.update') }}" class="space-y-6 p-4 sm:p-8">
                 @csrf
                 @method('PUT')
 
@@ -74,7 +56,7 @@
                             value="{{ old('name', $organization->name) }}"
                             required
                             placeholder="Contoh: Garasi Barbershop Group"
-                            class="w-full px-4 py-2.5 rounded-xl border border-neutral-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 text-sm text-neutral-900 placeholder:text-neutral-400 transition"
+                            class="min-h-11 w-full px-4 py-2.5 rounded-xl border border-neutral-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 text-sm text-neutral-900 placeholder:text-neutral-400 transition"
                         >
                     </div>
 
@@ -87,7 +69,7 @@
                             id="timezone"
                             name="timezone"
                             required
-                            class="w-full px-4 py-2.5 rounded-xl border border-neutral-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 text-sm text-neutral-900 transition bg-white"
+                            class="min-h-11 w-full px-4 py-2.5 rounded-xl border border-neutral-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 text-sm text-neutral-900 transition bg-white"
                         >
                             @php
                                 $tz = old('timezone', $organization->timezone ?: 'Asia/Makassar');
@@ -109,14 +91,14 @@
                             name="description"
                             rows="3"
                             placeholder="Deskripsi singkat mengenai grup atau jaringan usaha Anda"
-                            class="w-full px-4 py-2.5 rounded-xl border border-neutral-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 text-sm text-neutral-900 placeholder:text-neutral-400 transition"
+                            class="min-h-11 w-full px-4 py-2.5 rounded-xl border border-neutral-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 text-sm text-neutral-900 placeholder:text-neutral-400 transition"
                         >{{ old('description', $organization->description) }}</textarea>
                     </div>
                 </div>
 
                 {{-- Action Buttons --}}
-                <div class="flex items-center justify-end gap-3 pt-6 border-t border-neutral-200">
-                    <button type="submit" class="inline-flex items-center justify-center px-6 py-2.5 rounded-xl text-xs font-bold text-white bg-brand-700 hover:bg-brand-800 shadow-md shadow-brand-700/20 transition">
+                <div class="flex flex-col-reverse gap-2 border-t border-neutral-200 pt-6 sm:flex-row sm:items-center sm:justify-end sm:gap-3">
+                    <button type="submit" class="inline-flex h-11 items-center justify-center px-6 rounded-xl text-sm font-bold text-white bg-brand-700 hover:bg-brand-800 shadow-md shadow-brand-700/20 transition">
                         Simpan Perubahan Organisasi
                     </button>
                 </div>

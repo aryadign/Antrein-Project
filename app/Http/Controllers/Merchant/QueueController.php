@@ -36,7 +36,7 @@ class QueueController extends Controller
         $selectedStatus = $request->query('status');
         $selectedService = $request->query('service_id');
         $selectedSource = $request->query('source');
-        $selectedCounter = $request->query('counter');
+        $selectedCounterFilter = $request->query('counter_id', $request->query('counter'));
         $search = trim((string) $request->query('search', ''));
 
         $query = QueueTicket::with(['service', 'counter', 'statusHistories'])
@@ -50,11 +50,11 @@ class QueueController extends Controller
         }
 
         // Counter filter
-        if ($selectedCounter) {
-            if ($selectedCounter === 'unassigned') {
+        if ($selectedCounterFilter) {
+            if ($selectedCounterFilter === 'unassigned') {
                 $query->whereNull('counter_id');
             } else {
-                $query->where('counter_id', (int) $selectedCounter);
+                $query->where('counter_id', (int) $selectedCounterFilter);
             }
         }
 
@@ -65,6 +65,7 @@ class QueueController extends Controller
             QueueTicket::STATUS_SEDANG_DILAYANI,
             QueueTicket::STATUS_SELESAI,
             QueueTicket::STATUS_DILEWATI,
+            QueueTicket::STATUS_TIDAK_HADIR,
             QueueTicket::STATUS_DIBATALKAN,
         ])) {
             $query->where('status', $selectedStatus);
@@ -94,7 +95,7 @@ class QueueController extends Controller
                 WHEN status = 'sedang_dilayani' THEN 1 
                 WHEN status = 'dipanggil' THEN 2 
                 WHEN status = 'menunggu' THEN 3 
-                ELSE 4 END ASC, sequence_number ASC");
+                ELSE 4 END ASC, CASE WHEN booking_slot_start IS NULL THEN 0 ELSE 1 END ASC, booking_slot_start ASC, sequence_number ASC");
         } else {
             $query->latest('id');
         }
@@ -124,7 +125,11 @@ class QueueController extends Controller
                 ->count(),
             'dilewati' => QueueTicket::where('business_id', $business->id)
                 ->where('daily_queue_id', $dailyQueue->id)
-                ->where('status', QueueTicket::STATUS_DILEWATI)
+                ->whereIn('status', [QueueTicket::STATUS_DILEWATI, QueueTicket::STATUS_TIDAK_HADIR])
+                ->count(),
+            'tidak_hadir' => QueueTicket::where('business_id', $business->id)
+                ->where('daily_queue_id', $dailyQueue->id)
+                ->where('status', QueueTicket::STATUS_TIDAK_HADIR)
                 ->count(),
             'dibatalkan' => QueueTicket::where('business_id', $business->id)
                 ->where('daily_queue_id', $dailyQueue->id)
@@ -143,8 +148,16 @@ class QueueController extends Controller
 
         // Counters list
         $counters = $business->counters()->orderBy('code')->get();
-        $availableCounters = $user->assignedCounters();
         $activeCountersStatus = $this->queueService->getActiveCountersStatus($business);
+        if (! $business->usesStations()) {
+            $primaryCounter = $activeCountersStatus->first();
+            $availableCounters = $primaryCounter ? collect([$primaryCounter]) : collect();
+            $activeCounter = $primaryCounter;
+        } else {
+            $availableCounters = $user->assignedCounters();
+            $activeCounterId = session('merchant_active_counter_id') ?: ($availableCounters->first()?->id);
+            $activeCounter = $availableCounters->firstWhere('id', $activeCounterId) ?: $availableCounters->first();
+        }
 
         return view('merchant.queues.index', [
             'tickets' => $tickets,
@@ -161,7 +174,8 @@ class QueueController extends Controller
             'selectedStatus' => $selectedStatus,
             'selectedService' => $selectedService,
             'selectedSource' => $selectedSource,
-            'selectedCounter' => $selectedCounter,
+            'activeCounter' => $activeCounter,
+            'selectedCounterFilter' => $selectedCounterFilter,
             'search' => $search,
         ]);
     }

@@ -26,7 +26,7 @@ class AuthenticatedSessionController extends Controller
     /**
      * Handle an incoming authentication request.
      *
-     * @throws \Illuminate\Validation\ValidationException
+     * @throws ValidationException
      */
     public function store(Request $request): RedirectResponse
     {
@@ -87,7 +87,15 @@ class AuthenticatedSessionController extends Controller
             return redirect()->intended(route('admin.dashboard'));
         }
 
+        if ($user->isCustomer()) {
+            return redirect()->intended(route('customer.dashboard'));
+        }
+
         if ($user->hasCompletedOnboarding()) {
+            if ($user->business && ! $user->business->isApproved()) {
+                return redirect()->route('merchant.approval.status');
+            }
+
             return redirect()->intended(route('merchant.dashboard'));
         }
 

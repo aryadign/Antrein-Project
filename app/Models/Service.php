@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class Service extends Model
 {
@@ -22,6 +24,7 @@ class Service extends Model
         'business_id',
         'name',
         'description',
+        'image_path',
         'duration_minutes',
         'price',
         'daily_quota',
@@ -44,9 +47,64 @@ class Service extends Model
     }
 
     /**
+     * Public URL of the photo customers see for this service, if one was uploaded or seeded.
+     */
+    public function imageUrl(): ?string
+    {
+        if (! $this->image_path) {
+            return null;
+        }
+
+        if (Str::startsWith($this->image_path, ['http://', 'https://', 'images/'])) {
+            return asset($this->image_path);
+        }
+
+        return Storage::disk('public')->url($this->image_path);
+    }
+
+    /**
+     * Illustration icon guessed from the service name and description, used when no photo is uploaded.
+     */
+    public function iconPath(): ?string
+    {
+        $text = Str::lower($this->name.' '.$this->description);
+
+        return match (true) {
+            Str::contains($text, ['kopi', 'coffee', 'espresso', 'americano', 'latte']) => 'images/figma/coffee.svg',
+            Str::contains($text, ['teh', 'minum', 'jus', 'matcha', 'boba', 'milk tea', 'es ']) => 'images/figma/cup-soda.svg',
+            Str::contains($text, ['makan', 'nasi', 'roti', 'pastry', 'croissant', 'ayam', 'toast', 'mie', 'paket']) => 'images/figma/utensils.svg',
+            Str::contains($text, ['rambut', 'cukur', 'jenggot', 'kumis', 'potong', 'shaving']) => 'images/icons/scissors.svg',
+            Str::contains($text, ['facial', 'salon', 'creambath', 'kecantikan', 'spa', 'nail', 'makeup']) => 'images/icons/sparkles.svg',
+            Str::contains($text, ['periksa', 'dokter', 'gigi', 'mata', 'konsultasi', 'kesehatan']) => 'images/icons/stethoscope.svg',
+            Str::contains($text, ['servis', 'service', 'perbaik', 'reparasi', 'instal']) => 'images/icons/wrench.svg',
+            default => null,
+        };
+    }
+
+    /**
+     * Stock photo matching the service name, then the store category, used when no photo is uploaded.
+     */
+    public function fallbackImagePath(?BusinessCategory $category = null): ?string
+    {
+        $text = Str::lower($this->name.' '.$this->description);
+
+        return match (true) {
+            Str::contains($text, ['foto', 'cetak', 'studio', 'laminating']) => 'images/services/studio-foto.jpg',
+            Str::contains($text, ['teh', 'klepon', 'jajanan']) => 'images/services/teh-artisan.jpg',
+            Str::contains($text, ['pastry', 'croissant', 'roti', 'kue', 'cake', 'donat']) => 'images/stores/pastry.jpg',
+            Str::contains($text, ['matcha', 'jus', 'boba', 'milk tea', 'minuman']) => 'images/stores/kuliner.jpg',
+            Str::contains($text, ['kopi', 'coffee', 'espresso', 'americano', 'latte']) => 'images/stores/kopi.jpg',
+            Str::contains($text, ['makan', 'nasi', 'ayam', 'mie', 'paket', 'sunda']) => 'images/stores/restoran.jpg',
+            Str::contains($text, ['rambut', 'cukur', 'jenggot', 'kumis', 'shaving', 'barber', 'facial', 'creambath', 'manicure', 'eyelash', 'smoothing', 'salon']) => 'images/stores/barbershop.jpg',
+            Str::contains($text, ['periksa', 'dokter', 'konsultasi', 'kesehatan', 'klinik']) => 'images/stores/klinik.jpg',
+            default => $category?->coverImagePath(),
+        };
+    }
+
+    /**
      * Scope query to only include active services.
      *
-     * @param Builder<Service> $query
+     * @param  Builder<Service>  $query
      */
     public function scopeActive(Builder $query): Builder
     {
@@ -88,4 +146,3 @@ class Service extends Model
         return $this->hasMany(QueueTicket::class);
     }
 }
-

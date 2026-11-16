@@ -4,14 +4,14 @@
     description="Informasi profil akun, kepemilikan UMKM, dan rekam jejak aktivitas pengguna."
 >
     <div 
-        class="space-y-6" 
-        x-data="{ 
-            deactivateModalOpen: false, 
-            targetUserId: {{ $user->id }}, 
-            targetUserName: '{{ addslashes($user->name) }}', 
-            targetUserRole: '{{ $user->role }}', 
-            targetUserEmail: '{{ addslashes($user->email) }}',
-            actionUrl: '{{ route('admin.users.deactivate', $user) }}'
+        class="space-y-5 sm:space-y-6"
+        x-data="{
+            deactivateModalOpen: false,
+            targetUserId: {{ $user->id }},
+            targetUserName: @js($user->name),
+            targetUserRole: @js($user->role),
+            targetUserEmail: @js($user->email),
+            actionUrl: @js(route('admin.users.deactivate', $user)),
         }"
     >
         {{-- Flash Messages --}}
@@ -35,17 +35,17 @@
 
         {{-- Top Navigation & Actions --}}
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <a href="{{ route('admin.users.index') }}" class="inline-flex items-center gap-2 text-xs font-semibold text-neutral-600 hover:text-neutral-900 transition">
+            <a href="{{ route('admin.users.index') }}" class="inline-flex min-h-11 items-center gap-2 text-xs font-semibold text-neutral-600 hover:text-neutral-900 transition">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
                 Kembali ke Daftar Pengguna
             </a>
 
-            <div class="flex items-center gap-2">
+            <div class="grid grid-cols-1 sm:flex sm:items-center sm:gap-2">
                 @if ($user->is_active)
                     <button 
                         type="button" 
                         @click="deactivateModalOpen = true"
-                        class="px-4 py-2 rounded-lg bg-rose-50 text-rose-700 text-xs font-semibold hover:bg-rose-100 transition border border-rose-200"
+                        class="inline-flex h-11 w-full items-center justify-center px-4 rounded-lg bg-rose-50 text-rose-700 sm:w-auto text-xs font-semibold hover:bg-rose-100 transition border border-rose-200"
                     >
                         Nonaktifkan Akun
                     </button>
@@ -54,7 +54,7 @@
                         @csrf
                         <button 
                             type="submit" 
-                            class="px-4 py-2 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition shadow-xs"
+                            class="inline-flex h-11 w-full items-center justify-center px-4 rounded-lg bg-emerald-600 text-white sm:w-auto text-xs font-semibold hover:bg-emerald-700 transition shadow-xs"
                         >
                             Aktifkan Akun
                         </button>
@@ -63,8 +63,14 @@
             </div>
         </div>
 
+        @php
+            $operatorMemberships = $user->businessMemberships->where('role', \App\Models\BusinessMembership::ROLE_OPERATOR);
+            $isOperatorAccount = $user->isMerchant() && $user->ownedBusinesses->isEmpty() && $operatorMemberships->isNotEmpty();
+            $primaryBusiness = $user->ownedBusinesses->first() ?? $operatorMemberships->first()?->business ?? $user->business;
+        @endphp
+
         {{-- Header Profile Card --}}
-        <div class="bg-white rounded-xl border border-neutral-200 p-6 shadow-xs">
+        <div class="bg-white rounded-xl border border-neutral-200 p-4 shadow-xs sm:p-6">
             <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                 <div class="w-16 h-16 rounded-full bg-brand-50 border border-brand-200 text-brand-700 font-extrabold text-xl flex items-center justify-center shrink-0">
                     {{ strtoupper(substr($user->name, 0, 2)) }}
@@ -76,30 +82,28 @@
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800 border border-indigo-200">
                                 Administrator
                             </span>
+                        @elseif ($user->isCustomer())
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                Pelanggan
+                            </span>
+                        @elseif ($isOperatorAccount)
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-cyan-100 text-cyan-800 border border-cyan-200">
+                                Operator UMKM
+                            </span>
                         @else
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-200">
-                                Merchant UMKM
+                                Owner UMKM
                             </span>
                         @endif
 
-                        @if ($user->is_active)
-                            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                                Akun Aktif
-                            </span>
-                        @else
-                            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
-                                <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
-                                Akun Dinonaktifkan
-                            </span>
-                        @endif
+                        <x-status-badge :status="$user->is_active ? 'aktif' : 'nonaktif'" size="sm" />
                     </div>
-                    <p class="text-sm text-neutral-500 mt-1">{{ $user->email }}</p>
+                    <p class="text-sm text-neutral-500 mt-1 break-all">{{ $user->email }}</p>
                 </div>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-6">
             {{-- Account Information Details --}}
             <div class="bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-xs">
                 <div class="p-4 sm:p-5 border-b border-neutral-200">
@@ -108,95 +112,93 @@
                 </div>
 
                 <div class="p-4 sm:p-5 divide-y divide-neutral-100 text-sm">
-                    <div class="py-2.5 flex justify-between items-center">
+                    <div class="py-2.5 flex justify-between items-start gap-3">
                         <span class="text-neutral-500">ID Pengguna</span>
                         <span class="font-mono text-xs text-neutral-800 bg-neutral-100 px-2 py-0.5 rounded">#{{ $user->id }}</span>
                     </div>
 
-                    <div class="py-2.5 flex justify-between items-center">
+                    <div class="py-2.5 flex justify-between items-start gap-3">
                         <span class="text-neutral-500">Nama Lengkap</span>
-                        <span class="font-semibold text-neutral-900">{{ $user->name }}</span>
+                        <span class="min-w-0 text-right font-semibold text-neutral-900">{{ $user->name }}</span>
                     </div>
 
-                    <div class="py-2.5 flex justify-between items-center">
+                    <div class="py-2.5 flex justify-between items-start gap-3">
                         <span class="text-neutral-500">Alamat Email</span>
-                        <span class="font-medium text-neutral-800">{{ $user->email }}</span>
+                        <span class="min-w-0 break-all text-right font-medium text-neutral-800">{{ $user->email }}</span>
                     </div>
 
-                    <div class="py-2.5 flex justify-between items-center">
+                    <div class="py-2.5 flex justify-between items-start gap-3">
                         <span class="text-neutral-500">Peran Sistem</span>
-                        <span class="font-semibold {{ $user->isAdmin() ? 'text-indigo-600' : 'text-blue-600' }}">
-                            {{ $user->isAdmin() ? 'Administrator Platform' : 'Pemilik Usaha (Merchant)' }}
+                        <span class="font-semibold {{ $user->isAdmin() ? 'text-indigo-600' : ($user->isCustomer() ? 'text-emerald-700' : ($isOperatorAccount ? 'text-cyan-700' : 'text-blue-600')) }}">
+                            {{ $user->isAdmin() ? 'Administrator Platform' : ($user->isCustomer() ? 'Pelanggan AntreIn' : ($isOperatorAccount ? 'Staf Operator UMKM' : 'Pemilik Usaha (Owner UMKM)')) }}
                         </span>
                     </div>
 
-                    <div class="py-2.5 flex justify-between items-center">
+                    <div class="py-2.5 flex justify-between items-start gap-3">
                         <span class="text-neutral-500">Status Akun</span>
                         <span class="font-semibold {{ $user->is_active ? 'text-emerald-600' : 'text-rose-600' }}">
                             {{ $user->is_active ? 'Aktif (Dapat Login)' : 'Nonaktif (Akses Dicegah)' }}
                         </span>
                     </div>
 
-                    <div class="py-2.5 flex justify-between items-center">
+                    <div class="py-2.5 flex justify-between items-start gap-3">
                         <span class="text-neutral-500">Terdaftar Pada</span>
                         <span class="text-neutral-800">{{ $user->created_at->format('d M Y, H:i') }}</span>
                     </div>
 
-                    <div class="py-2.5 flex justify-between items-center">
+                    <div class="py-2.5 flex justify-between items-start gap-3">
                         <span class="text-neutral-500">Pembaruan Terakhir</span>
                         <span class="text-neutral-800">{{ $user->updated_at->format('d M Y, H:i') }}</span>
                     </div>
                 </div>
             </div>
 
-            {{-- Connected UMKM Information (If Merchant) --}}
+            {{-- Connected UMKM Information (If Merchant / Operator) --}}
             <div class="bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-xs">
                 <div class="p-4 sm:p-5 border-b border-neutral-200">
                     <h3 class="text-h3 font-bold text-neutral-900">Gerai UMKM Terhubung</h3>
-                    <p class="text-caption text-neutral-500 mt-0.5">Entitas bisnis yang dimiliki oleh akun pengguna ini.</p>
+                    <p class="text-caption text-neutral-500 mt-0.5">
+                        {{ $isOperatorAccount ? 'Penugasan gerai & loket layanan untuk akun operator ini.' : 'Entitas bisnis yang dimiliki atau dikelola oleh akun pengguna ini.' }}
+                    </p>
                 </div>
 
                 <div class="p-4 sm:p-5">
-                    @if ($user->business)
+                    @if ($primaryBusiness)
                         <div class="space-y-4">
                             <div class="flex items-start justify-between gap-3">
-                                <div>
-                                    <h4 class="font-bold text-base text-neutral-900">{{ $user->business->name }}</h4>
-                                    <p class="text-caption text-neutral-500">Slug: <code class="font-mono bg-neutral-100 px-1 rounded">{{ $user->business->slug }}</code></p>
+                                <div class="min-w-0">
+                                    <h4 class="font-bold text-base text-neutral-900">{{ $primaryBusiness->name }}</h4>
+                                    <p class="text-caption text-neutral-500">Slug: <code class="font-mono bg-neutral-100 px-1 rounded">{{ $primaryBusiness->slug }}</code></p>
                                 </div>
 
-                                @if ($user->business->is_suspended)
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-rose-100 text-rose-800">
-                                        Ditangguhkan
-                                    </span>
-                                @else
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-800">
-                                        Normal / Aktif
-                                    </span>
-                                @endif
+                                <x-status-badge :status="$primaryBusiness->is_suspended ? 'suspended' : 'aktif'" size="sm" class="shrink-0" />
                             </div>
 
                             <div class="p-3 bg-neutral-50 rounded-lg text-xs space-y-1.5 border border-neutral-200">
-                                <div class="flex justify-between">
+                                <div class="flex justify-between gap-3">
                                     <span class="text-neutral-500">Kategori:</span>
-                                    <span class="font-medium text-neutral-800">{{ $user->business->category?->name ?? '—' }}</span>
+                                    <span class="font-medium text-neutral-800">{{ $primaryBusiness->category?->name ?? '—' }}</span>
                                 </div>
-                                <div class="flex justify-between">
+                                <div class="flex justify-between gap-3">
                                     <span class="text-neutral-500">Kontak Telepon:</span>
-                                    <span class="font-medium text-neutral-800">{{ $user->business->phone ?? '—' }}</span>
+                                    <span class="font-medium text-neutral-800">{{ $primaryBusiness->phone ?? '—' }}</span>
                                 </div>
-                                <div class="flex justify-between">
+                                <div class="flex justify-between gap-3">
                                     <span class="text-neutral-500">Status Operasional:</span>
-                                    <span class="font-medium {{ $user->business->is_active ? 'text-emerald-700' : 'text-neutral-600' }}">
-                                        {{ $user->business->is_active ? 'Buka / Menerima' : 'Tutup' }}
-                                    </span>
+                                    <x-status-badge :status="$primaryBusiness->status" size="sm" />
                                 </div>
+                                @if ($isOperatorAccount && $operatorMemberships->first()?->assignedCounters->isNotEmpty())
+                                    <div class="flex justify-between gap-3">
+                                        <span class="text-neutral-500">Loket Ditugaskan:</span>
+                                        <span class="font-semibold text-neutral-900 text-right">{{ $operatorMemberships->first()->assignedCounters->pluck('name')->implode(', ') }}</span>
+                                    </div>
+                                @endif
                             </div>
 
                             <div class="pt-2">
                                 <a 
-                                    href="{{ route('admin.businesses.show', $user->business) }}" 
-                                    class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-neutral-900 text-white text-xs font-semibold hover:bg-neutral-800 transition"
+                                    href="{{ route('admin.businesses.show', $primaryBusiness) }}" 
+                                    class="inline-flex h-11 items-center gap-1.5 px-4 rounded-lg bg-neutral-900 text-white text-xs font-semibold hover:bg-neutral-800 transition"
                                 >
                                     Lihat Detail Profil UMKM
                                     <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
@@ -208,6 +210,12 @@
                             <svg class="w-10 h-10 mx-auto text-neutral-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
                             <p class="font-semibold text-neutral-700">Belum Ada Gerai Terdaftar</p>
                             <p class="text-caption text-neutral-500 mt-1">Pengguna ini terdaftar sebagai Merchant namun belum menyelesaikan langkah onboarding profil gerai.</p>
+                        </div>
+                    @elseif ($user->isCustomer())
+                        <div class="py-8 text-center text-neutral-400">
+                            <svg class="w-10 h-10 mx-auto text-emerald-200 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                            <p class="font-semibold text-neutral-700">Akun Pelanggan</p>
+                            <p class="text-caption text-neutral-500 mt-1">Akun pelanggan digunakan untuk mengambil tiket antrean dan memberi ulasan UMKM.</p>
                         </div>
                     @else
                         <div class="py-8 text-center text-neutral-400">
@@ -230,11 +238,13 @@
             <div class="divide-y divide-neutral-100">
                 @forelse ($userLogs as $log)
                     <div class="p-4 sm:px-5 flex items-start gap-3 text-sm">
-                        <div class="w-2 h-2 rounded-full bg-brand-500 mt-2 shrink-0"></div>
+                        <span class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-700" aria-hidden="true">
+                            <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+                        </span>
                         <div class="min-w-0 flex-1">
-                            <div class="flex items-center justify-between gap-2">
-                                <span class="font-semibold text-neutral-900">{{ $log->action }}</span>
-                                <span class="text-caption text-neutral-400 shrink-0">{{ $log->created_at->diffForHumans() }}</span>
+                            <div class="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5">
+                                <code class="break-all font-mono text-xs font-semibold text-neutral-900">{{ $log->action }}</code>
+                                <time datetime="{{ $log->created_at->toIso8601String() }}" class="text-caption text-neutral-400 shrink-0 tabular-nums">{{ $log->created_at->diffForHumans() }}</time>
                             </div>
                             <p class="text-caption text-neutral-600 mt-0.5">{{ $log->description }}</p>
                         </div>
@@ -262,11 +272,11 @@
                 @click="deactivateModalOpen = false"
             ></div>
 
-            <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
-                <div class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg border border-neutral-200">
+            <div class="flex min-h-full items-end justify-center text-center sm:items-center sm:p-4">
+                <div class="relative w-full transform overflow-hidden rounded-t-2xl bg-white text-left shadow-xl transition-all sm:my-8 sm:max-w-lg sm:rounded-2xl border border-neutral-200">
                     <form method="POST" :action="actionUrl">
                         @csrf
-                        <div class="bg-white p-6">
+                        <div class="bg-white p-5 sm:p-6">
                             <div class="flex items-start gap-4">
                                 <div class="w-10 h-10 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
                                     <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
@@ -297,7 +307,7 @@
                                                 type="checkbox" 
                                                 name="emergency_force" 
                                                 value="1" 
-                                                class="rounded border-rose-300 text-rose-600 focus:ring-rose-500 mt-0.5"
+                                                class="size-5 rounded border-rose-300 text-rose-600 focus:ring-rose-500 mt-0.5"
                                             >
                                             <div class="text-xs">
                                                 <span class="font-bold text-rose-900 block">Bypass Darurat (Emergency Force)</span>
@@ -323,17 +333,17 @@
                             </div>
                         </div>
 
-                        <div class="bg-neutral-50 px-6 py-4 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 border-t border-neutral-200">
+                        <div class="bg-neutral-50 px-5 py-4 sm:px-6 grid grid-cols-2 gap-2 sm:flex sm:justify-end border-t border-neutral-200">
                             <button 
                                 type="button" 
-                                @click="deactivateModalOpen = false" 
-                                class="px-4 py-2 rounded-lg border border-neutral-300 text-neutral-700 text-xs font-semibold hover:bg-neutral-100 transition"
+                                @click="deactivateModalOpen = false"
+                                class="inline-flex h-11 items-center justify-center px-4 rounded-lg border border-neutral-300 text-neutral-700 text-xs font-semibold hover:bg-neutral-100 transition"
                             >
                                 Batal
                             </button>
                             <button 
-                                type="submit" 
-                                class="px-4 py-2 rounded-lg bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 transition shadow-xs"
+                                type="submit"
+                                class="inline-flex h-11 items-center justify-center px-4 rounded-lg bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 transition shadow-xs"
                             >
                                 Konfirmasi Nonaktifkan
                             </button>

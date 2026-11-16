@@ -4,7 +4,7 @@ namespace Tests\Feature\Customer;
 
 use App\Models\Business;
 use App\Models\BusinessCategory;
-use App\Models\DailyQueue;
+use App\Models\QueueStatusHistory;
 use App\Models\QueueTicket;
 use App\Models\Service;
 use App\Models\User;
@@ -19,8 +19,11 @@ class CustomerTrackingPageTest extends TestCase
     use RefreshDatabase;
 
     private QueueService $queueService;
+
     private Business $business;
+
     private Service $service;
+
     private User $merchant;
 
     protected function setUp(): void
@@ -69,7 +72,7 @@ class CustomerTrackingPageTest extends TestCase
         $response = $this->get(route('customer.queue.track', ['token' => $ticket->access_token]));
 
         $response->assertOk();
-        $response->assertSee('A-001');
+        $response->assertSee('TKT-001');
         $response->assertSee('Bali Eye Center');
         $response->assertSee('Periksa Mata Lengkap');
         $response->assertSee('Gusti Ngurah Jaya');
@@ -90,7 +93,7 @@ class CustomerTrackingPageTest extends TestCase
         $response = $this->get(route('customer.ticket.show', ['token' => $ticket->access_token]));
 
         $response->assertOk();
-        $response->assertSee('A-001');
+        $response->assertSee('TKT-001');
         $response->assertSee('Bali Eye Center');
     }
 
@@ -220,11 +223,137 @@ class CustomerTrackingPageTest extends TestCase
         $response = $this->get(route('customer.queue.track', ['token' => $ticket->access_token]));
 
         $response->assertStatus(410);
-        $response->assertSee('Tautan Pelacakan Kedaluwarsa');
+        $response->assertSee('Tiket Pelacakan Kedaluwarsa');
         $response->assertDontSee('Gusti Ngurah Jaya');
         $response->assertDontSee('081234567890');
 
         Carbon::setTestNow(); // reset
     }
-}
 
+    public function test_waiting_tracking_page_shows_cancel_button_and_qr_without_copy_link(): void
+    {
+        $customer = User::factory()->customer()->create();
+        $ticket = $this->queueService->generateOnlineTicket(
+            business: $this->business,
+            service: $this->service,
+            customerName: 'Gusti Ngurah Jaya',
+            customerPhone: '081234567890',
+            customer: $customer
+        );
+
+        $this->actingAs($customer)->get(route('customer.queue.track', ['token' => $ticket->access_token]))
+            ->assertOk()
+            ->assertSee('Batalkan Antrean')
+            ->assertSee('QR Code Tiket')
+            ->assertSee('Unduh QR Tiket')
+            ->assertSee('<svg', false)
+            ->assertDontSee('Salin Link Tiket')
+            ->assertDontSee('Link tiket Anda');
+    }
+
+    public function test_customer_can_cancel_waiting_ticket_with_custom_reason(): void
+    {
+        $customer = User::factory()->customer()->create();
+        $ticket = $this->queueService->generateOnlineTicket(
+            business: $this->business,
+            service: $this->service,
+            customerName: 'Gusti Ngurah Jaya',
+            customerPhone: '081234567890',
+            customer: $customer
+        );
+
+        $response = $this->actingAs($customer)->post(route('customer.queue.cancel', ['token' => $ticket->access_token]), [
+            'cancellation_reason' => 'Waktu tunggu terlalu lama',
+        ]);
+
+        $response->assertRedirect(route('customer.queue.track', ['token' => $ticket->access_token]));
+        $response->assertSessionHas('status', 'Antrean '.$ticket->ticket_number.' berhasil dibatalkan.');
+
+        $ticket->refresh();
+        $this->assertSame(QueueTicket::STATUS_DIBATALKAN, $ticket->status);
+        $this->assertSame('Waktu tunggu terlalu lama', $ticket->cancellation_reason);
+
+        $this->assertDatabaseHas('queue_status_histories', [
+            'queue_ticket_id' => $ticket->id,
+            'from_status' => QueueTicket::STATUS_MENUNGGU,
+            'to_status' => QueueTicket::STATUS_DIBATALKAN,
+            'actor_type' => QueueStatusHistory::ACTOR_CUSTOMER,
+            'actor_id' => null,
+        ]);
+
+        $this->actingAs($customer)->get(route('customer.queue.track', ['token' => $ticket->access_token]))
+            ->assertOk()
+            ->assertSee('Dibatalkan')
+            ->assertSee('Waktu tunggu terlalu lama')
+            ->assertDontSee('Batalkan Antrean');
+    }
+
+    public function test_customer_cancel_uses_default_reason_when_blank(): void
+    {
+        $customer = User::factory()->customer()->create();
+        $ticket = $this->queueService->generateOnlineTicket(
+            business: $this->business,
+            service: $this->service,
+            customerName: 'Gusti Ngurah Jaya',
+            customer: $customer
+        );
+
+        $this->actingAs($customer)->post(route('customer.queue.cancel', ['token' => $ticket->access_token]), [
+            'cancellation_reason' => '',
+        ])->assertRedirect(route('customer.queue.track', ['token' => $ticket->access_token]));
+
+        $this->assertSame(QueueTicket::STATUS_DIBATALKAN, $ticket->fresh()->status);
+        $this->assertSame('Dibatalkan oleh pelanggan', $ticket->fresh()->cancellation_reason);
+    }
+
+    public function test_customer_cannot_cancel_ticket_after_being_called_or_served(): void
+    {
+        $customer = User::factory()->customer()->create();
+        $ticket = $this->queueService->generateOnlineTicket(
+            business: $this->business,
+            service: $this->service,
+            customerName: 'Gusti Ngurah Jaya',
+            customer: $customer
+        );
+
+        $this->queueService->callNext($this->business, $this->merchant);
+        $ticket->refresh();
+
+        $this->actingAs($customer)->postJson(route('customer.queue.cancel', ['token' => $ticket->access_token]), [
+            'cancellation_reason' => 'Berubah pikiran',
+        ])->assertStatus(422)->assertJsonStructure(['message']);
+
+        $this->assertSame(QueueTicket::STATUS_DIPANGGIL, $ticket->fresh()->status);
+
+        $this->queueService->startService($ticket, $this->merchant);
+
+        $this->actingAs($customer)->post(route('customer.queue.cancel', ['token' => $ticket->access_token]))
+            ->assertSessionHasErrors('queue_error');
+
+        $this->assertSame(QueueTicket::STATUS_SEDANG_DILAYANI, $ticket->fresh()->status);
+    }
+
+    public function test_customer_cancel_returns_410_for_expired_terminal_ticket(): void
+    {
+        $customer = User::factory()->customer()->create();
+        $ticket = $this->queueService->generateOnlineTicket(
+            business: $this->business,
+            service: $this->service,
+            customerName: 'Gusti Ngurah Jaya',
+            customer: $customer
+        );
+
+        $this->queueService->callNext($this->business, $this->merchant);
+        $ticket->refresh();
+        $this->queueService->startService($ticket, $this->merchant);
+        $ticket->refresh();
+        $this->queueService->completeTicket($ticket, $this->merchant);
+
+        Carbon::setTestNow(now()->addHours(25));
+
+        $this->actingAs($customer)->post(route('customer.queue.cancel', ['token' => $ticket->access_token]))
+            ->assertStatus(410);
+
+        Carbon::setTestNow();
+    }
+}

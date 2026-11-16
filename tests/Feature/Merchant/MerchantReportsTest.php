@@ -4,6 +4,7 @@ namespace Tests\Feature\Merchant;
 
 use App\Models\Business;
 use App\Models\BusinessCategory;
+use App\Models\BusinessMembership;
 use App\Models\DailyQueue;
 use App\Models\QueueTicket;
 use App\Models\Service;
@@ -18,9 +19,13 @@ class MerchantReportsTest extends TestCase
     use RefreshDatabase;
 
     private User $merchant;
+
     private Business $business;
+
     private Service $serviceA;
+
     private Service $serviceB;
+
     private DailyQueue $dailyQueue;
 
     protected function setUp(): void
@@ -83,6 +88,23 @@ class MerchantReportsTest extends TestCase
 
         $response = $this->actingAs($admin)->get(route('merchant.reports'));
         $response->assertForbidden();
+    }
+
+    public function test_operator_cannot_access_owner_reports_or_exports(): void
+    {
+        $operator = User::factory()->merchant()->create();
+        BusinessMembership::create([
+            'business_id' => $this->business->id,
+            'organization_id' => $this->business->organization_id,
+            'user_id' => $operator->id,
+            'role' => BusinessMembership::ROLE_OPERATOR,
+            'is_active' => true,
+            'joined_at' => now(),
+        ]);
+
+        $this->actingAs($operator)->get(route('merchant.reports'))->assertForbidden();
+        $this->actingAs($operator)->get(route('merchant.reports.export.csv'))->assertForbidden();
+        $this->actingAs($operator)->get(route('merchant.reports.export.pdf'))->assertForbidden();
     }
 
     public function test_merchant_without_onboarding_is_redirected_to_onboarding(): void
@@ -190,7 +212,6 @@ class MerchantReportsTest extends TestCase
          * Service A: Total 3 (2 completed, 0 skipped, 1 cancelled)
          * Service B: Total 2 (1 completed, 1 skipped, 0 cancelled)
          */
-
         $baseTime = Carbon::now('Asia/Makassar')->startOfDay()->addHours(9);
 
         // Ticket 1
@@ -286,19 +307,25 @@ class MerchantReportsTest extends TestCase
         $this->assertEquals(23.3, $report['avgServiceMinutes']);
         $this->assertEquals(3, $report['serviceSamples']);
 
-        // Verify Per-Service Breakdown (M9-08)
+        // Verify Per-Service Breakdown & Gross Revenue (M9-08)
+        $this->assertEquals(200000.0, $report['grossRevenue']);
+
         $services = $report['servicesBreakdown'];
         $svcA = $services->firstWhere('service_name', 'Gentleman Haircut');
         $this->assertNotNull($svcA);
+        $this->assertEquals(75000.0, $svcA['unit_price']);
         $this->assertEquals(3, $svcA['total_tickets']);
         $this->assertEquals(2, $svcA['completed_tickets']);
         $this->assertEquals(1, $svcA['cancelled_tickets']);
+        $this->assertEquals(150000.0, $svcA['gross_revenue']);
 
         $svcB = $services->firstWhere('service_name', 'Beard Grooming');
         $this->assertNotNull($svcB);
+        $this->assertEquals(50000.0, $svcB['unit_price']);
         $this->assertEquals(2, $svcB['total_tickets']);
         $this->assertEquals(1, $svcB['completed_tickets']);
         $this->assertEquals(1, $svcB['skipped_tickets']);
+        $this->assertEquals(50000.0, $svcB['gross_revenue']);
 
         // Web view response verification
         $response = $this->actingAs($this->merchant)->get(route('merchant.reports', ['period' => 'today']));
@@ -307,6 +334,10 @@ class MerchantReportsTest extends TestCase
         $response->assertSeeText('23.3 mnt');
         $response->assertSee('Gentleman Haircut');
         $response->assertSee('Beard Grooming');
+        $response->assertSee('Estimasi Pemasukan Kotor');
+        $response->assertSee('Rp 200.000');
+        $response->assertSee('Rp 150.000');
+        $response->assertSee('Rp 50.000');
     }
 
     public function test_empty_and_incomplete_data_displays_insufficient_data_notice(): void
@@ -332,11 +363,11 @@ class MerchantReportsTest extends TestCase
                 'business_id' => $this->business->id,
                 'daily_queue_id' => $this->dailyQueue->id,
                 'service_id' => $this->serviceA->id,
-                'ticket_number' => 'P-' . str_pad((string) ($i + 1), 3, '0', STR_PAD_LEFT),
+                'ticket_number' => 'P-'.str_pad((string) ($i + 1), 3, '0', STR_PAD_LEFT),
                 'sequence_number' => $i + 1,
-                'customer_name' => 'Pelanggan ' . ($i + 1),
+                'customer_name' => 'Pelanggan '.($i + 1),
                 'status' => QueueTicket::STATUS_SELESAI,
-                'access_token' => 'tok-p-' . $i,
+                'access_token' => 'tok-p-'.$i,
                 'created_at' => $time10am->copy(),
             ]);
         }
@@ -352,11 +383,11 @@ class MerchantReportsTest extends TestCase
                 'business_id' => $this->business->id,
                 'daily_queue_id' => $this->dailyQueue->id,
                 'service_id' => $this->serviceA->id,
-                'ticket_number' => 'P-' . str_pad((string) ($i + 1), 3, '0', STR_PAD_LEFT),
+                'ticket_number' => 'P-'.str_pad((string) ($i + 1), 3, '0', STR_PAD_LEFT),
                 'sequence_number' => $i + 1,
-                'customer_name' => 'Pelanggan ' . ($i + 1),
+                'customer_name' => 'Pelanggan '.($i + 1),
                 'status' => QueueTicket::STATUS_SELESAI,
-                'access_token' => 'tok-p-' . $i,
+                'access_token' => 'tok-p-'.$i,
                 'created_at' => $time10am->copy(),
             ]);
         }

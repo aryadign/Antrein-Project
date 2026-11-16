@@ -4,6 +4,7 @@ namespace Tests\Feature\Queue;
 
 use App\Models\Business;
 use App\Models\BusinessCategory;
+use App\Models\BusinessMembership;
 use App\Models\QueueTicket;
 use App\Models\Service;
 use App\Models\User;
@@ -15,7 +16,11 @@ class WalkInTicketCreationTest extends TestCase
     use RefreshDatabase;
 
     private User $merchant;
+
+    private User $operator;
+
     private Business $business;
+
     private Service $service;
 
     protected function setUp(): void
@@ -40,6 +45,14 @@ class WalkInTicketCreationTest extends TestCase
             'status' => Business::STATUS_BUKA,
         ]);
 
+        $this->operator = User::factory()->merchant()->create();
+        BusinessMembership::create([
+            'business_id' => $this->business->id,
+            'user_id' => $this->operator->id,
+            'role' => BusinessMembership::ROLE_OPERATOR,
+            'is_active' => true,
+        ]);
+
         $this->service = Service::create([
             'business_id' => $this->business->id,
             'name' => 'Signature Haircut',
@@ -51,7 +64,7 @@ class WalkInTicketCreationTest extends TestCase
 
     public function test_merchant_can_create_walk_in_ticket(): void
     {
-        $response = $this->actingAs($this->merchant)->postJson(route('merchant.queues.walk-in'), [
+        $response = $this->actingAs($this->operator)->postJson(route('merchant.queues.walk-in'), [
             'service_id' => $this->service->id,
             'customer_name' => 'Walk-in Guest',
             'notes' => 'Permintaan potong undercut',
@@ -70,13 +83,13 @@ class WalkInTicketCreationTest extends TestCase
             ],
         ]);
 
-        $this->assertEquals('A-001', $response->json('data.ticket_number'));
+        $this->assertEquals('TKT-001', $response->json('data.ticket_number'));
         $this->assertNotEmpty($response->json('data.access_token'));
 
         $this->assertDatabaseHas('queue_tickets', [
             'business_id' => $this->business->id,
             'service_id' => $this->service->id,
-            'ticket_number' => 'A-001',
+            'ticket_number' => 'TKT-001',
             'customer_name' => 'Walk-in Guest',
             'source' => QueueTicket::SOURCE_WALK_IN,
             'status' => QueueTicket::STATUS_WAITING,
@@ -86,7 +99,7 @@ class WalkInTicketCreationTest extends TestCase
 
     public function test_walk_in_ticket_creation_allows_optional_phone(): void
     {
-        $response = $this->actingAs($this->merchant)->postJson(route('merchant.queues.walk-in'), [
+        $response = $this->actingAs($this->operator)->postJson(route('merchant.queues.walk-in'), [
             'service_id' => $this->service->id,
             'customer_name' => 'Guest With Phone',
             'customer_phone' => '081333444555',
@@ -104,7 +117,7 @@ class WalkInTicketCreationTest extends TestCase
         $this->business->update(['status' => Business::STATUS_JEDA]);
 
         // Attempting without confirmation
-        $response1 = $this->actingAs($this->merchant)->postJson(route('merchant.queues.walk-in'), [
+        $response1 = $this->actingAs($this->operator)->postJson(route('merchant.queues.walk-in'), [
             'service_id' => $this->service->id,
             'customer_name' => 'Guest During Pause',
         ]);
@@ -116,21 +129,21 @@ class WalkInTicketCreationTest extends TestCase
         $this->assertStringContainsString('Jeda Sementara', $response1->json('message'));
 
         // Attempting with confirmed_paused = true
-        $response2 = $this->actingAs($this->merchant)->postJson(route('merchant.queues.walk-in'), [
+        $response2 = $this->actingAs($this->operator)->postJson(route('merchant.queues.walk-in'), [
             'service_id' => $this->service->id,
             'customer_name' => 'Guest During Pause',
             'confirmed_paused' => true,
         ]);
 
         $response2->assertCreated();
-        $this->assertEquals('A-001', $response2->json('data.ticket_number'));
+        $this->assertEquals('TKT-001', $response2->json('data.ticket_number'));
     }
 
     public function test_walk_in_creation_fails_when_business_is_closed(): void
     {
         $this->business->update(['status' => Business::STATUS_TUTUP]);
 
-        $response = $this->actingAs($this->merchant)->postJson(route('merchant.queues.walk-in'), [
+        $response = $this->actingAs($this->operator)->postJson(route('merchant.queues.walk-in'), [
             'service_id' => $this->service->id,
             'customer_name' => 'Guest After Closing',
         ]);
@@ -161,7 +174,7 @@ class WalkInTicketCreationTest extends TestCase
             'is_active' => true,
         ]);
 
-        $response = $this->actingAs($this->merchant)->postJson(route('merchant.queues.walk-in'), [
+        $response = $this->actingAs($this->operator)->postJson(route('merchant.queues.walk-in'), [
             'service_id' => $otherService->id,
             'customer_name' => 'Intruder Guest',
         ]);

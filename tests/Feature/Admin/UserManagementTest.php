@@ -4,6 +4,8 @@ namespace Tests\Feature\Admin;
 
 use App\Models\Business;
 use App\Models\BusinessCategory;
+use App\Models\BusinessCounter;
+use App\Models\BusinessMembership;
 use App\Models\DailyQueue;
 use App\Models\QueueTicket;
 use App\Models\Service;
@@ -72,7 +74,7 @@ class UserManagementTest extends TestCase
 
         $category = BusinessCategory::create([
             'name' => 'Klinik',
-            'slug' => 'klinik-' . uniqid(),
+            'slug' => 'klinik-'.uniqid(),
             'is_active' => true,
         ]);
 
@@ -136,7 +138,7 @@ class UserManagementTest extends TestCase
 
         $category = BusinessCategory::create([
             'name' => 'Klinik',
-            'slug' => 'klinik-' . uniqid(),
+            'slug' => 'klinik-'.uniqid(),
             'is_active' => true,
         ]);
 
@@ -230,5 +232,76 @@ class UserManagementTest extends TestCase
             'user_id' => $admin->id,
         ]);
     }
-}
 
+    public function test_admin_can_search_and_filter_operator_accounts(): void
+    {
+        $admin = User::factory()->admin()->create(['name' => 'Admin Penguji']);
+        $owner = User::factory()->merchant()->create(['name' => 'Owner Sari']);
+        $operator = User::factory()->merchant()->create(['name' => 'Staf Budi Operator']);
+        $customer = User::factory()->customer()->create(['name' => 'Pelanggan Dina']);
+
+        $category = BusinessCategory::create([
+            'name' => 'Kafe',
+            'slug' => 'kafe-test',
+            'is_active' => true,
+        ]);
+
+        $business = Business::create([
+            'user_id' => $owner->id,
+            'category_id' => $category->id,
+            'name' => 'Kopi Nusantara',
+            'slug' => 'kopi-nusantara-test',
+            'phone' => '081234567890',
+            'timezone' => 'Asia/Makassar',
+            'status' => Business::STATUS_BUKA,
+            'approval_status' => Business::APPROVAL_APPROVED,
+            'is_active' => true,
+        ]);
+
+        $counter = BusinessCounter::create([
+            'business_id' => $business->id,
+            'name' => 'Loket Kopi Utama',
+            'code' => 'L-99',
+            'is_active' => true,
+        ]);
+
+        $membership = BusinessMembership::create([
+            'business_id' => $business->id,
+            'organization_id' => $business->organization_id,
+            'user_id' => $operator->id,
+            'role' => BusinessMembership::ROLE_OPERATOR,
+            'is_active' => true,
+            'joined_at' => now(),
+        ]);
+        $membership->assignedCounters()->sync([$counter->id]);
+
+        // Filter role=operator finds Operator Budi with UMKM & counter label, excludes owner & customer
+        $filterOp = $this->actingAs($admin)->get(route('admin.users.index', ['role' => 'operator']));
+        $filterOp->assertOk()
+            ->assertSee('Staf Budi Operator')
+            ->assertSee('Operator UMKM')
+            ->assertSee('Kopi Nusantara')
+            ->assertSee('Loket Kopi Utama')
+            ->assertDontSee('Owner Sari')
+            ->assertDontSee('Pelanggan Dina');
+
+        // Search keyword "operator" matches operator account
+        $searchKeyword = $this->actingAs($admin)->get(route('admin.users.index', ['search' => 'operator']));
+        $searchKeyword->assertOk()
+            ->assertSee('Staf Budi Operator')
+            ->assertDontSee('Pelanggan Dina');
+
+        // Search by UMKM name matches both owner & operator attached to Kopi Nusantara
+        $searchUmkm = $this->actingAs($admin)->get(route('admin.users.index', ['search' => 'Kopi Nusantara']));
+        $searchUmkm->assertOk()
+            ->assertSee('Staf Budi Operator')
+            ->assertSee('Owner Sari');
+
+        // Detail page displays operator badge, UMKM, and counter assignment
+        $detail = $this->actingAs($admin)->get(route('admin.users.show', $operator));
+        $detail->assertOk()
+            ->assertSee('Operator UMKM')
+            ->assertSee('Kopi Nusantara')
+            ->assertSee('Loket Kopi Utama');
+    }
+}

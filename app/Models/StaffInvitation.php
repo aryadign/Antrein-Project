@@ -22,6 +22,7 @@ class StaffInvitation extends Model
         'invited_by_user_id',
         'email',
         'role',
+        'business_counter_id',
         'token_hash',
         'expires_at',
         'accepted_at',
@@ -48,6 +49,14 @@ class StaffInvitation extends Model
     public function business(): BelongsTo
     {
         return $this->belongsTo(Business::class);
+    }
+
+    /**
+     * Get the counter the owner picked as this operator's first assignment, if any.
+     */
+    public function counter(): BelongsTo
+    {
+        return $this->belongsTo(BusinessCounter::class, 'business_counter_id');
     }
 
     /**
@@ -103,4 +112,3 @@ class StaffInvitation extends Model
         return [$plainToken, $tokenHash];
     }
 }
-

@@ -28,10 +28,15 @@ class HistoricalWaitingTimeEstimationTest extends TestCase
     use RefreshDatabase;
 
     private QueueService $queueService;
+
     private WaitingTimeEstimationService $estimationService;
+
     private User $merchant;
+
     private Business $business;
+
     private Service $service;
+
     private DailyQueue $todayQueue;
 
     protected function setUp(): void
@@ -732,7 +737,12 @@ class HistoricalWaitingTimeEstimationTest extends TestCase
         $this->seedWaitingTicket(1);
         $this->seedWaitingTicket(2);
 
-        $response = $this->postJson(route('customer.queue.take', ['slug' => $this->business->slug]), [
+        $customer = User::factory()->customer()->create([
+            'is_active' => true,
+            'email_verified_at' => now(),
+        ]);
+
+        $response = $this->actingAs($customer)->postJson(route('customer.queue.take', ['slug' => $this->business->slug]), [
             'service_id' => $this->service->id,
             'customer_name' => 'Pelanggan Ambil Baru',
             'customer_phone' => '081234567890',
@@ -742,12 +752,14 @@ class HistoricalWaitingTimeEstimationTest extends TestCase
         $response->assertJsonStructure([
             'data' => [
                 'estimated_wait_minutes',
+                'estimated_wait_range',
                 'estimated_wait_reason',
             ],
         ]);
-        // New ticket lands at position 3: 2 ahead x 10 / 1 counter = 20 minutes.
+        // New ticket lands at position 3: 2 ahead x 10 / 1 counter = 20 minutes (range 16–25 menit).
         $this->assertSame(3, $response->json('data.queue_position'));
         $this->assertSame(20, $response->json('data.estimated_wait_minutes'));
+        $this->assertSame('16–25 menit', $response->json('data.estimated_wait_range'));
         $this->assertNull($response->json('data.estimated_wait_reason'));
     }
 
@@ -767,7 +779,7 @@ class HistoricalWaitingTimeEstimationTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('Perkiraan waktu tunggu');
-        $response->assertSee('± 10 menit');
+        $response->assertSee('8–13 menit');
         $response->assertSee('bukan janji waktu pelayanan');
         // The old static duration-based estimate line must not appear for the wait.
         $response->assertSee('Estimasi Durasi'); // service metadata row stays (nominal service duration)

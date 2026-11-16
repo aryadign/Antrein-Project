@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Merchant;
 
 use App\Http\Controllers\Controller;
 use App\Models\Business;
-use App\Models\CustomerReview;
 use App\Models\QueueTicket;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -28,7 +27,7 @@ class CustomerReviewController extends Controller
         // Metrics calculation (strictly tenant-isolated)
         $totalReviews = $business->customerReviews()->count();
         $averageRating = $business->averageRating();
-        
+
         $completedTicketsCount = $business->queueTickets()
             ->where('status', QueueTicket::STATUS_SELESAI)
             ->count();
@@ -45,13 +44,35 @@ class CustomerReviewController extends Controller
             1 => $business->customerReviews()->where('rating', 1)->count(),
         ];
 
+        $ratingBreakdown = [];
+        foreach ($ratingsDistribution as $star => $count) {
+            $ratingBreakdown[$star] = [
+                'count' => $count,
+                'percent' => $totalReviews > 0 ? (int) round(($count / $totalReviews) * 100) : 0,
+            ];
+        }
+
+        $reviewsWithCommentCount = $business->customerReviews()
+            ->whereNotNull('comment')
+            ->where('comment', '!=', '')
+            ->count();
+
+        $withCommentOnly = $request->boolean('dengan_komentar');
+        $reviewSort = (string) $request->query('urut_ulasan', 'terbaru');
+        if (! in_array($reviewSort, ['terbaru', 'rating_tinggi', 'rating_rendah'], true)) {
+            $reviewSort = 'terbaru';
+        }
+
         // Query with filters
         $query = $business->customerReviews()
-            ->with(['queueTicket', 'service'])
-            ->latest();
+            ->with(['queueTicket', 'service']);
 
         if ($request->filled('rating') && in_array((int) $request->rating, [1, 2, 3, 4, 5], true)) {
             $query->where('rating', (int) $request->rating);
+        }
+
+        if ($withCommentOnly) {
+            $query->whereNotNull('comment')->where('comment', '!=', '');
         }
 
         if ($request->filled('service_id')) {
@@ -69,6 +90,12 @@ class CustomerReviewController extends Controller
             });
         }
 
+        match ($reviewSort) {
+            'rating_tinggi' => $query->orderByDesc('rating')->latest(),
+            'rating_rendah' => $query->orderBy('rating')->latest(),
+            default => $query->latest(),
+        };
+
         $reviews = $query->paginate(15)->withQueryString();
         $services = $business->services()->orderBy('name')->get();
 
@@ -80,8 +107,11 @@ class CustomerReviewController extends Controller
             'completedTicketsCount' => $completedTicketsCount,
             'reviewRate' => $reviewRate,
             'ratingsDistribution' => $ratingsDistribution,
+            'ratingBreakdown' => $ratingBreakdown,
+            'reviewsWithCommentCount' => $reviewsWithCommentCount,
+            'withCommentOnly' => $withCommentOnly,
+            'reviewSort' => $reviewSort,
             'services' => $services,
         ]);
     }
 }
-

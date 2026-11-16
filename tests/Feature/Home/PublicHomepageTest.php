@@ -37,7 +37,7 @@ class PublicHomepageTest extends TestCase
         $response->assertSee('Fitur');
         $response->assertSee('Untuk UMKM');
         $response->assertSee('Pertanyaan yang Sering Diajukan (FAQ)');
-        $response->assertSee('A-001'); // Mockup queue card number
+        $response->assertSee('TKT-001'); // Mockup queue card number
         $response->assertSee('Unified Online &amp; Walk-in Queue', false);
         $response->assertSee('Multi-Counter Management');
         $response->assertSee('Real-Time Queue Updates');
@@ -125,5 +125,88 @@ class PublicHomepageTest extends TestCase
             $response = $this->get($route);
             $response->assertStatus(404);
         }
+    }
+
+    public function test_homepage_offers_customer_login_and_registration_entry(): void
+    {
+        $response = $this->get('/');
+
+        $response->assertOk();
+        $response->assertSee('Masuk Pelanggan');
+        $response->assertSee('Daftar Pelanggan');
+        $response->assertSee('Jelajahi UMKM');
+        $response->assertSee('href="'.route('customer.dashboard').'"', false);
+        $response->assertSee('Untuk Pemilik UMKM &amp; Staf', false);
+    }
+
+    public function test_homepage_has_no_decorative_dots_or_bullet_separators(): void
+    {
+        $response = $this->get('/');
+
+        $response->assertOk();
+        $response->assertDontSee('&bull;', false);
+        $response->assertDontSee('•');
+        $response->assertDontSee('·');
+        $response->assertDontSee('animate-ping', false);
+        $response->assertSee('Buka s/d 21.00');
+    }
+
+    public function test_login_page_supports_customers_and_merchants(): void
+    {
+        $response = $this->get(route('login'));
+
+        $response->assertOk();
+        $response->assertSee('Untuk Pelanggan, Pemilik UMKM, Staf Operator, dan Admin AntreIn.');
+        $response->assertSee('Ingin mengambil nomor antrean?');
+        $response->assertSee('Daftar Pelanggan');
+        $response->assertSee('href="'.route('customer.dashboard').'"', false);
+        $response->assertDontSee('•');
+    }
+
+    public function test_register_page_offers_customer_and_umkm_tabs_with_password_toggle(): void
+    {
+        $response = $this->get(route('register'));
+
+        $response->assertOk();
+        $response->assertSee('Pelanggan');
+        $response->assertSee('Pemilik UMKM');
+        $response->assertSee('Tampilkan kata sandi');
+        $response->assertSee('href="'.route('login').'"', false);
+    }
+
+    public function test_homepage_renders_gojek_inspired_showcase_assets_and_category_cards(): void
+    {
+        $response = $this->get(route('home'));
+
+        $response->assertOk()
+            ->assertSee('images/landing/hero.jpg')
+            ->assertSee('images/landing/showcase-ticket.jpg')
+            ->assertSee('images/landing/showcase-merchant.jpg')
+            ->assertSee('images/landing/showcase-display.jpg')
+            ->assertSee('Skala &amp; Ekosistem AntreIn untuk Berbagai Jenis Usaha', false);
+    }
+
+    public function test_customer_layout_brand_logo_links_guests_back_to_landing_page(): void
+    {
+        $guestResponse = $this->get(route('customer.dashboard'));
+        $guestResponse->assertOk()
+            ->assertSee('href="'.route('home').'"', false);
+
+        $customer = User::factory()->customer()->create();
+        $customerResponse = $this->actingAs($customer)->get(route('customer.dashboard'));
+        $customerResponse->assertOk()
+            ->assertSee('href="'.route('customer.dashboard').'"', false);
+    }
+
+    public function test_homepage_uses_antrein_brand_blue_and_white_palette(): void
+    {
+        $response = $this->get(route('home'));
+
+        $response->assertOk()
+            ->assertSee('bg-white/95', false)
+            ->assertSee('from-brand-800 via-brand-700 to-brand-900', false)
+            ->assertSee('from-brand-700 to-brand-900', false)
+            ->assertDontSee('#0B132B', false)
+            ->assertDontSee('#060B19', false);
     }
 }

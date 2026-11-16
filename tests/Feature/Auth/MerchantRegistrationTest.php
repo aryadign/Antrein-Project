@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Auth;
 
-use App\Models\ActivityLog;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -16,7 +15,8 @@ class MerchantRegistrationTest extends TestCase
         $response = $this->get('/register');
 
         $response->assertStatus(200);
-        $response->assertSee('Daftarkan Usaha Anda');
+        $response->assertSee('Buat Akun AntreIn');
+        $response->assertSee('Pemilik UMKM');
     }
 
     public function test_new_merchant_can_register(): void
@@ -94,4 +94,3 @@ class MerchantRegistrationTest extends TestCase
         $this->assertGuest();
     }
 }
-

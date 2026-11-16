@@ -17,8 +17,11 @@ class CustomerPollingTest extends TestCase
     use RefreshDatabase;
 
     private QueueService $queueService;
+
     private Business $business;
+
     private Service $service;
+
     private User $merchant;
 
     protected function setUp(): void
@@ -94,7 +97,8 @@ class CustomerPollingTest extends TestCase
         $res2 = $this->getJson(route('customer.queue.track', ['token' => $ticket->access_token]));
         $res2->assertOk();
         $this->assertEquals(QueueTicket::STATUS_CALLED, $res2->json('data.status'));
-        $this->assertEquals('A-001', $res2->json('data.now_serving'));
+        $this->assertArrayNotHasKey('now_serving', $res2->json('data'));
+        $this->assertEquals('TKT-001', $res2->json('data.ticket_number'));
 
         // 3. Merchant starts service: sedang_dilayani
         $ticket->refresh();
@@ -141,4 +145,3 @@ class CustomerPollingTest extends TestCase
         Carbon::setTestNow();
     }
 }
-

@@ -1,4 +1,4 @@
-<x-layouts.auth title="Lupa Kata Sandi" heading="Atur Ulang Kata Sandi" subheading="Masukkan alamat email akun Anda. Kami akan mengirimkan tautan untuk mengatur ulang kata sandi Anda.">
+<x-layouts.auth title="Lupa Kata Sandi" heading="Atur Ulang Kata Sandi" subheading="Masukkan alamat email akun Anda. Kami akan mengirimkan instruksi untuk mengatur ulang kata sandi Anda.">
     @if (session('status'))
         <div class="mb-4 rounded-md bg-emerald-50 p-4 text-sm font-medium text-emerald-800 border border-emerald-200">
             {{ session('status') }}
@@ -18,20 +18,20 @@
                 required
                 autofocus
                 placeholder="nama@usaha.id"
-                :invalid="$errors->has('email')"
+                :error="$errors->has('email')"
             />
             <x-input-error :messages="$errors->get('email')" class="mt-1" />
         </div>
 
         <div class="pt-2">
             <x-button type="submit" variant="primary" class="w-full h-11 justify-center">
-                Kirim Tautan Atur Ulang
+                Kirim Instruksi Atur Ulang
             </x-button>
         </div>
 
-        <div class="mt-6 text-center text-sm text-neutral-600">
+        <div class="mt-2 text-center text-sm text-neutral-600">
             Ingat kata sandi Anda?
-            <a href="{{ route('login') }}" class="font-semibold text-brand-700 hover:text-brand-800 hover:underline">
+            <a href="{{ route('login') }}" class="inline-flex min-h-11 items-center font-semibold text-brand-700 hover:text-brand-800 hover:underline">
                 Kembali ke Halaman Masuk
             </a>
         </div>

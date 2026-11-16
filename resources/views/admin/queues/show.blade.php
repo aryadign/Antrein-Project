@@ -1,12 +1,21 @@
-<x-layouts.admin 
-    :title="'Monitoring Tiket ' . $ticket->ticket_number . ' — AntreIn'" 
+@php
+    $timezone = $ticket->business?->timezone ?: config('app.timezone');
+    $timezoneLabel = match ($timezone) {
+        'Asia/Jakarta' => 'WIB',
+        'Asia/Jayapura' => 'WIT',
+        default => 'WITA',
+    };
+@endphp
+
+<x-layouts.admin
+    :title="'Monitoring Tiket ' . $ticket->ticket_number"
     :heading="'Detail Tiket: ' . $ticket->ticket_number" 
     description="Pemantauan audit lintas-gerai untuk tiket antrean dan rekam jejak status transisinya."
 >
-    <div class="space-y-6">
+    <div class="space-y-5 sm:space-y-6">
         {{-- Top Navigation --}}
-        <div class="flex items-center justify-between">
-            <a href="{{ route('admin.queues.index') }}" class="inline-flex items-center gap-2 text-xs font-semibold text-neutral-600 hover:text-neutral-900 transition">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+            <a href="{{ route('admin.queues.index') }}" class="inline-flex min-h-11 items-center gap-2 text-xs font-semibold text-neutral-600 hover:text-neutral-900 transition">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
                 Kembali ke Daftar Antrean
             </a>
@@ -29,36 +38,17 @@
         </div>
 
         {{-- Ticket Header Card --}}
-        <div class="bg-white rounded-xl border border-neutral-200 p-6 shadow-xs">
+        <div class="bg-white rounded-xl border border-neutral-200 p-4 shadow-xs sm:p-6">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div class="flex items-center gap-4">
-                    <div class="w-16 h-16 rounded-2xl bg-brand-50 border border-brand-200 text-brand-700 font-mono font-extrabold text-2xl flex items-center justify-center shrink-0">
+                <div class="flex min-w-0 items-center gap-4">
+                    <div class="h-16 min-w-16 px-3 rounded-2xl bg-brand-50 border border-brand-200 text-brand-700 font-mono font-extrabold text-2xl tabular-nums flex items-center justify-center shrink-0">
                         {{ $ticket->ticket_number }}
                     </div>
-                    <div>
+                    <div class="min-w-0">
                         <div class="flex flex-wrap items-center gap-2">
                             <h2 class="text-xl font-bold text-neutral-950">Tiket {{ $ticket->ticket_number }}</h2>
 
-                            @switch($ticket->status)
-                                @case('menunggu')
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">Menunggu</span>
-                                    @break
-                                @case('dipanggil')
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">Dipanggil</span>
-                                    @break
-                                @case('sedang_dilayani')
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">Sedang Dilayani</span>
-                                    @break
-                                @case('selesai')
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">Selesai</span>
-                                    @break
-                                @case('dilewati')
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-orange-50 text-orange-700 border border-orange-200">Dilewati</span>
-                                    @break
-                                @case('dibatalkan')
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-neutral-100 text-neutral-600 border border-neutral-200">Dibatalkan</span>
-                                    @break
-                            @endswitch
+                            <x-status-badge :status="$ticket->status" size="sm" />
 
                             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold {{ $ticket->source === 'online' ? 'bg-sky-50 text-sky-700 border border-sky-200' : 'bg-neutral-100 text-neutral-700 border border-neutral-200' }}">
                                 {{ $ticket->source === 'online' ? 'Online' : 'Walk-in' }}
@@ -73,7 +63,7 @@
                             @else
                                 <span class="font-semibold text-neutral-800">—</span>
                             @endif
-                            pada {{ $ticket->created_at->format('d M Y, H:i') }}
+                            pada <span class="tabular-nums">{{ $ticket->created_at->copy()->timezone($timezone)->format('d M Y, H:i') }} {{ $timezoneLabel }}</span>
                         </p>
                     </div>
                 </div>
@@ -87,11 +77,11 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-6">
             {{-- Customer Information (Masked PII) --}}
             <div class="bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-xs">
-                <div class="p-4 sm:p-5 border-b border-neutral-200 flex items-center justify-between">
-                    <div>
+                <div class="p-4 sm:p-5 border-b border-neutral-200 flex flex-wrap items-start justify-between gap-2">
+                    <div class="min-w-0">
                         <h3 class="text-h3 font-bold text-neutral-900">Informasi Pelanggan</h3>
                         <p class="text-caption text-neutral-500 mt-0.5">Data pemesan antrean dengan proteksi privasi.</p>
                     </div>
@@ -101,36 +91,36 @@
                 </div>
 
                 <div class="p-4 sm:p-5 divide-y divide-neutral-100 text-sm">
-                    <div class="py-2.5 flex justify-between items-center">
-                        <span class="text-neutral-500">Nama Pelanggan</span>
-                        <span class="font-semibold text-neutral-900">{{ $ticket->customer_name }}</span>
+                    <div class="py-2.5 flex justify-between items-start gap-3">
+                        <span class="shrink-0 text-neutral-500">Nama Pelanggan</span>
+                        <span class="min-w-0 text-right font-semibold text-neutral-900">{{ $ticket->customer_name }}</span>
                     </div>
 
-                    <div class="py-2.5 flex justify-between items-center">
-                        <span class="text-neutral-500">Nomor Telepon (Masked)</span>
+                    <div class="py-2.5 flex justify-between items-start gap-3">
+                        <span class="shrink-0 text-neutral-500">Nomor Telepon (Masked)</span>
                         <span class="font-mono font-medium text-neutral-800 bg-neutral-100 px-2 py-0.5 rounded text-xs">
                             {{ \App\Http\Controllers\Admin\QueueMonitoringController::maskPhoneNumber($ticket->customer_phone) }}
                         </span>
                     </div>
 
-                    <div class="py-2.5 flex justify-between items-center">
-                        <span class="text-neutral-500">Kanal Pendaftaran</span>
-                        <span class="font-semibold {{ $ticket->source === 'online' ? 'text-sky-600' : 'text-neutral-800' }}">
+                    <div class="py-2.5 flex justify-between items-start gap-3">
+                        <span class="shrink-0 text-neutral-500">Kanal Pendaftaran</span>
+                        <span class="min-w-0 text-right font-semibold {{ $ticket->source === 'online' ? 'text-sky-600' : 'text-neutral-800' }}">
                             {{ $ticket->source === 'online' ? 'Online (Customer Web App)' : 'Walk-in (Didaftarkan di Tempat)' }}
                         </span>
                     </div>
 
-                    <div class="py-2.5 flex justify-between items-start">
-                        <span class="text-neutral-500">Catatan Pelanggan</span>
+                    <div class="py-2.5 flex justify-between items-start gap-3">
+                        <span class="shrink-0 text-neutral-500">Catatan Pelanggan</span>
                         <span class="font-medium text-neutral-800 text-right max-w-xs">
                             {{ $ticket->notes ?: '— (Tidak ada catatan)' }}
                         </span>
                     </div>
 
-                    <div class="py-2.5 flex justify-between items-center">
-                        <span class="text-neutral-500">Estimasi Waktu Pelayanan</span>
+                    <div class="py-2.5 flex justify-between items-start gap-3">
+                        <span class="shrink-0 text-neutral-500">Estimasi Waktu Pelayanan</span>
                         <span class="font-medium text-neutral-800">
-                            {{ $ticket->estimated_service_time ? $ticket->estimated_service_time->format('H:i') . ' WITA' : '—' }}
+                            {{ $ticket->estimated_service_time ? \Illuminate\Support\Carbon::parse($ticket->estimated_service_time)->timezone($timezone)->format('H:i').' '.$timezoneLabel : '—' }}
                         </span>
                     </div>
                 </div>
@@ -144,10 +134,10 @@
                 </div>
 
                 <div class="p-4 sm:p-5 divide-y divide-neutral-100 text-sm">
-                    <div class="py-2.5 flex justify-between items-center">
-                        <span class="text-neutral-500">Gerai UMKM</span>
+                    <div class="py-2.5 flex justify-between items-start gap-3">
+                        <span class="shrink-0 text-neutral-500">Gerai UMKM</span>
                         @if ($ticket->business)
-                            <a href="{{ route('admin.businesses.show', $ticket->business) }}" class="font-bold text-brand-600 hover:underline">
+                            <a href="{{ route('admin.businesses.show', $ticket->business) }}" class="min-w-0 text-right font-bold text-brand-600 hover:underline">
                                 {{ $ticket->business->name }}
                             </a>
                         @else
@@ -155,29 +145,29 @@
                         @endif
                     </div>
 
-                    <div class="py-2.5 flex justify-between items-center">
-                        <span class="text-neutral-500">Kategori Bisnis</span>
+                    <div class="py-2.5 flex justify-between items-start gap-3">
+                        <span class="shrink-0 text-neutral-500">Kategori Bisnis</span>
                         <span class="font-medium text-neutral-800">
                             {{ $ticket->business?->category?->name ?? '—' }}
                         </span>
                     </div>
 
-                    <div class="py-2.5 flex justify-between items-center">
-                        <span class="text-neutral-500">Layanan Dipilih</span>
-                        <span class="font-semibold text-neutral-900">
+                    <div class="py-2.5 flex justify-between items-start gap-3">
+                        <span class="shrink-0 text-neutral-500">Layanan Dipilih</span>
+                        <span class="min-w-0 text-right font-semibold text-neutral-900">
                             {{ $ticket->service?->name ?? '—' }}
                         </span>
                     </div>
 
-                    <div class="py-2.5 flex justify-between items-center">
-                        <span class="text-neutral-500">Estimasi Durasi Layanan</span>
+                    <div class="py-2.5 flex justify-between items-start gap-3">
+                        <span class="shrink-0 text-neutral-500">Estimasi Durasi Layanan</span>
                         <span class="font-medium text-neutral-800">
                             {{ $ticket->service?->duration_minutes ?? '—' }} Menit
                         </span>
                     </div>
 
-                    <div class="py-2.5 flex justify-between items-center">
-                        <span class="text-neutral-500">Tanggal Sesi Antrean</span>
+                    <div class="py-2.5 flex justify-between items-start gap-3">
+                        <span class="shrink-0 text-neutral-500">Tanggal Sesi Antrean</span>
                         <span class="font-medium text-neutral-800">
                             {{ $ticket->dailyQueue?->queue_date ? \Carbon\Carbon::parse($ticket->dailyQueue->queue_date)->format('d M Y') : '—' }}
                         </span>
@@ -193,32 +183,31 @@
                 <p class="text-caption text-neutral-500 mt-0.5">Rekam jejak perubahan siklus hidup tiket dari awal pendaftaran hingga selesai/batal.</p>
             </div>
 
-            <div class="p-6">
+            <div class="p-4 sm:p-6">
                 @if ($ticket->statusHistories->isNotEmpty())
-                    <div class="relative border-l-2 border-neutral-200 ml-4 space-y-6">
+                    <ol class="relative ml-3 space-y-4 border-l-2 border-neutral-200 sm:space-y-5">
                         @foreach ($ticket->statusHistories as $history)
-                            <div class="relative pl-6">
-                                {{-- Dot Indicator --}}
-                                <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-white border-2 border-brand-500"></div>
+                            <li class="relative pl-6">
+                                <span class="absolute -left-[13px] top-3 flex size-6 items-center justify-center rounded-full bg-brand-100 text-[10px] font-extrabold text-brand-700 ring-4 ring-white tabular-nums">{{ $loop->iteration }}</span>
 
-                                <div class="bg-neutral-50/75 rounded-lg p-3.5 border border-neutral-200 text-sm">
-                                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-1.5">
-                                        <div class="flex items-center gap-2">
-                                            <span class="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-neutral-200 text-neutral-700">
-                                                {{ $history->from_status ?? 'Dibuat' }}
-                                            </span>
-                                            <span class="text-neutral-400">→</span>
-                                            <span class="font-mono text-xs font-bold px-2 py-0.5 rounded bg-brand-100 text-brand-800">
-                                                {{ $history->to_status }}
-                                            </span>
+                                <div class="rounded-lg border border-neutral-200 bg-neutral-50/75 p-3.5 text-sm">
+                                    <div class="mb-1.5 flex flex-col justify-between gap-1.5 sm:flex-row sm:items-center">
+                                        <div class="flex flex-wrap items-center gap-2">
+                                            @if ($history->from_status)
+                                                <x-status-badge :status="$history->from_status" size="sm" />
+                                            @else
+                                                <span class="rounded bg-neutral-200 px-2 py-0.5 text-xs font-semibold text-neutral-700">Dibuat</span>
+                                            @endif
+                                            <svg class="size-4 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-label="menjadi"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+                                            <x-status-badge :status="$history->to_status" size="sm" />
                                         </div>
 
-                                        <span class="text-caption text-neutral-400">
-                                            {{ $history->created_at?->format('d M Y, H:i:s') ?? '—' }}
-                                        </span>
+                                        <time class="text-caption text-neutral-400 tabular-nums" @if ($history->created_at) datetime="{{ $history->created_at->toIso8601String() }}" @endif>
+                                            {{ $history->created_at ? $history->created_at->copy()->timezone($timezone)->format('d M Y, H:i:s').' '.$timezoneLabel : '—' }}
+                                        </time>
                                     </div>
 
-                                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs text-neutral-600 mt-2 pt-2 border-t border-neutral-200/60">
+                                    <div class="mt-2 flex flex-col justify-between gap-1 border-t border-neutral-200/60 pt-2 text-xs text-neutral-600 sm:flex-row sm:items-center">
                                         <div>
                                             <span class="text-neutral-400">Dilakukan oleh:</span>
                                             <strong class="text-neutral-800">{{ $history->actor?->name ?? 'Sistem / Pelanggan' }}</strong>
@@ -232,9 +221,9 @@
                                         @endif
                                     </div>
                                 </div>
-                            </div>
+                            </li>
                         @endforeach
-                    </div>
+                    </ol>
                 @else
                     <div class="py-8 text-center text-caption text-neutral-400">
                         Belum ada riwayat transisi status tercatat untuk tiket ini.

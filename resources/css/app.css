@@ -12,10 +12,14 @@
     /* Brand Colors */
     --color-brand-50: #EFF6FF;
     --color-brand-100: #DBEAFE;
+    --color-brand-200: #BFDBFE;
+    --color-brand-300: #93C5FD;
     --color-brand-400: #60A5FA;
     --color-brand-500: #3B82F6;
     --color-brand-600: #2563EB;
     --color-brand-700: #1E40AF;
+    --color-brand-800: #1E3A8A;
+    --color-brand-900: #172554;
 
     /* Neutral Colors */
     --color-neutral-50: #F8FAFC;

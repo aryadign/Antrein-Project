@@ -3,7 +3,7 @@
     heading="Monitoring Antrean Lintas-UMKM" 
     description="Pantau arus tiket antrean di seluruh mitra UMKM secara realtime dalam mode pengawasan (read-only)."
 >
-    <div class="space-y-6">
+    <div class="space-y-5 sm:space-y-6">
         {{-- Read-Only Notice Banner (M8-25) --}}
         <div class="rounded-xl bg-blue-50/75 border border-blue-200 p-4 text-xs text-blue-900 flex items-start gap-3 shadow-xs">
             <svg class="w-5 h-5 text-blue-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -16,65 +16,40 @@
         </div>
 
         {{-- Metrics Summary Strip (M8-22) --}}
-        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5">
-            <div class="bg-white rounded-xl border border-neutral-200 p-3 shadow-xs">
-                <span class="text-[11px] font-semibold text-neutral-500 block truncate">Total Tiket</span>
-                <span class="text-xl font-extrabold text-neutral-950 tabular-nums block mt-0.5">{{ number_format($stats['total']) }}</span>
-            </div>
-
-            <div class="bg-amber-50/50 rounded-xl border border-amber-200 p-3 shadow-xs">
-                <span class="text-[11px] font-semibold text-amber-800 block truncate">Menunggu</span>
-                <span class="text-xl font-extrabold text-amber-950 tabular-nums block mt-0.5">{{ number_format($stats['menunggu']) }}</span>
-            </div>
-
-            <div class="bg-blue-50/50 rounded-xl border border-blue-200 p-3 shadow-xs">
-                <span class="text-[11px] font-semibold text-blue-800 block truncate">Dipanggil</span>
-                <span class="text-xl font-extrabold text-blue-950 tabular-nums block mt-0.5">{{ number_format($stats['dipanggil']) }}</span>
-            </div>
-
-            <div class="bg-indigo-50/50 rounded-xl border border-indigo-200 p-3 shadow-xs">
-                <span class="text-[11px] font-semibold text-indigo-800 block truncate">Sedang Dilayani</span>
-                <span class="text-xl font-extrabold text-indigo-950 tabular-nums block mt-0.5">{{ number_format($stats['sedang_dilayani']) }}</span>
-            </div>
-
-            <div class="bg-emerald-50/50 rounded-xl border border-emerald-200 p-3 shadow-xs">
-                <span class="text-[11px] font-semibold text-emerald-800 block truncate">Selesai</span>
-                <span class="text-xl font-extrabold text-emerald-950 tabular-nums block mt-0.5">{{ number_format($stats['selesai']) }}</span>
-            </div>
-
-            <div class="bg-orange-50/50 rounded-xl border border-orange-200 p-3 shadow-xs">
-                <span class="text-[11px] font-semibold text-orange-800 block truncate">Dilewati</span>
-                <span class="text-xl font-extrabold text-orange-950 tabular-nums block mt-0.5">{{ number_format($stats['dilewati']) }}</span>
-            </div>
-
-            <div class="bg-neutral-100/60 rounded-xl border border-neutral-300 p-3 shadow-xs col-span-2 sm:col-span-1">
-                <span class="text-[11px] font-semibold text-neutral-600 block truncate">Dibatalkan</span>
-                <span class="text-xl font-extrabold text-neutral-800 tabular-nums block mt-0.5">{{ number_format($stats['dibatalkan']) }}</span>
-            </div>
+        <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-8">
+            <x-stat-tile class="col-span-2 sm:col-span-1" label="Total Tiket" :value="number_format($stats['total'])" />
+            <x-stat-tile label="Menunggu" :value="number_format($stats['menunggu'])" tone="warning" />
+            <x-stat-tile label="Dipanggil" :value="number_format($stats['dipanggil'])" tone="brand" />
+            <x-stat-tile label="Sedang Dilayani" :value="number_format($stats['sedang_dilayani'])" tone="brand" />
+            <x-stat-tile label="Selesai" :value="number_format($stats['selesai'])" tone="success" />
+            <x-stat-tile label="Tidak Hadir" :value="number_format($stats['tidak_hadir'] ?? 0)" tone="danger" />
+            <x-stat-tile label="Dilewati" :value="number_format($stats['dilewati'])" tone="warning" />
+            <x-stat-tile label="Dibatalkan" :value="number_format($stats['dibatalkan'])" tone="muted" />
         </div>
 
         {{-- Multi-Filter Bar (M8-23) --}}
-        <div class="bg-white rounded-xl border border-neutral-200 p-4 shadow-xs">
+        <div class="bg-white rounded-xl border border-neutral-200 p-3 shadow-xs sm:p-4">
             <form method="GET" action="{{ route('admin.queues.index') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
                 {{-- Search Box --}}
                 <div class="lg:col-span-2">
-                    <label class="block text-caption font-semibold text-neutral-700 mb-1">Cari No Tiket / Pelanggan / UMKM</label>
+                    <label for="queue-search" class="block text-caption font-semibold text-neutral-700 mb-1">Cari No Tiket / Pelanggan / UMKM</label>
                     <div class="relative">
-                        <input 
-                            type="text" 
-                            name="search" 
+                        <input
+                            id="queue-search"
+                            type="search"
+                            name="search"
                             value="{{ $search }}" 
-                            placeholder="Contoh: A-001, Budi, Warung Kopi..." 
-                            class="w-full pl-9 pr-3 py-2 rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500"
+                            placeholder="Contoh: TKT-001, Budi, Kopi Senja..." 
+                            class="h-11 w-full pl-9 pr-3 rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500"
                         >
-                        <svg class="w-4 h-4 text-neutral-400 absolute left-3 top-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        <svg class="w-4 h-4 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                     </div>
                 </div>
 
                 {{-- Business Filter --}}
                 <div>
-                    <label class="block text-caption font-semibold text-neutral-700 mb-1">Gerai UMKM</label>
-                    <select name="business_id" class="w-full rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500">
+                    <label for="queue-business" class="block text-caption font-semibold text-neutral-700 mb-1">Gerai UMKM</label>
+                    <select id="queue-business" name="business_id" class="h-11 w-full rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500">
                         <option value="">Semua UMKM</option>
                         @foreach ($businesses as $b)
                             <option value="{{ $b->id }}" {{ $businessId == $b->id ? 'selected' : '' }}>
@@ -86,13 +61,14 @@
 
                 {{-- Status Filter --}}
                 <div>
-                    <label class="block text-caption font-semibold text-neutral-700 mb-1">Status Tiket</label>
-                    <select name="status" class="w-full rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500">
+                    <label for="queue-status" class="block text-caption font-semibold text-neutral-700 mb-1">Status Tiket</label>
+                    <select id="queue-status" name="status" class="h-11 w-full rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500">
                         <option value="">Semua Status</option>
                         <option value="menunggu" {{ $status === 'menunggu' ? 'selected' : '' }}>Menunggu</option>
                         <option value="dipanggil" {{ $status === 'dipanggil' ? 'selected' : '' }}>Dipanggil</option>
                         <option value="sedang_dilayani" {{ $status === 'sedang_dilayani' ? 'selected' : '' }}>Sedang Dilayani</option>
                         <option value="selesai" {{ $status === 'selesai' ? 'selected' : '' }}>Selesai</option>
+                        <option value="tidak_hadir" {{ $status === 'tidak_hadir' ? 'selected' : '' }}>Tidak Hadir</option>
                         <option value="dilewati" {{ $status === 'dilewati' ? 'selected' : '' }}>Dilewati</option>
                         <option value="dibatalkan" {{ $status === 'dibatalkan' ? 'selected' : '' }}>Dibatalkan</option>
                     </select>
@@ -100,8 +76,8 @@
 
                 {{-- Source Filter --}}
                 <div>
-                    <label class="block text-caption font-semibold text-neutral-700 mb-1">Sumber (Kanal)</label>
-                    <select name="source" class="w-full rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500">
+                    <label for="queue-source" class="block text-caption font-semibold text-neutral-700 mb-1">Sumber (Kanal)</label>
+                    <select id="queue-source" name="source" class="h-11 w-full rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500">
                         <option value="">Semua Kanal</option>
                         <option value="online" {{ $source === 'online' ? 'selected' : '' }}>Online (Web)</option>
                         <option value="walk_in" {{ $source === 'walk_in' ? 'selected' : '' }}>Walk-In (Kasir)</option>
@@ -110,20 +86,22 @@
 
                 {{-- Date Filter & Action Buttons --}}
                 <div class="sm:col-span-2 lg:col-span-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-neutral-100">
-                    <div class="flex items-center gap-2">
-                        <div class="w-44">
-                            <input 
-                                type="date" 
-                                name="date" 
-                                value="{{ $date }}" 
-                                class="w-full py-1.5 px-3 rounded-lg border-neutral-300 text-xs focus:border-brand-500 focus:ring-brand-500"
+                    <div class="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+                        <div class="col-span-2 sm:w-44">
+                            <label for="queue-date" class="sr-only">Tanggal antrean</label>
+                            <input
+                                id="queue-date"
+                                type="date"
+                                name="date"
+                                value="{{ $date }}"
+                                class="h-11 w-full px-3 rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500"
                             >
                         </div>
-                        <button type="submit" class="px-4 py-2 rounded-lg bg-neutral-900 text-white text-xs font-bold hover:bg-neutral-800 transition shadow-xs">
+                        <button type="submit" class="inline-flex h-11 items-center justify-center px-4 rounded-lg bg-neutral-900 text-white text-xs font-bold hover:bg-neutral-800 transition shadow-xs">
                             Filter
                         </button>
                         @if ($search || $businessId || $status || $source || $date)
-                            <a href="{{ route('admin.queues.index') }}" class="px-3 py-2 rounded-lg border border-neutral-300 text-neutral-700 text-xs font-medium hover:bg-neutral-50 transition">
+                            <a href="{{ route('admin.queues.index') }}" class="inline-flex h-11 items-center justify-center px-3 rounded-lg border border-neutral-300 text-neutral-700 text-xs font-medium hover:bg-neutral-50 transition">
                                 Reset
                             </a>
                         @endif
@@ -211,38 +189,7 @@
 
                                 {{-- Status Badge --}}
                                 <td class="py-3.5 px-4">
-                                    @switch($ticket->status)
-                                        @case('menunggu')
-                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                                                Menunggu
-                                            </span>
-                                            @break
-                                        @case('dipanggil')
-                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-                                                Dipanggil
-                                            </span>
-                                            @break
-                                        @case('sedang_dilayani')
-                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                                                Dilayani
-                                            </span>
-                                            @break
-                                        @case('selesai')
-                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                                Selesai
-                                            </span>
-                                            @break
-                                        @case('dilewati')
-                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-orange-50 text-orange-700 border border-orange-200">
-                                                Dilewati
-                                            </span>
-                                            @break
-                                        @case('dibatalkan')
-                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-neutral-100 text-neutral-600 border border-neutral-200">
-                                                Dibatalkan
-                                            </span>
-                                            @break
-                                    @endswitch
+                                    <x-status-badge :status="$ticket->status" size="sm" class="whitespace-nowrap" />
                                 </td>
 
                                 {{-- Created At --}}
@@ -254,7 +201,8 @@
                                 <td class="py-3.5 px-4 text-right">
                                     <a 
                                         href="{{ route('admin.queues.show', $ticket) }}" 
-                                        class="p-1.5 rounded-lg text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 transition inline-block"
+                                        class="inline-flex size-9 items-center justify-center rounded-lg text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 transition"
+                                        aria-label="Pantau detail tiket {{ $ticket->ticket_number }}"
                                         title="Pantau Detail Tiket"
                                     >
                                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
@@ -281,7 +229,7 @@
                 @forelse ($tickets as $ticket)
                     <div class="p-4 space-y-3">
                         <div class="flex items-start justify-between gap-3">
-                            <div>
+                            <div class="min-w-0">
                                 <span class="font-mono font-bold text-base text-neutral-900 bg-neutral-100 px-2.5 py-1 rounded border border-neutral-200 inline-block">
                                     {{ $ticket->ticket_number }}
                                 </span>
@@ -292,26 +240,7 @@
                             </div>
 
                             <div class="text-right shrink-0">
-                                @switch($ticket->status)
-                                    @case('menunggu')
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">Menunggu</span>
-                                        @break
-                                    @case('dipanggil')
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">Dipanggil</span>
-                                        @break
-                                    @case('sedang_dilayani')
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">Dilayani</span>
-                                        @break
-                                    @case('selesai')
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">Selesai</span>
-                                        @break
-                                    @case('dilewati')
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-orange-50 text-orange-700 border border-orange-200">Dilewati</span>
-                                        @break
-                                    @case('dibatalkan')
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-neutral-100 text-neutral-600 border border-neutral-200">Dibatalkan</span>
-                                        @break
-                                @endswitch
+                                <x-status-badge :status="$ticket->status" size="sm" class="whitespace-nowrap" />
 
                                 <span class="block text-[11px] text-neutral-400 mt-1">
                                     {{ $ticket->source === 'online' ? 'Online' : 'Walk-in' }}
@@ -320,24 +249,24 @@
                         </div>
 
                         <div class="text-caption text-neutral-600 space-y-1 bg-neutral-50/75 p-2.5 rounded-lg border border-neutral-200/60">
-                            <div class="flex justify-between">
+                            <div class="flex justify-between gap-3">
                                 <span class="text-neutral-500">UMKM:</span>
                                 <span class="font-semibold text-neutral-900 truncate max-w-[180px]">{{ $ticket->business?->name ?? '—' }}</span>
                             </div>
-                            <div class="flex justify-between">
+                            <div class="flex justify-between gap-3">
                                 <span class="text-neutral-500">Layanan:</span>
                                 <span class="font-medium text-neutral-800 truncate max-w-[180px]">{{ $ticket->service?->name ?? '—' }}</span>
                             </div>
-                            <div class="flex justify-between">
+                            <div class="flex justify-between gap-3">
                                 <span class="text-neutral-500">Waktu:</span>
-                                <span>{{ $ticket->created_at->format('d M Y, H:i') }}</span>
+                                <span class="tabular-nums">{{ $ticket->created_at->format('d M Y, H:i') }}</span>
                             </div>
                         </div>
 
-                        <div class="flex justify-end pt-1">
-                            <a 
-                                href="{{ route('admin.queues.show', $ticket) }}" 
-                                class="px-3 py-1.5 rounded-lg border border-neutral-300 text-neutral-700 text-xs font-medium hover:bg-neutral-50 transition"
+                        <div>
+                            <a
+                                href="{{ route('admin.queues.show', $ticket) }}"
+                                class="inline-flex h-11 w-full items-center justify-center px-3 rounded-lg border border-neutral-300 text-neutral-700 text-xs font-medium hover:bg-neutral-50 transition"
                             >
                                 Pantau Detail Tiket
                             </a>

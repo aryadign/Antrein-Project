@@ -2,10 +2,8 @@
 
 namespace Tests\Feature\Reviews;
 
-use App\Models\ActivityLog;
 use App\Models\Business;
 use App\Models\BusinessCategory;
-use App\Models\BusinessCounter;
 use App\Models\BusinessMembership;
 use App\Models\CustomerReview;
 use App\Models\DailyQueue;
@@ -21,10 +19,16 @@ class CustomerReviewTest extends TestCase
     use RefreshDatabase;
 
     protected User $owner;
+
     protected Business $business;
+
     protected Service $service;
+
     protected DailyQueue $dailyQueue;
+
     protected User $operator;
+
+    protected User $customer;
 
     protected function setUp(): void
     {
@@ -83,6 +87,11 @@ class CustomerReviewTest extends TestCase
             'is_active' => true,
             'joined_at' => now(),
         ]);
+
+        $this->customer = User::factory()->customer()->create([
+            'is_active' => true,
+            'email_verified_at' => now(),
+        ]);
     }
 
     /**
@@ -94,6 +103,7 @@ class CustomerReviewTest extends TestCase
             'business_id' => $this->business->id,
             'daily_queue_id' => $this->dailyQueue->id,
             'service_id' => $this->service->id,
+            'user_id' => $this->customer->id,
             'ticket_number' => 'A-001',
             'sequence_number' => 1,
             'customer_name' => 'Ahmad Santoso',
@@ -114,7 +124,7 @@ class CustomerReviewTest extends TestCase
     {
         $ticket = $this->createTicket(QueueTicket::STATUS_SELESAI);
 
-        $response = $this->post(route('customer.review.store', ['token' => $ticket->access_token]), [
+        $response = $this->actingAs($this->customer)->post(route('customer.review.store', ['token' => $ticket->access_token]), [
             'rating' => 5,
             'comment' => 'Pelayanan sangat ramah dan ruang tunggu nyaman!',
         ]);
@@ -141,7 +151,7 @@ class CustomerReviewTest extends TestCase
     {
         $ticket = $this->createTicket(QueueTicket::STATUS_SELESAI);
 
-        $response = $this->postJson(route('customer.review.store', ['token' => $ticket->access_token]), [
+        $response = $this->actingAs($this->customer)->postJson(route('customer.review.store', ['token' => $ticket->access_token]), [
             'rating' => 4,
             'comment' => 'Dokter sangat informatif.',
         ]);
@@ -185,7 +195,7 @@ class CustomerReviewTest extends TestCase
     {
         $ticket = $this->createTicket(QueueTicket::STATUS_MENUNGGU);
 
-        $response = $this->postJson(route('customer.review.store', ['token' => $ticket->access_token]), [
+        $response = $this->actingAs($this->customer)->postJson(route('customer.review.store', ['token' => $ticket->access_token]), [
             'rating' => 5,
         ]);
 
@@ -200,7 +210,7 @@ class CustomerReviewTest extends TestCase
     {
         $ticket = $this->createTicket(QueueTicket::STATUS_DIPANGGIL);
 
-        $response = $this->postJson(route('customer.review.store', ['token' => $ticket->access_token]), [
+        $response = $this->actingAs($this->customer)->postJson(route('customer.review.store', ['token' => $ticket->access_token]), [
             'rating' => 5,
         ]);
 
@@ -211,7 +221,7 @@ class CustomerReviewTest extends TestCase
     {
         $ticket = $this->createTicket(QueueTicket::STATUS_SEDANG_DILAYANI);
 
-        $response = $this->postJson(route('customer.review.store', ['token' => $ticket->access_token]), [
+        $response = $this->actingAs($this->customer)->postJson(route('customer.review.store', ['token' => $ticket->access_token]), [
             'rating' => 5,
         ]);
 
@@ -222,7 +232,7 @@ class CustomerReviewTest extends TestCase
     {
         $ticket = $this->createTicket(QueueTicket::STATUS_DILEWATI);
 
-        $response = $this->postJson(route('customer.review.store', ['token' => $ticket->access_token]), [
+        $response = $this->actingAs($this->customer)->postJson(route('customer.review.store', ['token' => $ticket->access_token]), [
             'rating' => 1,
         ]);
 
@@ -233,7 +243,7 @@ class CustomerReviewTest extends TestCase
     {
         $ticket = $this->createTicket(QueueTicket::STATUS_DIBATALKAN);
 
-        $response = $this->postJson(route('customer.review.store', ['token' => $ticket->access_token]), [
+        $response = $this->actingAs($this->customer)->postJson(route('customer.review.store', ['token' => $ticket->access_token]), [
             'rating' => 1,
         ]);
 
@@ -249,13 +259,13 @@ class CustomerReviewTest extends TestCase
         $ticket = $this->createTicket(QueueTicket::STATUS_SELESAI);
 
         // First review
-        $this->postJson(route('customer.review.store', ['token' => $ticket->access_token]), [
+        $this->actingAs($this->customer)->postJson(route('customer.review.store', ['token' => $ticket->access_token]), [
             'rating' => 5,
             'comment' => 'Pertama kali ulas',
         ])->assertStatus(201);
 
         // Second review attempt
-        $res = $this->postJson(route('customer.review.store', ['token' => $ticket->access_token]), [
+        $res = $this->actingAs($this->customer)->postJson(route('customer.review.store', ['token' => $ticket->access_token]), [
             'rating' => 4,
             'comment' => 'Coba ulas lagi',
         ]);
@@ -274,17 +284,17 @@ class CustomerReviewTest extends TestCase
         $ticket = $this->createTicket(QueueTicket::STATUS_SELESAI);
 
         // Rating 0
-        $this->postJson(route('customer.review.store', ['token' => $ticket->access_token]), [
+        $this->actingAs($this->customer)->postJson(route('customer.review.store', ['token' => $ticket->access_token]), [
             'rating' => 0,
         ])->assertStatus(422)->assertJsonValidationErrors(['rating']);
 
         // Rating 6
-        $this->postJson(route('customer.review.store', ['token' => $ticket->access_token]), [
+        $this->actingAs($this->customer)->postJson(route('customer.review.store', ['token' => $ticket->access_token]), [
             'rating' => 6,
         ])->assertStatus(422)->assertJsonValidationErrors(['rating']);
 
         // Null rating
-        $this->postJson(route('customer.review.store', ['token' => $ticket->access_token]), [])
+        $this->actingAs($this->customer)->postJson(route('customer.review.store', ['token' => $ticket->access_token]), [])
             ->assertStatus(422)->assertJsonValidationErrors(['rating']);
     }
 
@@ -292,7 +302,7 @@ class CustomerReviewTest extends TestCase
     {
         $ticket = $this->createTicket(QueueTicket::STATUS_SELESAI);
 
-        $this->post(route('customer.review.store', ['token' => $ticket->access_token]), [
+        $this->actingAs($this->customer)->post(route('customer.review.store', ['token' => $ticket->access_token]), [
             'rating' => 5,
             'comment' => '<script>alert("XSS")</script><b>Pelayanan Bagus!</b>',
         ]);
@@ -306,7 +316,7 @@ class CustomerReviewTest extends TestCase
 
     public function test_submitting_with_invalid_token_returns_404(): void
     {
-        $response = $this->postJson(route('customer.review.store', ['token' => 'invalid-token-12345']), [
+        $response = $this->actingAs($this->customer)->postJson(route('customer.review.store', ['token' => 'invalid-token-12345']), [
             'rating' => 5,
         ]);
 
@@ -336,12 +346,11 @@ class CustomerReviewTest extends TestCase
         $response->assertSee('5.0');
     }
 
-    public function test_operator_can_view_reviews_page(): void
+    public function test_operator_cannot_view_reviews_page(): void
     {
         $response = $this->actingAs($this->operator)->get(route('merchant.reviews.index'));
 
-        $response->assertOk();
-        $response->assertViewIs('merchant.reviews.index');
+        $response->assertForbidden();
     }
 
     public function test_guest_is_redirected_to_login_when_accessing_reviews(): void
@@ -464,4 +473,3 @@ class CustomerReviewTest extends TestCase
         $res2->assertDontSee('Bintang lima mantap');
     }
 }
-

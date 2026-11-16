@@ -6,7 +6,6 @@ use App\Events\QueueTicketCreated;
 use App\Events\QueueTicketStatusChanged;
 use App\Models\Business;
 use App\Models\BusinessCategory;
-use App\Models\BusinessCounter;
 use App\Models\BusinessMembership;
 use App\Models\DailyQueue;
 use App\Models\PushSubscription;
@@ -16,12 +15,10 @@ use App\Models\User;
 use App\Models\UserNotificationPreference;
 use App\Notifications\CustomerTicketStatusNotification;
 use App\Notifications\MerchantNewOnlineTicketNotification;
-use App\Services\WebPushService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
-use Mockery;
 use Tests\TestCase;
 
 class EmailAndBrowserNotificationsTest extends TestCase
@@ -29,9 +26,14 @@ class EmailAndBrowserNotificationsTest extends TestCase
     use RefreshDatabase;
 
     protected User $owner;
+
     protected Business $business;
+
     protected Service $service;
+
     protected DailyQueue $dailyQueue;
+
+    protected User $customer;
 
     protected function setUp(): void
     {
@@ -76,6 +78,11 @@ class EmailAndBrowserNotificationsTest extends TestCase
             'total_tickets' => 0,
             'status' => DailyQueue::STATUS_ACTIVE,
         ]);
+
+        $this->customer = User::factory()->customer()->create([
+            'is_active' => true,
+            'email_verified_at' => now(),
+        ]);
     }
 
     // =========================================================================
@@ -84,7 +91,7 @@ class EmailAndBrowserNotificationsTest extends TestCase
 
     public function test_customer_can_register_online_with_optional_email_and_explicit_consent(): void
     {
-        $response = $this->post(route('customer.queue.take', ['slug' => $this->business->slug]), [
+        $response = $this->actingAs($this->customer)->post(route('customer.queue.take', ['slug' => $this->business->slug]), [
             'service_id' => $this->service->id,
             'customer_name' => 'Budi Pratama',
             'customer_phone' => '081299887766',
@@ -102,7 +109,7 @@ class EmailAndBrowserNotificationsTest extends TestCase
 
     public function test_customer_registration_without_email_leaves_fields_null(): void
     {
-        $response = $this->post(route('customer.queue.take', ['slug' => $this->business->slug]), [
+        $response = $this->actingAs($this->customer)->post(route('customer.queue.take', ['slug' => $this->business->slug]), [
             'service_id' => $this->service->id,
             'customer_name' => 'Siti Aminah',
             'customer_phone' => '081344556677',
@@ -118,7 +125,7 @@ class EmailAndBrowserNotificationsTest extends TestCase
 
     public function test_customer_registration_fails_if_notify_email_checked_but_email_is_invalid(): void
     {
-        $response = $this->post(route('customer.queue.take', ['slug' => $this->business->slug]), [
+        $response = $this->actingAs($this->customer)->post(route('customer.queue.take', ['slug' => $this->business->slug]), [
             'service_id' => $this->service->id,
             'customer_name' => 'Joko Anwar',
             'customer_phone' => '081344556688',
@@ -132,7 +139,7 @@ class EmailAndBrowserNotificationsTest extends TestCase
 
     public function test_customer_registration_fails_if_notify_email_checked_but_email_is_blank(): void
     {
-        $response = $this->post(route('customer.queue.take', ['slug' => $this->business->slug]), [
+        $response = $this->actingAs($this->customer)->post(route('customer.queue.take', ['slug' => $this->business->slug]), [
             'service_id' => $this->service->id,
             'customer_name' => 'Joko Anwar',
             'customer_phone' => '081344556688',
@@ -380,6 +387,7 @@ class EmailAndBrowserNotificationsTest extends TestCase
             'business_id' => $this->business->id,
             'daily_queue_id' => $this->dailyQueue->id,
             'service_id' => $this->service->id,
+            'user_id' => $this->customer->id,
             'ticket_number' => 'A-008',
             'sequence_number' => 8,
             'customer_name' => 'Kevin Sanjaya',
@@ -389,7 +397,7 @@ class EmailAndBrowserNotificationsTest extends TestCase
             'qr_code_hash' => Str::random(64),
         ]);
 
-        $response = $this->postJson(route('customer.push.subscribe'), [
+        $response = $this->actingAs($this->customer)->postJson(route('customer.push.subscribe'), [
             'token' => $ticket->access_token,
             'endpoint' => 'https://fcm.googleapis.com/fcm/send/sample-customer-token',
             'public_key' => 'BLz98SamplePublicKey...',
@@ -409,7 +417,7 @@ class EmailAndBrowserNotificationsTest extends TestCase
 
     public function test_customer_push_subscription_fails_for_invalid_token(): void
     {
-        $response = $this->postJson(route('customer.push.subscribe'), [
+        $response = $this->actingAs($this->customer)->postJson(route('customer.push.subscribe'), [
             'token' => 'non-existent-token',
             'endpoint' => 'https://fcm.googleapis.com/fcm/send/sample-customer-token-2',
             'public_key' => 'BLz98SamplePublicKey...',
@@ -425,6 +433,7 @@ class EmailAndBrowserNotificationsTest extends TestCase
             'business_id' => $this->business->id,
             'daily_queue_id' => $this->dailyQueue->id,
             'service_id' => $this->service->id,
+            'user_id' => $this->customer->id,
             'ticket_number' => 'A-009',
             'sequence_number' => 9,
             'customer_name' => 'Liliyana Natsir',
@@ -445,7 +454,7 @@ class EmailAndBrowserNotificationsTest extends TestCase
             'auth_token' => 'SampleAuth',
         ]);
 
-        $response = $this->deleteJson(route('customer.push.unsubscribe'), [
+        $response = $this->actingAs($this->customer)->deleteJson(route('customer.push.unsubscribe'), [
             'token' => $ticket->access_token,
             'endpoint' => $endpoint,
         ]);

@@ -4,15 +4,12 @@ namespace Tests\Feature\Merchant;
 
 use App\Models\Business;
 use App\Models\BusinessCategory;
-use App\Models\BusinessCounter;
 use App\Models\BusinessMembership;
 use App\Models\BusinessOrganization;
-use App\Models\DailyQueue;
-use App\Models\OrganizationMembership;
-use App\Models\QueueTicket;
 use App\Models\Service;
 use App\Models\User;
 use App\Services\QueueService;
+use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -21,13 +18,19 @@ class MultiBranchManagementTest extends TestCase
     use RefreshDatabase;
 
     private User $ownerA;
+
     private BusinessOrganization $orgA;
+
     private Business $branchA1;
+
     private BusinessCategory $category;
+
     private User $operatorA1;
 
     private User $ownerB;
+
     private BusinessOrganization $orgB;
+
     private Business $branchB1;
 
     protected function setUp(): void
@@ -263,6 +266,16 @@ class MultiBranchManagementTest extends TestCase
     public function test_operator_cannot_access_branch_management(): void
     {
         $this->actingAs($this->operatorA1)
+            ->get(route('merchant.branches.index'))
+            ->assertStatus(403);
+
+        $this->actingAs($this->operatorA1)
+            ->post(route('merchant.branches.switch'), [
+                'business_id' => $this->branchA1->id,
+            ])
+            ->assertStatus(403);
+
+        $this->actingAs($this->operatorA1)
             ->get(route('merchant.branches.create'))
             ->assertStatus(403);
 
@@ -278,6 +291,14 @@ class MultiBranchManagementTest extends TestCase
 
         $this->actingAs($this->operatorA1)
             ->get(route('merchant.organization.edit'))
+            ->assertStatus(403);
+
+        $this->actingAs($this->operatorA1)
+            ->get(route('merchant.organization.reports'))
+            ->assertStatus(403);
+
+        $this->actingAs($this->operatorA1)
+            ->get(route('merchant.reviews.index'))
             ->assertStatus(403);
     }
 
@@ -380,8 +401,8 @@ class MultiBranchManagementTest extends TestCase
         // Both tickets start at sequence 1 in their respective branch
         $this->assertEquals(1, $ticket1->sequence_number);
         $this->assertEquals(1, $ticket2->sequence_number);
-        $this->assertEquals('A-001', $ticket1->ticket_number);
-        $this->assertEquals('A-001', $ticket2->ticket_number);
+        $this->assertEquals('TKT-001', $ticket1->ticket_number);
+        $this->assertEquals('TKT-001', $ticket2->ticket_number);
         $this->assertEquals($this->branchA1->id, $ticket1->business_id);
         $this->assertEquals($branchA2->id, $ticket2->business_id);
     }
@@ -409,5 +430,23 @@ class MultiBranchManagementTest extends TestCase
         $response->assertOk();
         $response->assertSee('Klinik Sehat Utama');
         $response->assertDontSee('Garasi Barbershop Pusat');
+    }
+
+    /**
+     * Test Seeder Organization Provisioning: Seeded owners have active organizations and can access group reports.
+     */
+    public function test_seeded_owner_accounts_can_access_organization_reports(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+
+        $seededOwner = User::where('email', 'owner@garasi.id')->firstOrFail();
+
+        $this->assertTrue($seededOwner->canManageOrganization());
+        $this->assertGreaterThan(0, BusinessOrganization::count());
+
+        $response = $this->actingAs($seededOwner)->get(route('merchant.organization.reports'));
+
+        $response->assertOk();
+        $response->assertSee('Laporan Agregat Organisasi');
     }
 }

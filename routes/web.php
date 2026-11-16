@@ -12,17 +12,20 @@ use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\StaffInvitationController;
 use App\Http\Controllers\Broadcasting\TicketBroadcastAuthController;
+use App\Http\Controllers\Customer\CustomerHomeController;
 use App\Http\Controllers\Customer\CustomerPushSubscriptionController;
+use App\Http\Controllers\Customer\CustomerReviewController;
 use App\Http\Controllers\Customer\QueueTicketController;
+use App\Http\Controllers\Dev\DevDemoAccessController;
 use App\Http\Controllers\Display\PublicQueueDisplayController;
-use App\Http\Controllers\Merchant\CounterManagementController;
 use App\Http\Controllers\Merchant\BranchController;
-use App\Http\Controllers\Merchant\OrganizationController;
-use App\Http\Controllers\Merchant\OrganizationReportController;
+use App\Http\Controllers\Merchant\CounterManagementController;
 use App\Http\Controllers\Merchant\DashboardController;
 use App\Http\Controllers\Merchant\DisplayManagementController;
 use App\Http\Controllers\Merchant\NotificationPreferenceController;
 use App\Http\Controllers\Merchant\OnboardingController;
+use App\Http\Controllers\Merchant\OrganizationController;
+use App\Http\Controllers\Merchant\OrganizationReportController;
 use App\Http\Controllers\Merchant\QueueController;
 use App\Http\Controllers\Merchant\QueueOperationController;
 use App\Http\Controllers\Merchant\ReportController;
@@ -48,7 +51,7 @@ Route::get('/health', function () {
     try {
         DB::connection()->getPdo();
         $dbOk = true;
-    } catch (\Throwable $e) {
+    } catch (Throwable $e) {
         $dbError = $e->getMessage();
     }
 
@@ -73,18 +76,34 @@ Route::get('/', function () {
     return view('home');
 })->name('home');
 
-// Customer Public Queue Routes (Milestone 6)
+// Customer Portal & Queue Routes
+Route::get('/pelanggan', [CustomerHomeController::class, 'index'])->name('customer.dashboard');
+Route::get('/pelanggan/cari', [CustomerHomeController::class, 'search'])->name('customer.search');
 Route::get('/q/{slug}', [QueueTicketController::class, 'show'])->name('customer.queue');
-Route::get('/q/{slug}/take-queue', [QueueTicketController::class, 'create'])->name('customer.queue.create');
-Route::post('/q/{slug}/take-queue', [QueueTicketController::class, 'store'])->name('customer.queue.take');
 Route::get('/q/track/{token}', [QueueTicketController::class, 'track'])->name('customer.queue.track');
 Route::get('/ticket/{token}', [QueueTicketController::class, 'track'])->name('customer.ticket.show');
-Route::post('/q/track/{token}/review', [\App\Http\Controllers\Customer\CustomerReviewController::class, 'store'])
-    ->middleware('throttle:15,1')
-    ->name('customer.review.store');
-Route::post('/push-subscriptions/customer', [CustomerPushSubscriptionController::class, 'store'])->name('customer.push.subscribe');
-Route::delete('/push-subscriptions/customer', [CustomerPushSubscriptionController::class, 'destroy'])->name('customer.push.unsubscribe');
 Route::post('/broadcasting/auth/ticket', [TicketBroadcastAuthController::class, 'authenticate'])->name('broadcasting.auth.ticket');
+
+// Customer Authenticated Routes (Login required to take queue, view tickets/history/profile, cancel, review)
+Route::middleware(['auth', 'active'])->group(function () {
+    Route::get('/pelanggan/antrean', [CustomerHomeController::class, 'myTickets'])->name('customer.my-tickets');
+    Route::get('/pelanggan/riwayat', [CustomerHomeController::class, 'history'])->name('customer.history');
+    Route::get('/pelanggan/profil', [CustomerHomeController::class, 'profile'])->name('customer.profile');
+    Route::post('/pelanggan/profil', [CustomerHomeController::class, 'updateProfile'])
+        ->middleware('throttle:30,1')
+        ->name('customer.profile.update');
+
+    Route::get('/q/{slug}/take-queue', [QueueTicketController::class, 'create'])->name('customer.queue.create');
+    Route::post('/q/{slug}/take-queue', [QueueTicketController::class, 'store'])->name('customer.queue.take');
+    Route::post('/q/track/{token}/cancel', [QueueTicketController::class, 'cancel'])
+        ->middleware('throttle:15,1')
+        ->name('customer.queue.cancel');
+    Route::post('/q/track/{token}/review', [CustomerReviewController::class, 'store'])
+        ->middleware('throttle:15,1')
+        ->name('customer.review.store');
+    Route::post('/push-subscriptions/customer', [CustomerPushSubscriptionController::class, 'store'])->name('customer.push.subscribe');
+    Route::delete('/push-subscriptions/customer', [CustomerPushSubscriptionController::class, 'destroy'])->name('customer.push.unsubscribe');
+});
 
 // Public Queue TV/Monitor Display Routes (Milestone 16 - P1-08)
 Route::get('/display/{token}', [PublicQueueDisplayController::class, 'show'])->name('display.show');
@@ -94,32 +113,38 @@ Route::get('/display/{token}/data', [PublicQueueDisplayController::class, 'data'
 Route::prefix('preview')->name('preview.')->group(function () {
     Route::get('/design-system', function () {
         abort_if(app()->isProduction(), 404);
+
         return view('preview.design-system');
     })->name('design-system');
 
     Route::get('/admin', function () {
         abort_if(app()->isProduction(), 404);
+
         return view('preview.admin');
     })->name('admin');
 
     Route::get('/merchant', function () {
         abort_if(app()->isProduction(), 404);
+
         return view('preview.merchant');
     })->name('merchant');
 
     Route::get('/customer', function () {
         abort_if(app()->isProduction(), 404);
+
         return view('preview.customer');
     })->name('customer');
 
     Route::get('/auth', function () {
         abort_if(app()->isProduction(), 404);
+
         return view('preview.auth');
     })->name('auth');
 });
 
 Route::get('/design-system', function () {
     abort_if(app()->isProduction(), 404);
+
     return view('preview.design-system');
 })->name('design-system');
 
@@ -130,8 +155,8 @@ Route::get('/design-system', function () {
 */
 if (app()->environment(['local', 'testing'])) {
     Route::prefix('dev')->name('dev.')->group(function () {
-        Route::post('/quick-login', [\App\Http\Controllers\Dev\DevDemoAccessController::class, 'quickLogin'])->name('quick-login');
-        Route::post('/switch-persona', [\App\Http\Controllers\Dev\DevDemoAccessController::class, 'switchPersona'])->name('switch-persona');
+        Route::post('/quick-login', [DevDemoAccessController::class, 'quickLogin'])->name('quick-login');
+        Route::post('/switch-persona', [DevDemoAccessController::class, 'switchPersona'])->name('switch-persona');
     });
 }
 
@@ -181,10 +206,12 @@ Route::middleware(['auth', 'active'])->group(function () {
         // Platform Dashboard (M8-01 to M8-07)
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
 
-        // Business Management (M8-08 to M8-14)
+        // Business Management & Approval (M8-08 to M8-14)
         Route::get('/businesses', [BusinessManagementController::class, 'index'])->name('businesses.index');
         Route::get('/umkm', [BusinessManagementController::class, 'index'])->name('umkm'); // Alias for nav
         Route::get('/businesses/{business}', [BusinessManagementController::class, 'show'])->name('businesses.show');
+        Route::post('/businesses/{business}/approve', [BusinessManagementController::class, 'approve'])->name('businesses.approve');
+        Route::post('/businesses/{business}/reject', [BusinessManagementController::class, 'reject'])->name('businesses.reject');
         Route::patch('/businesses/{business}/toggle-suspension', [BusinessManagementController::class, 'toggleSuspension'])->name('businesses.toggle-suspension');
 
         // User Management (M8-15 to M8-19)
@@ -223,18 +250,31 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::post('/onboarding/complete', [OnboardingController::class, 'complete'])->name('onboarding.complete');
         Route::get('/onboarding/qr-download', [OnboardingController::class, 'downloadQr'])->name('onboarding.download-qr');
 
-        // Operational merchant routes (Restricted by 'onboarded' middleware)
+        // Registration Approval Waiting / Status page (Accessible after onboarding while pending/rejected)
         Route::middleware('onboarded')->group(function () {
-            // Shared Operational Routes (Accessible to both Owner and Operator)
+            Route::get('/approval-status', [OnboardingController::class, 'approvalStatus'])->name('approval.status');
+            Route::post('/approval-status/resubmit', [OnboardingController::class, 'resubmit'])->name('approval.resubmit');
+        });
+
+        // Operational merchant routes (Restricted by 'onboarded' and 'approved.business' middlewares)
+        Route::middleware(['onboarded', 'approved.business'])->group(function () {
+            // Shared Routes (Owner and Operator)
             Route::middleware('business.role:owner,operator')->group(function () {
                 Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-
-                // Queue Management & Views (Milestone 7)
-                Route::get('/queues', [QueueController::class, 'index'])->name('queues');
                 Route::get('/queues/qr', [QueueController::class, 'qr'])->name('queues.qr');
+
+                // Notification Preferences & Web Push Subscriptions (Milestone 15 - P1-05)
+                Route::put('/settings/notifications', [NotificationPreferenceController::class, 'update'])->name('settings.notifications.update');
+                Route::post('/settings/push-subscription', [NotificationPreferenceController::class, 'storeSubscription'])->name('settings.push.subscribe');
+                Route::delete('/settings/push-subscription', [NotificationPreferenceController::class, 'destroySubscription'])->name('settings.push.unsubscribe');
+            });
+
+            // Operator-Only Queue Desk & Operations (Owner cannot operate queues directly)
+            Route::middleware('business.role:operator')->group(function () {
+                Route::get('/queues', [QueueController::class, 'index'])->name('queues');
+                Route::get('/queues/status', [QueueOperationController::class, 'status'])->name('queues.status');
                 Route::get('/queues/{ticket}', [QueueController::class, 'show'])->name('queues.show');
 
-                // Queue Operations (Milestone 5 & Milestone 12 & Milestone 13)
                 Route::post('/queues/select-counter', [QueueOperationController::class, 'selectCounter'])->name('queues.select-counter');
                 Route::post('/queues/walk-in', [QueueOperationController::class, 'walkIn'])->name('queues.walk-in');
                 Route::post('/queues/call-next', [QueueOperationController::class, 'callNext'])->name('queues.call-next');
@@ -242,19 +282,13 @@ Route::middleware(['auth', 'active'])->group(function () {
                 Route::post('/queues/{ticket}/start-service', [QueueOperationController::class, 'startService'])->name('queues.start-service');
                 Route::post('/queues/{ticket}/complete', [QueueOperationController::class, 'complete'])->name('queues.complete');
                 Route::post('/queues/{ticket}/skip', [QueueOperationController::class, 'skip'])->name('queues.skip');
-                Route::get('/queues/status', [QueueOperationController::class, 'status'])->name('queues.status');
+                Route::post('/queues/{ticket}/cancel', [QueueOperationController::class, 'cancel'])->name('queues.cancel');
 
-                // Notification Preferences & Web Push Subscriptions (Milestone 15 - P1-05)
-                Route::put('/settings/notifications', [NotificationPreferenceController::class, 'update'])->name('settings.notifications.update');
-                Route::post('/settings/push-subscription', [NotificationPreferenceController::class, 'storeSubscription'])->name('settings.push.subscribe');
-                Route::delete('/settings/push-subscription', [NotificationPreferenceController::class, 'destroySubscription'])->name('settings.push.unsubscribe');
-
-                // Customer Reviews & Feedback Monitoring (Milestone 17 - P1-09)
-                Route::get('/reviews', [\App\Http\Controllers\Merchant\CustomerReviewController::class, 'index'])->name('reviews.index');
-
-                // Multi-Branch switching & branch overview (Milestone 19 - P2-01)
-                Route::get('/branches', [BranchController::class, 'index'])->name('branches.index');
-                Route::post('/branches/switch', [BranchController::class, 'switch'])->name('branches.switch');
+                // Public Queue Display Management (Operator Only)
+                Route::get('/display', [DisplayManagementController::class, 'index'])->name('display.index');
+                Route::post('/display/toggle', [DisplayManagementController::class, 'toggle'])->name('display.toggle');
+                Route::post('/display/generate', [DisplayManagementController::class, 'generate'])->name('display.generate');
+                Route::delete('/display/revoke', [DisplayManagementController::class, 'revoke'])->name('display.revoke');
             });
 
             // Organization-level management (Milestone 19 - P2-01)
@@ -272,11 +306,16 @@ Route::middleware(['auth', 'active'])->group(function () {
 
             // Owner-Only Administrative Routes (Restricted to Owner)
             Route::middleware('business.role:owner')->group(function () {
-                // Owner-only Queue Operation: Cancellation
-                Route::post('/queues/{ticket}/cancel', [QueueOperationController::class, 'cancel'])->name('queues.cancel');
+                // Customer Reviews & Feedback Monitoring (Owner Only)
+                Route::get('/reviews', [App\Http\Controllers\Merchant\CustomerReviewController::class, 'index'])->name('reviews.index');
+
+                // Multi-Branch switching & branch overview (Owner Only)
+                Route::get('/branches', [BranchController::class, 'index'])->name('branches.index');
+                Route::post('/branches/switch', [BranchController::class, 'switch'])->name('branches.switch');
 
                 // Counter Management (Milestone 13 - P1-03)
                 Route::get('/counters', [CounterManagementController::class, 'index'])->name('counters.index');
+                Route::patch('/counters/station-mode', [CounterManagementController::class, 'toggleStationMode'])->name('counters.toggle-station-mode');
                 Route::post('/counters', [CounterManagementController::class, 'store'])->name('counters.store');
                 Route::put('/counters/{counter}', [CounterManagementController::class, 'update'])->name('counters.update');
                 Route::patch('/counters/{counter}/toggle-status', [CounterManagementController::class, 'toggleStatus'])->name('counters.toggle-status');
@@ -304,18 +343,12 @@ Route::middleware(['auth', 'active'])->group(function () {
                 Route::patch('/services/{service}/toggle-status', [ServiceController::class, 'toggleStatus'])->name('services.toggle-status');
                 Route::delete('/services/{service}', [ServiceController::class, 'destroy'])->name('services.destroy');
 
-                // Staff Management (Milestone 12 - P1-01 & P1-02)
+                // Staff Management (Direct Account Creation & Credentials)
                 Route::get('/staff', [StaffManagementController::class, 'index'])->name('staff.index');
-                Route::post('/staff/invitations', [StaffManagementController::class, 'storeInvitation'])->name('staff.invitations.store');
-                Route::delete('/staff/invitations/{invitation}', [StaffManagementController::class, 'revokeInvitation'])->name('staff.invitations.revoke');
+                Route::post('/staff', [StaffManagementController::class, 'store'])->name('staff.store');
+                Route::patch('/staff/{membership}/password', [StaffManagementController::class, 'updatePassword'])->name('staff.password');
                 Route::patch('/staff/{membership}/toggle-status', [StaffManagementController::class, 'toggleStatus'])->name('staff.toggle-status');
                 Route::delete('/staff/{membership}', [StaffManagementController::class, 'destroy'])->name('staff.destroy');
-
-                // Public Queue Display Management (Milestone 16 - P1-08)
-                Route::get('/display', [DisplayManagementController::class, 'index'])->name('display.index');
-                Route::post('/display/toggle', [DisplayManagementController::class, 'toggle'])->name('display.toggle');
-                Route::post('/display/generate', [DisplayManagementController::class, 'generate'])->name('display.generate');
-                Route::delete('/display/revoke', [DisplayManagementController::class, 'revoke'])->name('display.revoke');
             });
         });
     });

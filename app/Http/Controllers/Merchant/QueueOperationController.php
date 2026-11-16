@@ -62,6 +62,7 @@ class QueueOperationController extends Controller
                     'data' => [
                         'ticket_id' => $ticket->id,
                         'ticket_number' => $ticket->ticket_number,
+                        'booking_slot' => $ticket->bookingSlotWindowLabel(),
                         'access_token' => $ticket->access_token,
                         'status' => $ticket->status,
                         'customer_name' => $ticket->customer_name,
@@ -88,6 +89,27 @@ class QueueOperationController extends Controller
      */
     protected function resolveCounter(Request $request, Business $business, User $user, ?QueueTicket $ticket = null): ?BusinessCounter
     {
+        if (! $business->usesStations()) {
+            if ($ticket && $ticket->counter_id) {
+                $ticketCounter = $ticket->counter;
+                if ($ticketCounter && $ticketCounter->is_active && $user->canOperateCounter($ticketCounter)) {
+                    return $ticketCounter;
+                }
+            }
+
+            $primary = $business->activeCounters()
+                ->with('activeTicket')
+                ->orderBy('code')
+                ->get();
+            $preferred = $primary->first(fn (BusinessCounter $c): bool => $c->activeTicket !== null) ?? $primary->first();
+
+            if ($preferred && $user->canOperateCounter($preferred)) {
+                return $preferred;
+            }
+
+            return $user->assignedCounters()->first() ?: $preferred;
+        }
+
         $counterId = $request->input('counter_id') ?: session('merchant_active_counter_id');
 
         if ($counterId) {
@@ -291,9 +313,9 @@ class QueueOperationController extends Controller
     {
         $user = $request->user();
 
-        // Cancellation of tickets is strictly restricted to Owner (M12 RBAC)
-        if ($user->isOperator()) {
-            abort(403, 'Akses tidak diizinkan. Pembatalan tiket hanya dapat dilakukan oleh Pemilik Usaha.');
+        // Queue operation including cancellation is restricted to Operator Loket
+        if ($user->isOwner()) {
+            abort(403, 'Akses tidak diizinkan. Operasional antrean hanya dapat dilakukan oleh Operator Loket.');
         }
 
         $this->authorizeTicketOwnership($ticket, $user->business);

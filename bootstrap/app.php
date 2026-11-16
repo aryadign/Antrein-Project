@@ -1,5 +1,13 @@
 <?php
 
+use App\Http\Middleware\EnsureBusinessApproved;
+use App\Http\Middleware\EnsureBusinessRole;
+use App\Http\Middleware\EnsureMerchantOnboarded;
+use App\Http\Middleware\EnsureOrganizationManager;
+use App\Http\Middleware\EnsureUserHasRole;
+use App\Http\Middleware\EnsureUserIsActive;
+use App\Http\Middleware\EnsureUserOwnsBusiness;
+use App\Http\Middleware\ResolveActiveBranch;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -20,28 +28,37 @@ return Application::configure(basePath: dirname(__DIR__))
                 return route('admin.dashboard');
             }
 
-            if ($user?->hasCompletedOnboarding()) {
-                return route('merchant.dashboard');
+            if ($user?->isCustomer()) {
+                return route('customer.dashboard');
             }
 
-            if ($user) {
-                return route('merchant.onboarding');
+            if ($user?->isMerchant()) {
+                if (! $user->hasCompletedOnboarding()) {
+                    return route('merchant.onboarding');
+                }
+
+                if ($user->business && ! $user->business->isApproved()) {
+                    return route('merchant.approval.status');
+                }
+
+                return route('merchant.dashboard');
             }
 
             return route('login');
         });
 
         $middleware->alias([
-            'role' => \App\Http\Middleware\EnsureUserHasRole::class,
-            'active' => \App\Http\Middleware\EnsureUserIsActive::class,
-            'onboarded' => \App\Http\Middleware\EnsureMerchantOnboarded::class,
-            'owns.business' => \App\Http\Middleware\EnsureUserOwnsBusiness::class,
-            'business.role' => \App\Http\Middleware\EnsureBusinessRole::class,
-            'active.branch' => \App\Http\Middleware\ResolveActiveBranch::class,
-            'organization.manager' => \App\Http\Middleware\EnsureOrganizationManager::class,
+            'role' => EnsureUserHasRole::class,
+            'active' => EnsureUserIsActive::class,
+            'onboarded' => EnsureMerchantOnboarded::class,
+            'approved.business' => EnsureBusinessApproved::class,
+            'owns.business' => EnsureUserOwnsBusiness::class,
+            'business.role' => EnsureBusinessRole::class,
+            'active.branch' => ResolveActiveBranch::class,
+            'organization.manager' => EnsureOrganizationManager::class,
         ]);
 
-        $middleware->appendToGroup('web', \App\Http\Middleware\EnsureUserIsActive::class);
+        $middleware->appendToGroup('web', EnsureUserIsActive::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

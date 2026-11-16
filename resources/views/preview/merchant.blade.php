@@ -20,7 +20,9 @@
             <x-card padding="lg" class="border-2 border-brand-200 bg-gradient-to-b from-brand-50/40 to-white">
                 <div class="flex items-center justify-between border-b border-neutral-200 pb-4 mb-6">
                     <div class="flex items-center gap-2">
-                        <span class="w-3 h-3 rounded-full bg-brand-600 animate-ping"></span>
+                        <span class="flex size-8 items-center justify-center rounded-lg bg-brand-600 text-white" aria-hidden="true">
+                            <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                        </span>
                         <h3 class="text-h3 font-bold text-neutral-900 tracking-tight">Sedang Berlangsung (Now Serving)</h3>
                     </div>
                     <x-status-badge status="sedang_dilayani" size="md" />
@@ -31,10 +33,9 @@
                     <span class="text-caption text-neutral-500 font-semibold tracking-wider uppercase block mb-1">Nomor Antrean Dipanggil</span>
                     <x-ticket-number number="A-014" size="hero" service="Potong Rambut Dewasa (30 mnt)" source="online" />
                     
-                    <div class="mt-4 flex items-center justify-center gap-4 text-body text-neutral-700">
+                    <div class="mt-4 flex flex-wrap items-center justify-center gap-2 text-body text-neutral-700">
                         <span class="font-bold text-neutral-900">Made Aryawan</span>
-                        <span>•</span>
-                        <span class="text-neutral-500">0812-3456-7890</span>
+                        <span class="rounded-md bg-neutral-100 px-2 py-0.5 text-caption font-medium text-neutral-600 tabular-nums">0812-3456-7890</span>
                     </div>
 
                     <div class="mt-2 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-brand-700 text-caption font-medium border border-blue-200">

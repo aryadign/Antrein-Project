@@ -3,7 +3,7 @@
     heading="Pengaturan Identitas Platform" 
     description="Kelola konfigurasi global AntreIn, identitas branding, informasi kontak bantuan, dan zona waktu standar."
 >
-    <div class="space-y-6 max-w-4xl" x-data="{ logoPreview: '{{ $settings['logo_url'] ?? '' }}' }">
+    <div class="space-y-5 sm:space-y-6 max-w-4xl" x-data="{ logoPreview: @js($settings['logo_url'] ?? '') }">
         {{-- Flash Messages --}}
         @if (session('status'))
             <div class="rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-sm font-medium text-emerald-800 flex items-center justify-between shadow-xs">
@@ -36,7 +36,7 @@
                     <p class="text-caption text-neutral-500 mt-0.5">Nama layanan dan logo resmi yang tampil pada header publik dan aplikasi.</p>
                 </div>
 
-                <div class="p-6 space-y-5">
+                <div class="p-4 sm:p-6 space-y-5">
                     {{-- Logo Upload (M8-29) --}}
                     <div>
                         <label class="block text-caption font-semibold text-neutral-700 mb-2">
@@ -61,7 +61,7 @@
                                     name="logo" 
                                     id="logo" 
                                     accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                                    class="block w-full text-xs text-neutral-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-neutral-100 file:text-neutral-800 hover:file:bg-neutral-200 cursor-pointer"
+                                    class="block w-full text-xs text-neutral-600 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-neutral-100 file:text-neutral-800 hover:file:bg-neutral-200 cursor-pointer"
                                     @change="
                                         const file = $event.target.files[0];
                                         if (file) {
@@ -89,7 +89,7 @@
                             id="platform_name" 
                             required 
                             value="{{ old('platform_name', $settings['platform_name']) }}" 
-                            class="w-full rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500"
+                            class="min-h-11 w-full rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500"
                         >
                     </div>
 
@@ -104,7 +104,7 @@
                             id="platform_tagline" 
                             value="{{ old('platform_tagline', $settings['platform_tagline']) }}" 
                             placeholder="Contoh: Solusi Antrean Digital UMKM Terpadu" 
-                            class="w-full rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500"
+                            class="min-h-11 w-full rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500"
                         >
                     </div>
                 </div>
@@ -117,7 +117,7 @@
                     <p class="text-caption text-neutral-500 mt-0.5">Informasi saluran bantuan resmi dan konfigurasi zona waktu default aplikasi.</p>
                 </div>
 
-                <div class="p-6 space-y-5">
+                <div class="p-4 sm:p-6 space-y-5">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                         {{-- Contact Email --}}
                         <div>
@@ -130,7 +130,7 @@
                                 id="contact_email" 
                                 required 
                                 value="{{ old('contact_email', $settings['contact_email']) }}" 
-                                class="w-full rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500"
+                                class="min-h-11 w-full rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500"
                             >
                         </div>
 
@@ -145,7 +145,7 @@
                                 id="contact_phone" 
                                 required 
                                 value="{{ old('contact_phone', $settings['contact_phone']) }}" 
-                                class="w-full rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500"
+                                class="min-h-11 w-full rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500"
                             >
                         </div>
                     </div>
@@ -159,7 +159,7 @@
                             name="default_timezone" 
                             id="default_timezone" 
                             required 
-                            class="w-full sm:w-80 rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500"
+                            class="h-11 w-full sm:w-80 rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500"
                         >
                             <option value="Asia/Makassar" {{ old('default_timezone', $settings['default_timezone']) === 'Asia/Makassar' ? 'selected' : '' }}>
                                 Asia/Makassar (WITA, UTC+8) — Default Pilot Bali
@@ -177,10 +177,10 @@
                     </div>
                 </div>
 
-                <div class="bg-neutral-50 px-6 py-4 border-t border-neutral-200 flex justify-end">
+                <div class="bg-neutral-50 px-4 py-4 sm:px-6 border-t border-neutral-200 flex justify-end">
                     <button 
                         type="submit" 
-                        class="px-5 py-2.5 rounded-lg bg-neutral-900 text-white text-xs font-bold hover:bg-neutral-800 transition shadow-xs flex items-center gap-2"
+                        class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-neutral-900 px-5 text-sm font-bold text-white shadow-xs transition hover:bg-neutral-800 sm:w-auto"
                     >
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                         Simpan Perubahan Pengaturan

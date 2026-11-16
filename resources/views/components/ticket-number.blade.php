@@ -1,5 +1,5 @@
 @props([
-    'number' => 'A-001',
+    'number' => 'TKT-001',
     'size' => 'default',
     'service' => null,
     'source' => null,
@@ -20,13 +20,9 @@
     </div>
 
     @if ($service || $source)
-        <div class="flex items-center gap-1.5 mt-1 text-caption text-neutral-500">
+        <div class="flex flex-wrap items-center justify-center gap-2 mt-1 text-caption text-neutral-500">
             @if ($service)
                 <span class="font-medium text-neutral-700">{{ $service }}</span>
-            @endif
-
-            @if ($service && $source)
-                <span>•</span>
             @endif
 
             @if ($source)

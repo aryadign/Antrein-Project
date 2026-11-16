@@ -8,6 +8,8 @@ use App\Models\Business;
 use App\Models\Service;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class ServiceController extends Controller
@@ -69,6 +71,12 @@ class ServiceController extends Controller
             'price' => ['nullable', 'numeric', 'min:0'],
             'daily_quota' => ['nullable', 'integer', 'min:1'],
             'is_active' => ['nullable', 'boolean'],
+            'image' => ['nullable', 'image', 'mimes:jpeg,png,webp', 'max:2048'],
+            'remove_image' => ['nullable', 'boolean'],
+        ], [
+            'image.image' => 'Foto layanan harus berupa gambar.',
+            'image.mimes' => 'Foto layanan harus berformat JPG, PNG, atau WEBP.',
+            'image.max' => 'Ukuran foto layanan maksimal 2 MB.',
         ]);
 
         $service = $business->services()->create([
@@ -78,6 +86,7 @@ class ServiceController extends Controller
             'price' => $validated['price'] ?? 0,
             'daily_quota' => $validated['daily_quota'] ?? null,
             'is_active' => $request->boolean('is_active', true),
+            'image_path' => $request->hasFile('image') ? $this->storeImage($request, $business) : null,
         ]);
 
         ActivityLog::log(
@@ -113,6 +122,12 @@ class ServiceController extends Controller
             'price' => ['nullable', 'numeric', 'min:0'],
             'daily_quota' => ['nullable', 'integer', 'min:1'],
             'is_active' => ['nullable', 'boolean'],
+            'image' => ['nullable', 'image', 'mimes:jpeg,png,webp', 'max:2048'],
+            'remove_image' => ['nullable', 'boolean'],
+        ], [
+            'image.image' => 'Foto layanan harus berupa gambar.',
+            'image.mimes' => 'Foto layanan harus berformat JPG, PNG, atau WEBP.',
+            'image.max' => 'Ukuran foto layanan maksimal 2 MB.',
         ]);
 
         $service->update([
@@ -122,6 +137,7 @@ class ServiceController extends Controller
             'price' => $validated['price'] ?? 0,
             'daily_quota' => $validated['daily_quota'] ?? null,
             'is_active' => $request->boolean('is_active'),
+            'image_path' => $this->resolveImagePath($request, $business, $service),
         ]);
 
         ActivityLog::log(
@@ -202,5 +218,42 @@ class ServiceController extends Controller
         return redirect()->route('merchant.services.index')
             ->with('status', sprintf('Layanan "%s" berhasil dihapus. Riwayat tiket terdahulu tetap dipertahankan.', $serviceName));
     }
-}
 
+    /**
+     * Store an uploaded service photo on the public disk, grouped per business.
+     */
+    protected function storeImage(Request $request, Business $business): string
+    {
+        return $request->file('image')->store('services/'.$business->id, 'public');
+    }
+
+    /**
+     * Decide the service photo after an update: replace it, remove it, or keep the current one.
+     */
+    protected function resolveImagePath(Request $request, Business $business, Service $service): ?string
+    {
+        if ($request->hasFile('image')) {
+            $this->deleteImage($service);
+
+            return $this->storeImage($request, $business);
+        }
+
+        if ($request->boolean('remove_image')) {
+            $this->deleteImage($service);
+
+            return null;
+        }
+
+        return $service->image_path;
+    }
+
+    /**
+     * Delete the current photo file of a service, if any.
+     */
+    protected function deleteImage(Service $service): void
+    {
+        if ($service->image_path && ! Str::startsWith($service->image_path, ['http://', 'https://', 'images/'])) {
+            Storage::disk('public')->delete($service->image_path);
+        }
+    }
+}

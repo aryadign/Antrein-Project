@@ -28,7 +28,21 @@ class DevelopmentMerchantSeederTest extends TestCase
 
         $this->assertSame('Barbershop Garasi (Demo Development)', $business->name);
         $this->assertSame(7, BusinessHour::where('business_id', $business->id)->count());
-        $this->assertSame(2, Service::where('business_id', $business->id)->count());
+        $this->assertSame(12, Service::where('business_id', $business->id)->count());
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'pelanggan@antrein.id',
+            'role' => User::ROLE_CUSTOMER,
+            'is_active' => true,
+        ]);
+        $this->assertDatabaseHas('businesses', [
+            'slug' => 'kopi-senja-roastery',
+            'approval_status' => Business::APPROVAL_APPROVED,
+        ]);
+        $this->assertDatabaseHas('businesses', [
+            'slug' => 'warung-teh-rimbun',
+            'approval_status' => Business::APPROVAL_PENDING,
+        ]);
     }
 
     public function test_seeder_is_repeatable_without_creating_duplicates(): void
@@ -37,11 +51,12 @@ class DevelopmentMerchantSeederTest extends TestCase
         $this->seed(DevelopmentMerchantSeeder::class);
 
         $this->assertSame(1, User::where('email', 'owner@garasi.id')->count());
+        $this->assertSame(1, User::where('email', 'pelanggan@antrein.id')->count());
         $this->assertSame(1, Business::where('slug', 'barbershop-garasi-demo')->count());
 
         $business = Business::where('slug', 'barbershop-garasi-demo')->firstOrFail();
         $this->assertSame(7, BusinessHour::where('business_id', $business->id)->count());
-        $this->assertSame(2, Service::where('business_id', $business->id)->count());
+        $this->assertSame(12, Service::where('business_id', $business->id)->count());
     }
 
     public function test_production_environment_skips_demo_merchant_seeding(): void

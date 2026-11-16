@@ -9,6 +9,8 @@ use App\Models\QueueTicket;
 use App\Models\Service;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -17,7 +19,9 @@ class ServiceManagementTest extends TestCase
     use RefreshDatabase;
 
     private User $merchant;
+
     private Business $business;
+
     private Service $existingService;
 
     protected function setUp(): void
@@ -283,5 +287,78 @@ class ServiceManagementTest extends TestCase
         // 5 total quota - 2 consumed tickets = 3 remaining quota
         $remaining = $service->getRemainingQuotaForDailyQueue($dailyQueue);
         $this->assertSame(3, $remaining);
+    }
+
+    public function test_merchant_can_upload_a_service_photo_shown_to_customers(): void
+    {
+        Storage::fake('public');
+
+        $this->actingAs($this->merchant)->post(route('merchant.services.store'), [
+            'name' => 'Hair Spa',
+            'duration_minutes' => 45,
+            'price' => 90000,
+            'is_active' => '1',
+            'image' => UploadedFile::fake()->image('hair-spa.jpg', 600, 600),
+        ])->assertRedirect(route('merchant.services.index'));
+
+        $service = Service::where('name', 'Hair Spa')->firstOrFail();
+
+        $this->assertNotNull($service->image_path);
+        $this->assertStringStartsWith('services/'.$this->business->id.'/', $service->image_path);
+        Storage::disk('public')->assertExists($service->image_path);
+
+        $this->get(route('customer.queue', $this->business->slug))
+            ->assertOk()
+            ->assertSee($service->imageUrl(), false);
+    }
+
+    public function test_replacing_or_removing_a_service_photo_deletes_the_old_file(): void
+    {
+        Storage::fake('public');
+
+        $oldPath = UploadedFile::fake()->image('old.jpg')->store('services/'.$this->business->id, 'public');
+        $this->existingService->update(['image_path' => $oldPath]);
+
+        $payload = [
+            'name' => 'Cuci & Blow',
+            'duration_minutes' => 30,
+            'price' => 50000,
+            'is_active' => '1',
+        ];
+
+        $this->actingAs($this->merchant)->put(route('merchant.services.update', $this->existingService), $payload + [
+            'image' => UploadedFile::fake()->image('new.png'),
+        ]);
+
+        $newPath = $this->existingService->fresh()->image_path;
+        Storage::disk('public')->assertMissing($oldPath);
+        Storage::disk('public')->assertExists($newPath);
+
+        $this->actingAs($this->merchant)->put(route('merchant.services.update', $this->existingService), $payload);
+        $this->assertSame($newPath, $this->existingService->fresh()->image_path);
+
+        $this->actingAs($this->merchant)->put(route('merchant.services.update', $this->existingService), $payload + ['remove_image' => '1']);
+        $this->assertNull($this->existingService->fresh()->image_path);
+        Storage::disk('public')->assertMissing($newPath);
+    }
+
+    public function test_service_photo_must_be_a_small_image(): void
+    {
+        Storage::fake('public');
+
+        $this->actingAs($this->merchant)->post(route('merchant.services.store'), [
+            'name' => 'Layanan PDF',
+            'duration_minutes' => 30,
+            'image' => UploadedFile::fake()->create('menu.pdf', 100, 'application/pdf'),
+        ])->assertSessionHasErrors('image');
+
+        $this->actingAs($this->merchant)->post(route('merchant.services.store'), [
+            'name' => 'Layanan Besar',
+            'duration_minutes' => 30,
+            'image' => UploadedFile::fake()->image('besar.jpg')->size(3000),
+        ])->assertSessionHasErrors('image');
+
+        $this->assertDatabaseMissing('services', ['name' => 'Layanan PDF']);
+        $this->assertDatabaseMissing('services', ['name' => 'Layanan Besar']);
     }
 }

@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\Business;
 use App\Models\BusinessCategory;
-use App\Models\BusinessCounter;
 use App\Models\BusinessMembership;
 use App\Models\Service;
 use App\Models\User;
@@ -13,8 +12,13 @@ use Illuminate\Support\Facades\Hash;
 class DevDemoService
 {
     public const string ADMIN_EMAIL = 'admin@antrein.id';
+
     public const string OWNER_EMAIL = 'owner@garasi.id';
+
     public const string OPERATOR_EMAIL = 'operator@garasi.id';
+
+    public const string CUSTOMER_EMAIL = 'pelanggan@antrein.id';
+
     public const string DEMO_SLUG = 'barbershop-garasi-demo';
 
     /**
@@ -27,8 +31,6 @@ class DevDemoService
 
     /**
      * Resolve or provision the requested demo persona user.
-     *
-     * @return User|null (Null for customer guest persona)
      */
     public function resolveOrCreatePersonaUser(string $persona): ?User
     {
@@ -36,9 +38,37 @@ class DevDemoService
             'admin' => $this->ensureAdminUser(),
             'owner' => $this->ensureOwnerUser(),
             'operator' => $this->ensureOperatorUser(),
-            'customer' => null,
+            'customer' => $this->ensureCustomerUser(),
             default => null,
         };
+    }
+
+    /**
+     * Ensure the dedicated demo customer user exists and is active.
+     */
+    public function ensureCustomerUser(): User
+    {
+        $this->ensureOwnerUser();
+
+        $customer = User::firstOrCreate(
+            ['email' => self::CUSTOMER_EMAIL],
+            [
+                'name' => 'Raka Pratama (Pelanggan Demo)',
+                'password' => Hash::make('pelanggan12345'),
+                'role' => User::ROLE_CUSTOMER,
+                'is_active' => true,
+                'email_verified_at' => now(),
+            ]
+        );
+
+        if (! $customer->is_active || $customer->role !== User::ROLE_CUSTOMER) {
+            $customer->update([
+                'is_active' => true,
+                'role' => User::ROLE_CUSTOMER,
+            ]);
+        }
+
+        return $customer;
     }
 
     /**

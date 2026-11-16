@@ -4,12 +4,14 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
+use App\Models\BusinessMembership;
 use App\Models\User;
 use App\Services\UserDeactivationService;
 use DomainException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class UserManagementController extends Controller
@@ -27,17 +29,70 @@ class UserManagementController extends Controller
         $role = $request->query('role');
         $status = $request->query('status'); // 'active', 'inactive'
 
-        $query = User::query()->with('business');
+        $query = User::query()->with([
+            'business',
+            'businessMemberships.business',
+            'businessMemberships.assignedCounters',
+            'ownedBusinesses',
+        ]);
 
         if ($search !== '') {
-            $query->where(function ($q) use ($search) {
+            $normalized = Str::lower($search);
+
+            $query->where(function ($q) use ($search, $normalized) {
                 $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%");
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhereHas('ownedBusinesses', function ($bq) use ($search) {
+                        $bq->where('name', 'like', "%{$search}%")
+                            ->orWhere('slug', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('businessMemberships.business', function ($bq) use ($search) {
+                        $bq->where('name', 'like', "%{$search}%")
+                            ->orWhere('slug', 'like', "%{$search}%");
+                    });
+
+                if (Str::contains($normalized, 'operator')) {
+                    $q->orWhere(function ($oq) {
+                        $oq->where('role', User::ROLE_MERCHANT)
+                            ->whereHas('businessMemberships', fn ($mq) => $mq->where('role', BusinessMembership::ROLE_OPERATOR));
+                    });
+                }
+
+                if (Str::contains($normalized, ['owner', 'pemilik'])) {
+                    $q->orWhere(function ($owq) {
+                        $owq->where('role', User::ROLE_MERCHANT)
+                            ->where(function ($sub) {
+                                $sub->whereHas('ownedBusinesses')
+                                    ->orWhereHas('businessMemberships', fn ($mq) => $mq->where('role', BusinessMembership::ROLE_OWNER));
+                            });
+                    });
+                }
+
+                if (Str::contains($normalized, ['pelanggan', 'customer'])) {
+                    $q->orWhere('role', User::ROLE_CUSTOMER);
+                }
+
+                if (Str::contains($normalized, 'admin')) {
+                    $q->orWhere('role', User::ROLE_ADMIN);
+                }
             });
         }
 
-        if ($role && in_array($role, [User::ROLE_ADMIN, User::ROLE_MERCHANT])) {
-            $query->where('role', $role);
+        if ($role === User::ROLE_ADMIN) {
+            $query->where('role', User::ROLE_ADMIN);
+        } elseif ($role === User::ROLE_CUSTOMER) {
+            $query->where('role', User::ROLE_CUSTOMER);
+        } elseif ($role === User::ROLE_MERCHANT) {
+            $query->where('role', User::ROLE_MERCHANT);
+        } elseif ($role === BusinessMembership::ROLE_OPERATOR) {
+            $query->where('role', User::ROLE_MERCHANT)
+                ->whereHas('businessMemberships', fn ($mq) => $mq->where('role', BusinessMembership::ROLE_OPERATOR));
+        } elseif ($role === BusinessMembership::ROLE_OWNER) {
+            $query->where('role', User::ROLE_MERCHANT)
+                ->where(function ($sub) {
+                    $sub->whereHas('ownedBusinesses')
+                        ->orWhereHas('businessMemberships', fn ($mq) => $mq->where('role', BusinessMembership::ROLE_OWNER));
+                });
         }
 
         if ($status === 'active') {
@@ -52,6 +107,10 @@ class UserManagementController extends Controller
             'total' => User::count(),
             'admins' => User::where('role', User::ROLE_ADMIN)->count(),
             'merchants' => User::where('role', User::ROLE_MERCHANT)->count(),
+            'operators' => User::where('role', User::ROLE_MERCHANT)
+                ->whereHas('businessMemberships', fn ($mq) => $mq->where('role', BusinessMembership::ROLE_OPERATOR))
+                ->count(),
+            'customers' => User::where('role', User::ROLE_CUSTOMER)->count(),
             'active' => User::where('is_active', true)->count(),
             'inactive' => User::where('is_active', false)->count(),
         ];
@@ -70,7 +129,12 @@ class UserManagementController extends Controller
      */
     public function show(User $user): View
     {
-        $user->load('business.category');
+        $user->load([
+            'business.category',
+            'businessMemberships.business.category',
+            'businessMemberships.assignedCounters',
+            'ownedBusinesses.category',
+        ]);
 
         $userLogs = ActivityLog::where('user_id', $user->id)
             ->latest('id')

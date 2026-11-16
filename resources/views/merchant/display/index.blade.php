@@ -1,183 +1,177 @@
-<x-layouts.merchant title="Layar Antrean Publik (TV Display) — AntreIn">
-    <div class="space-y-6">
+@php
+    $isDisplayActive = $business->isDisplayActive();
+    $oneTimeDisplayUrl = session('one_time_display_token') ? route('display.show', ['token' => session('one_time_display_token')]) : null;
+    $timezone = $business->timezone ?? 'Asia/Makassar';
+@endphp
+
+<x-layouts.merchant title="Layar Antrean Publik (TV Display)">
+    <div class="space-y-5 sm:space-y-6">
         {{-- Page Header --}}
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+            <div class="min-w-0">
                 <h1 class="text-h2 font-bold text-neutral-950">Layar Antrean Publik (TV Display)</h1>
-                <p class="text-body text-neutral-600 mt-1">
-                    Kelola tautan monitor antrean untuk ditampilkan pada TV, monitor ruang tunggu, atau layar pelanggan di lokasi usaha.
+                <p class="mt-1 text-body text-neutral-600">
+                    Kelola akses layar monitor antrean untuk ditampilkan pada TV, monitor ruang tunggu, atau layar pelanggan di lokasi usaha.
                 </p>
             </div>
 
-            {{-- Status Badge Header --}}
-            <div>
-                @if ($business->isDisplayActive())
-                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs">
-                        <span class="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span>
-                        LAYAR TV AKTIF
-                    </span>
-                @else
-                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-neutral-100 text-neutral-700 border border-neutral-300 shadow-2xs">
-                        <span class="w-2 h-2 rounded-full bg-neutral-400"></span>
-                        LAYAR TV NONAKTIF
-                    </span>
-                @endif
-            </div>
+            <span class="inline-flex w-fit shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold {{ $isDisplayActive ? 'border-emerald-300 bg-emerald-100 text-emerald-800' : 'border-neutral-300 bg-neutral-100 text-neutral-700' }}">
+                <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                {{ $isDisplayActive ? 'Layar TV Aktif' : 'Layar TV Nonaktif' }}
+            </span>
         </div>
 
         {{-- Flash Notification --}}
         @if (session('status'))
-            <div class="rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-sm font-medium text-emerald-800 flex items-center gap-2.5 shadow-2xs">
-                <svg class="w-5 h-5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <div class="flex items-center gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-800" role="status">
+                <svg class="w-5 h-5 shrink-0 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 <span>{{ session('status') }}</span>
             </div>
         @endif
 
         {{-- Main Configuration Card --}}
-        <x-card padding="lg">
-            <div class="space-y-6">
-                {{-- Status & Overview Row --}}
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-5 border-b border-neutral-200 gap-4">
-                    <div>
-                        <h2 class="text-h3 font-bold text-neutral-900">Konfigurasi & Tautan Layar Monitor</h2>
-                        <p class="text-caption text-neutral-500 mt-0.5">
-                            Unit Usaha: <strong class="text-neutral-800">{{ $business->name }}</strong> • Total Loket Aktif: <strong class="text-neutral-800">{{ $activeCountersCount }} Loket</strong>
-                        </p>
-                    </div>
-
-                    {{-- Activation Toggle Form --}}
-                    <div>
-                        <form method="POST" action="{{ route('merchant.display.toggle') }}">
-                            @csrf
-                            <input type="hidden" name="is_display_enabled" value="{{ $business->is_display_enabled ? '0' : '1' }}">
-                            <button
-                                type="submit"
-                                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition shadow-xs {{ $business->is_display_enabled ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200' : 'bg-brand-700 hover:bg-brand-800 text-white' }}"
-                            >
-                                @if ($business->is_display_enabled)
-                                    <svg class="w-4 h-4 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
-                                    Nonaktifkan Layar Publik
-                                @else
-                                    <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                                    Aktifkan Layar Publik
-                                @endif
-                            </button>
-                        </form>
-                    </div>
+        <section class="space-y-5 rounded-2xl border border-neutral-200 bg-white p-4 shadow-xs sm:p-6">
+            {{-- Status & Overview Row --}}
+            <div class="flex flex-col gap-4 border-b border-neutral-200 pb-5 sm:flex-row sm:items-center sm:justify-between">
+                <div class="min-w-0">
+                    <h2 class="text-h3 font-bold text-neutral-900">Konfigurasi & Akses Layar Monitor</h2>
+                    <dl class="mt-2 flex flex-wrap gap-2 text-caption">
+                        <div class="inline-flex min-w-0 items-center gap-1 rounded-lg bg-neutral-100 px-2.5 py-1">
+                            <dt class="text-neutral-500">Unit Usaha:</dt>
+                            <dd class="truncate font-semibold text-neutral-800">{{ $business->name }}</dd>
+                        </div>
+                        <div class="inline-flex items-center gap-1 rounded-lg bg-neutral-100 px-2.5 py-1">
+                            <dt class="text-neutral-500">Mode Station:</dt>
+                            <dd class="font-semibold text-neutral-800 tabular-nums">
+                                {{ $business->usesStations() ? $activeCountersCount.' Loket Aktif' : '1 Station Utama' }}
+                            </dd>
+                        </div>
+                    </dl>
                 </div>
 
-                {{-- Display Link & Quick Launch --}}
-                @if ($business->isDisplayActive() && session('one_time_display_token'))
-                    <div class="space-y-4 p-4 rounded-xl border border-amber-200 bg-amber-50/50" x-data="{ copied: false }">
-                        <div class="flex items-start gap-3">
-                            <span class="p-1 rounded-full bg-amber-100 text-amber-800 text-xs font-bold">⚠️</span>
-                            <div>
-                                <h4 class="text-xs sm:text-sm font-bold text-amber-900">Salin & Simpan Tautan Layar Display Sekarang</h4>
-                                <p class="text-caption text-amber-800 mt-0.5">
-                                    Demi keamanan privasi & anti-tampering, token akses lengkap ini <strong>hanya ditampilkan sekali ini saja</strong> dan tidak disimpan dalam teks biasa di database. Simpan atau segera buka tautan ini pada browser Smart TV / Monitor ruang tunggu Anda.
+                {{-- Activation Toggle Form --}}
+                <form method="POST" action="{{ route('merchant.display.toggle') }}" class="shrink-0">
+                    @csrf
+                    <input type="hidden" name="is_display_enabled" value="{{ $business->is_display_enabled ? '0' : '1' }}">
+                    <button
+                        type="submit"
+                        class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl px-4 text-sm font-bold shadow-xs transition sm:w-auto {{ $business->is_display_enabled ? 'border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100' : 'bg-brand-700 text-white hover:bg-brand-800' }}"
+                    >
+                        @if ($business->is_display_enabled)
+                            <svg class="w-4 h-4 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                            Nonaktifkan Layar Publik
+                        @else
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                            Aktifkan Layar Publik
+                        @endif
+                    </button>
+                </form>
+            </div>
+
+            {{-- Display QR & Quick Launch --}}
+            @if ($isDisplayActive && $oneTimeDisplayUrl)
+                @php $displayQrSvg = app(\App\Services\QrCodeService::class)->generateSvg($oneTimeDisplayUrl, 160); @endphp
+                <div class="flex flex-col gap-4 rounded-xl border border-amber-200 bg-amber-50/50 p-4 sm:flex-row sm:items-center">
+                    <div class="mx-auto shrink-0 rounded-xl bg-white p-2.5 shadow-xs ring-1 ring-amber-200 sm:mx-0 [&_svg]:block [&_svg]:size-32">
+                        {!! $displayQrSvg !!}
+                    </div>
+                    <div class="min-w-0 flex-1 space-y-3">
+                        <div class="flex items-start gap-2.5">
+                            <span class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-800">
+                                <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                            </span>
+                            <div class="min-w-0">
+                                <h4 class="text-sm font-bold text-amber-900">Buka atau Pindai Layar Display Sekarang</h4>
+                                <p class="mt-0.5 text-caption text-amber-800">
+                                    Demi keamanan privasi & anti-tampering, kredensial akses ini <strong>hanya ditampilkan sekali ini saja</strong> dan tidak disimpan dalam teks biasa di database. Pindai QR atau buka langsung pada browser Smart TV / Monitor ruang tunggu Anda.
                                 </p>
                             </div>
                         </div>
 
-                        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-                            <input 
-                                type="text" 
-                                readonly 
-                                value="{{ route('display.show', ['token' => session('one_time_display_token')]) }}"
-                                class="flex-1 px-4 py-2.5 text-xs sm:text-sm font-mono bg-white border border-amber-300 rounded-xl text-neutral-800 select-all focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs"
-                            >
-
-                            <button 
-                                type="button" 
-                                @click="navigator.clipboard.writeText('{{ route('display.show', ['token' => session('one_time_display_token')]) }}'); copied = true; setTimeout(() => copied = false, 2500);"
-                                class="px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition flex items-center justify-center gap-2 shrink-0 border bg-amber-100 hover:bg-amber-200 text-amber-900 border-amber-300"
-                            >
-                                <svg x-show="!copied" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-                                <svg x-show="copied" class="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display: none;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                                <span x-text="copied ? 'Tersalin ke Clipboard!' : 'Salin Tautan'"></span>
-                            </button>
-
-                            <a 
-                                href="{{ route('display.show', ['token' => session('one_time_display_token')]) }}" 
+                        <div>
+                            <a
+                                href="{{ $oneTimeDisplayUrl }}"
                                 target="_blank"
-                                class="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm transition flex items-center justify-center gap-2 shrink-0 shadow-xs"
+                                rel="noopener"
+                                class="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-neutral-900 px-5 text-sm font-bold text-white shadow-xs transition hover:bg-neutral-800"
                             >
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
-                                <span>Buka Layar Display</span>
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                                <span>Buka Layar Monitor</span>
                             </a>
                         </div>
                     </div>
-                @elseif ($business->isDisplayActive())
-                    <div class="p-4 rounded-xl border border-emerald-200 bg-emerald-50/50 space-y-3">
-                        <div class="flex items-start justify-between gap-3">
-                            <div class="flex items-center gap-2">
-                                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                                <h4 class="text-xs sm:text-sm font-bold text-emerald-900">Layar Display Publik Aktif & Berjalan</h4>
-                            </div>
-                            <span class="text-2xs font-mono px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                Hash: {{ substr($business->display_token_hash, 0, 12) }}...
+                </div>
+            @elseif ($isDisplayActive)
+                <div class="space-y-3 rounded-xl border border-emerald-200 bg-emerald-50/50 p-4">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div class="flex items-center gap-2">
+                            <span class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
+                                <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                             </span>
+                            <h4 class="text-sm font-bold text-emerald-900">Layar Display Publik Aktif & Berjalan</h4>
                         </div>
-                        <p class="text-caption text-neutral-600">
-                            Layar display monitor TV Anda saat ini sedang aktif menerima pembaruan antrean real-time. Demi alasan keamanan, token plaintext tidak disimpan di sistem. Jika Anda lupa atau kehilangan tautan pada layar TV Anda, gunakan tombol <strong>Rotasi / Regenerasi Tautan</strong> di bawah untuk membuat kredensial baru.
-                        </p>
+                        <span class="rounded border border-emerald-200 bg-emerald-100 px-2 py-0.5 font-mono text-2xs text-emerald-800">
+                            Hash: {{ substr($business->display_token_hash, 0, 12) }}...
+                        </span>
                     </div>
-                @endif
+                    <p class="text-caption text-neutral-600">
+                        Layar display monitor TV Anda saat ini sedang aktif menerima pembaruan antrean real-time. Demi alasan keamanan, token plaintext tidak disimpan di sistem. Jika Anda perlu membuka ulang layar TV Anda, gunakan tombol <strong>Rotasi / Regenerasi Akses</strong> di bawah untuk membuat kredensial baru.
+                    </p>
+                </div>
+            @endif
 
-                @if ($business->isDisplayActive())
-                    <div class="flex flex-col sm:flex-row sm:items-center justify-between text-caption text-neutral-500 pt-1 gap-2">
-                        <div>
-                            Kredensial aktif sejak: <strong>{{ $business->display_token_created_at ? $business->display_token_created_at->setTimezone($business->timezone ?? 'Asia/Makassar')->translatedFormat('d M Y, H:i') : 'Baru saja' }}</strong>
-                        </div>
+            @if ($isDisplayActive)
+                <div class="flex flex-col gap-3 text-caption text-neutral-500 sm:flex-row sm:items-center sm:justify-between">
+                    <p>
+                        Kredensial aktif sejak:
+                        <strong class="tabular-nums">{{ $business->display_token_created_at ? $business->display_token_created_at->setTimezone($timezone)->translatedFormat('d M Y, H:i') : 'Baru saja' }}</strong>
+                    </p>
 
-                        {{-- Danger Zone Actions: Regenerate & Revoke --}}
-                        <div class="flex items-center gap-4">
-                            <form method="POST" action="{{ route('merchant.display.generate') }}" onsubmit="return confirm('Apakah Anda yakin ingin membuat tautan baru? Tautan lama akan segera dinonaktifkan.');">
-                                @csrf
-                                <button type="submit" class="text-amber-700 hover:text-amber-900 text-xs font-semibold underline flex items-center gap-1">
-                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                                    Rotasi / Regenerasi Tautan
-                                </button>
-                            </form>
+                    {{-- Danger Zone Actions: Regenerate & Revoke --}}
+                    <div class="grid grid-cols-2 gap-2 sm:flex">
+                        <form method="POST" action="{{ route('merchant.display.generate') }}" onsubmit="return confirm('Apakah Anda yakin ingin membuat akses layar baru? Akses lama akan segera dinonaktifkan.');">
+                            @csrf
+                            <button type="submit" class="inline-flex h-11 w-full items-center justify-center gap-1.5 rounded-lg border border-amber-200 px-3 text-xs font-semibold text-amber-700 transition hover:bg-amber-50">
+                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                Rotasi / Regenerasi Akses
+                            </button>
+                        </form>
 
-                            <form method="POST" action="{{ route('merchant.display.revoke') }}" onsubmit="return confirm('Apakah Anda yakin ingin mencabut akses layar ini? Layar TV akan segera dinonaktifkan.');">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="text-rose-600 hover:text-rose-800 text-xs font-semibold underline flex items-center gap-1">
-                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                                    Cabut Akses
-                                </button>
-                            </form>
-                        </div>
+                        <form method="POST" action="{{ route('merchant.display.revoke') }}" onsubmit="return confirm('Apakah Anda yakin ingin mencabut akses layar ini? Layar TV akan segera dinonaktifkan.');">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="inline-flex h-11 w-full items-center justify-center gap-1.5 rounded-lg border border-rose-200 px-3 text-xs font-semibold text-rose-700 transition hover:bg-rose-50">
+                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                Cabut Akses
+                            </button>
+                        </form>
                     </div>
-                @else
-                    {{-- Display is currently disabled or no token yet --}}
-                    <div class="p-6 rounded-2xl bg-neutral-50 border border-neutral-200 text-center space-y-3">
-                        <div class="w-12 h-12 rounded-xl bg-neutral-200 text-neutral-500 mx-auto flex items-center justify-center">
-                            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                        </div>
-                        <h3 class="text-base font-bold text-neutral-900">Layar Antrean Publik Sedang Nonaktif</h3>
-                        <p class="text-caption text-neutral-600 max-w-md mx-auto">
-                            Aktifkan layar publik untuk menghasilkan tautan unik berenkripsi tinggi yang dapat dibuka pada peramban TV atau monitor ruang tunggu pelanggan Anda.
-                        </p>
-                        <div class="pt-2">
-                            <form method="POST" action="{{ route('merchant.display.generate') }}">
-                                @csrf
-                                <x-button type="submit" variant="primary" class="px-5 py-2">
-                                    Aktifkan & Buat Tautan Layar TV
-                                </x-button>
-                            </form>
-                        </div>
+                </div>
+            @else
+                {{-- Display is currently disabled or no token yet --}}
+                <div class="space-y-3 rounded-2xl border border-neutral-200 bg-neutral-50 p-5 text-center sm:p-6">
+                    <div class="mx-auto flex size-12 items-center justify-center rounded-xl bg-neutral-200 text-neutral-500">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                     </div>
-                @endif
-            </div>
-        </x-card>
+                    <h3 class="text-base font-bold text-neutral-900">Layar Antrean Publik Sedang Nonaktif</h3>
+                    <p class="mx-auto max-w-md text-caption text-neutral-600">
+                        Aktifkan layar publik untuk menghasilkan akses monitor berenkripsi tinggi yang dapat dibuka pada peramban TV atau monitor ruang tunggu pelanggan Anda.
+                    </p>
+                    <form method="POST" action="{{ route('merchant.display.generate') }}" class="pt-2">
+                        @csrf
+                        <x-button type="submit" variant="primary" class="h-11 w-full px-5 sm:w-auto">
+                            Aktifkan & Buat Akses Layar TV
+                        </x-button>
+                    </form>
+                </div>
+            @endif
+        </section>
 
         {{-- Live Screen Preview Card --}}
-        <x-card padding="lg">
+        <section class="rounded-2xl border border-neutral-200 bg-white p-4 shadow-xs sm:p-6">
             <div class="space-y-4">
-                <div class="flex items-center justify-between">
-                    <div>
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div class="min-w-0">
                         <h3 class="text-h3 font-bold text-neutral-900">Pratinjau Layar TV (Live Data Preview)</h3>
                         <p class="text-caption text-neutral-500 mt-0.5">
                             Representasi tampilan publik yang dilihat oleh pengunjung di ruang tunggu usaha Anda.
@@ -185,10 +179,11 @@
                     </div>
 
                     @if ($business->isDisplayActive() && $business->display_token)
-                        <a 
-                            href="{{ route('display.show', ['token' => $business->display_token]) }}" 
+                        <a
+                            href="{{ route('display.show', ['token' => $business->display_token]) }}"
                             target="_blank"
-                            class="text-xs font-bold text-brand-700 hover:text-brand-800 underline inline-flex items-center gap-1"
+                            rel="noopener"
+                            class="inline-flex min-h-11 shrink-0 items-center gap-1 text-xs font-bold text-brand-700 underline hover:text-brand-800"
                         >
                             <span>Buka Layar Penuh</span>
                             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
@@ -197,58 +192,77 @@
                 </div>
 
                 {{-- Scaled Down Miniature TV Frame --}}
-                <div class="rounded-2xl border border-slate-800 bg-slate-950 p-6 text-white shadow-lg overflow-hidden">
+                <div class="overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-neutral-900 shadow-xs sm:p-6">
                     {{-- Mini Header --}}
-                    <div class="flex items-center justify-between pb-4 border-b border-slate-800 text-xs">
-                        <div class="flex items-center gap-2">
-                            <span class="font-black text-brand-400">AntreIn Display</span>
-                            <span class="text-slate-600">•</span>
-                            <span class="font-bold text-white">{{ $business->name }}</span>
+                    <div class="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-neutral-200 bg-white px-3.5 py-2.5 text-xs shadow-2xs">
+                        <div class="flex min-w-0 items-center gap-2">
+                            <span class="shrink-0 rounded-md bg-brand-700 px-2 py-0.5 font-black text-white">AntreIn Display</span>
+                            <span class="truncate font-bold text-neutral-950">{{ $business->name }}</span>
                         </div>
-                        <div class="font-mono text-slate-400 text-xs">
-                            {{ $displayData['server_time']['time'] }} • {{ $business->timezone }}
+                        <div class="flex items-center gap-1.5 font-mono text-xs text-neutral-700 tabular-nums">
+                            <span class="font-bold">{{ $displayData['server_time']['time'] }}</span>
+                            <span class="rounded border border-neutral-200 bg-neutral-100 px-1.5 py-0.5 text-[10px] text-neutral-600">{{ $business->timezone }}</span>
                         </div>
                     </div>
 
                     {{-- Mini Counters Grid --}}
-                    <div class="py-6">
+                    <div class="py-5">
                         @if (empty($displayData['counters']))
-                            <div class="text-center py-8 text-xs text-slate-500">
+                            <div class="rounded-xl border border-neutral-200 bg-white py-8 text-center text-xs text-neutral-500">
                                 Belum ada loket aktif yang terdaftar di usaha ini.
                             </div>
                         @else
-                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            @php
+                                $previewCount = count($displayData['counters']);
+                                $previewGridClass = match (true) {
+                                    $previewCount <= 1 => 'grid-cols-1 max-w-md mx-auto',
+                                    $previewCount === 2 => 'grid-cols-1 sm:grid-cols-2',
+                                    $previewCount === 3 => 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
+                                    default => 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4',
+                                };
+                            @endphp
+                            <div class="grid gap-4 {{ $previewGridClass }}">
                                 @foreach ($displayData['counters'] as $counter)
-                                    <div class="rounded-xl border p-4 bg-slate-900/80 {{ $counter['active_ticket'] && $counter['active_ticket']['status'] === 'dipanggil' ? 'border-amber-500/80 bg-amber-950/20' : ($counter['active_ticket'] ? 'border-emerald-500/60' : 'border-slate-800') }}">
-                                        <div class="flex items-center justify-between mb-2">
-                                            <span class="font-bold text-xs uppercase text-slate-300">{{ $counter['name'] }}</span>
-                                            <span class="text-[10px] font-mono text-slate-500">{{ $counter['code'] }}</span>
+                                    @php
+                                        $ticket = $counter['active_ticket'] ?? null;
+                                        $isCalled = $ticket && ($ticket['status'] ?? null) === 'dipanggil';
+                                        $isServing = $ticket && ($ticket['status'] ?? null) === 'sedang_dilayani';
+                                    @endphp
+                                    <div class="overflow-hidden rounded-xl border-2 bg-white shadow-2xs {{ $isCalled ? 'border-amber-400 bg-amber-50/60' : ($isServing ? 'border-brand-600' : 'border-neutral-200') }}">
+                                        <div class="flex items-center justify-between border-b px-3.5 py-2 {{ $isCalled ? 'border-amber-300 bg-amber-400 text-amber-950' : ($isServing ? 'border-brand-700 bg-brand-700 text-white' : 'border-neutral-200 bg-neutral-50 text-neutral-800') }}">
+                                            <span class="truncate text-xs font-extrabold">{{ $counter['name'] }}</span>
+                                            <span class="rounded px-1.5 py-0.5 font-mono text-[10px] font-bold {{ $isCalled ? 'bg-amber-950/15 text-amber-950' : ($isServing ? 'bg-white/15 text-white' : 'bg-white text-neutral-600 ring-1 ring-neutral-200') }}">{{ $counter['code'] }}</span>
                                         </div>
 
-                                        <div class="text-center py-2">
-                                            @if ($counter['active_ticket'])
-                                                <div class="text-3xl font-black font-mono tracking-tight {{ $counter['active_ticket']['status'] === 'dipanggil' ? 'text-amber-300 animate-pulse' : 'text-white' }}">
-                                                    {{ $counter['active_ticket']['ticket_number'] }}
+                                        <div class="px-3.5 py-4 text-center">
+                                            @if ($ticket)
+                                                <div class="font-mono text-3xl font-black tracking-tight tabular-nums {{ $isCalled ? 'text-neutral-950' : 'text-brand-700' }}">
+                                                    {{ $ticket['ticket_number'] }}
                                                 </div>
-                                                <div class="text-[11px] font-medium text-slate-400 truncate mt-1">
-                                                    {{ $counter['active_ticket']['service_name'] }}
+                                                <div class="mt-1 truncate text-[11px] font-semibold text-neutral-700">
+                                                    {{ $ticket['service_name'] }}
                                                 </div>
+                                                @if (! empty($ticket['booking_slot_window']))
+                                                    <div class="mt-1 text-[10px] font-medium text-neutral-500 tabular-nums">
+                                                        Slot {{ $ticket['booking_slot_window'] }}
+                                                    </div>
+                                                @endif
                                             @else
-                                                <div class="text-2xl font-black font-mono text-slate-700">—</div>
-                                                <div class="text-[11px] text-slate-600 mt-1">Standby</div>
+                                                <div class="font-mono text-2xl font-black text-neutral-300">—</div>
+                                                <div class="mt-1 text-[11px] text-neutral-500">Standby</div>
                                             @endif
                                         </div>
 
-                                        <div class="mt-2 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px]">
-                                            @if ($counter['active_ticket'] && $counter['active_ticket']['status'] === 'dipanggil')
-                                                <span class="px-2 py-0.5 rounded bg-amber-400 text-slate-950 font-bold uppercase">Dipanggil</span>
-                                            @elseif ($counter['active_ticket'] && $counter['active_ticket']['status'] === 'sedang_dilayani')
-                                                <span class="px-2 py-0.5 rounded bg-emerald-500 text-slate-950 font-bold uppercase">Dilayani</span>
+                                        <div class="flex items-center justify-between border-t px-3.5 py-2 text-[10px] {{ $isCalled ? 'border-amber-300 bg-amber-100/70' : ($isServing ? 'border-neutral-100 bg-brand-50/40' : 'border-neutral-100 bg-neutral-50') }}">
+                                            @if ($isCalled)
+                                                <span class="rounded-full bg-amber-500 px-2 py-0.5 font-bold uppercase text-amber-950">Dipanggil</span>
+                                            @elseif ($isServing)
+                                                <span class="rounded-full border border-emerald-200 bg-emerald-100 px-2 py-0.5 font-bold uppercase text-emerald-800">Dilayani</span>
                                             @else
-                                                <span class="text-slate-500">Tersedia</span>
+                                                <span class="rounded-full bg-neutral-200/80 px-2 py-0.5 font-semibold text-neutral-600">Standby</span>
                                             @endif
-                                            <span class="text-slate-600 font-mono">
-                                                {{ $counter['active_ticket']['called_at_formatted'] ?? '' }}
+                                            <span class="font-mono text-neutral-500 tabular-nums">
+                                                {{ $ticket['called_at_formatted'] ?? 'Loket Siap' }}
                                             </span>
                                         </div>
                                     </div>
@@ -258,13 +272,13 @@
                     </div>
 
                     {{-- Mini Footer --}}
-                    <div class="pt-3 border-t border-slate-800 text-[11px] text-slate-500 flex items-center justify-between">
+                    <div class="flex flex-col gap-1 border-t border-neutral-200 pt-3 text-[11px] text-neutral-500 sm:flex-row sm:items-center sm:justify-between">
                         <span>Pembaruan otomatis secara real-time via WebSocket & Polling</span>
-                        <span class="font-semibold text-slate-400">AntreIn Platform</span>
+                        <span class="font-bold text-neutral-800">AntreIn Platform</span>
                     </div>
                 </div>
             </div>
-        </x-card>
+        </section>
     </div>
 </x-layouts.merchant>
 

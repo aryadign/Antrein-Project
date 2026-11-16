@@ -47,6 +47,11 @@ class DisplayService
             ->orderBy('name')
             ->get();
 
+        if (! $business->usesStations() && $counters->count() > 1) {
+            $primary = $counters->first(fn (BusinessCounter $c): bool => $c->activeTicket !== null) ?? $counters->first();
+            $counters = $primary ? collect([$primary]) : collect();
+        }
+
         $activeCounterData = $counters->map(function (BusinessCounter $counter) {
             /** @var QueueTicket|null $ticket */
             $ticket = $counter->activeTicket;
@@ -68,6 +73,7 @@ class DisplayService
                         default => ucfirst(str_replace('_', ' ', $ticket->status)),
                     },
                     'service_name' => $ticket->service?->name ?? 'Layanan',
+                    'booking_slot_window' => $ticket->bookingSlotWindowLabel($ticket->business?->timezone),
                     'called_at' => $ticket->called_at?->toIso8601String(),
                     'called_at_formatted' => $ticket->called_at?->setTimezone($ticket->business->timezone ?? 'Asia/Makassar')->format('H:i'),
                 ] : null,
@@ -84,6 +90,7 @@ class DisplayService
                 'slug' => $business->slug,
                 'timezone' => $timezone,
                 'logo_url' => $business->getLogoUrl(),
+                'use_stations' => $business->usesStations(),
             ],
             'server_time' => [
                 'iso' => $now->toIso8601String(),
@@ -93,12 +100,12 @@ class DisplayService
             ],
             'counters' => $activeCounterData->values()->all(),
             'meta' => [
+                'use_stations' => $business->usesStations(),
                 'total_active_counters' => $counters->count(),
                 'calling_count' => $callingCount,
                 'serving_count' => $servingCount,
-                'channel_name' => 'display.' . $business->display_token_hash,
+                'channel_name' => 'display.'.$business->display_token_hash,
             ],
         ];
     }
 }
-

@@ -42,6 +42,7 @@ class SettingsController extends Controller
         return view('merchant.settings.index', [
             'business' => $business,
             'categories' => $categories,
+            'areas' => Business::AREAS,
             'hours' => $hours,
             'activeTab' => $activeTab,
             'user' => $user,
@@ -65,6 +66,7 @@ class SettingsController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:150'],
             'category_id' => ['required', 'integer', 'exists:business_categories,id'],
+            'area' => ['nullable', 'string', Rule::in(array_keys(Business::AREAS))],
             'description' => ['nullable', 'string', 'max:1000'],
             'address' => ['nullable', 'string', 'max:500'],
             'phone' => ['required', 'string', 'max:30'],
@@ -95,6 +97,7 @@ class SettingsController extends Controller
                 $payload = [
                     'name' => $validated['name'],
                     'category_id' => $validated['category_id'],
+                    'area' => $validated['area'] ?? null,
                     'description' => $validated['description'] ?? null,
                     'address' => $validated['address'] ?? null,
                     'phone' => $validated['phone'],
@@ -320,4 +323,3 @@ class SettingsController extends Controller
             ->with('status', 'Informasi akun dan keamanan berhasil diperbarui!');
     }
 }
-

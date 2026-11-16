@@ -4,6 +4,7 @@ namespace Tests\Feature\Merchant;
 
 use App\Models\Business;
 use App\Models\BusinessCategory;
+use App\Models\BusinessMembership;
 use App\Models\DailyQueue;
 use App\Models\QueueTicket;
 use App\Models\Service;
@@ -17,8 +18,13 @@ class QueueOperationsUITest extends TestCase
     use RefreshDatabase;
 
     private User $merchant;
+
+    private User $operator;
+
     private Business $business;
+
     private Service $service;
+
     private DailyQueue $dailyQueue;
 
     protected function setUp(): void
@@ -43,6 +49,14 @@ class QueueOperationsUITest extends TestCase
             'status' => Business::STATUS_BUKA,
         ]);
 
+        $this->operator = User::factory()->merchant()->create();
+        BusinessMembership::create([
+            'business_id' => $this->business->id,
+            'user_id' => $this->operator->id,
+            'role' => BusinessMembership::ROLE_OPERATOR,
+            'is_active' => true,
+        ]);
+
         $this->service = Service::create([
             'business_id' => $this->business->id,
             'name' => 'Servis Ringan & Ganti Oli',
@@ -62,7 +76,7 @@ class QueueOperationsUITest extends TestCase
 
     public function test_merchant_can_issue_walk_in_ticket(): void
     {
-        $response = $this->actingAs($this->merchant)->post(route('merchant.queues.walk-in'), [
+        $response = $this->actingAs($this->operator)->post(route('merchant.queues.walk-in'), [
             'service_id' => $this->service->id,
             'customer_name' => 'Komang Arimbawa',
             'customer_phone' => '081234567899',
@@ -86,7 +100,7 @@ class QueueOperationsUITest extends TestCase
         $this->business->update(['status' => Business::STATUS_JEDA]);
 
         // Without confirmed_paused -> rejected
-        $responseFail = $this->actingAs($this->merchant)->post(route('merchant.queues.walk-in'), [
+        $responseFail = $this->actingAs($this->operator)->post(route('merchant.queues.walk-in'), [
             'service_id' => $this->service->id,
             'customer_name' => 'Pelanggan Jeda',
         ]);
@@ -94,7 +108,7 @@ class QueueOperationsUITest extends TestCase
         $responseFail->assertSessionHasErrors('walkin_error');
 
         // With confirmed_paused -> succeeds
-        $responseSuccess = $this->actingAs($this->merchant)->post(route('merchant.queues.walk-in'), [
+        $responseSuccess = $this->actingAs($this->operator)->post(route('merchant.queues.walk-in'), [
             'service_id' => $this->service->id,
             'customer_name' => 'Pelanggan Jeda Dikonfirmasi',
             'confirmed_paused' => 1,
@@ -134,7 +148,7 @@ class QueueOperationsUITest extends TestCase
             'access_token' => 'tok-fifo-2',
         ]);
 
-        $response = $this->actingAs($this->merchant)->post(route('merchant.queues.call-next'));
+        $response = $this->actingAs($this->operator)->post(route('merchant.queues.call-next'));
 
         $response->assertRedirect();
         $response->assertSessionHas('status');
@@ -176,7 +190,7 @@ class QueueOperationsUITest extends TestCase
             'access_token' => 'tok-serving-2',
         ]);
 
-        $response = $this->actingAs($this->merchant)->post(route('merchant.queues.call-next'));
+        $response = $this->actingAs($this->operator)->post(route('merchant.queues.call-next'));
 
         $response->assertSessionHasErrors('queue_error');
     }
@@ -196,17 +210,17 @@ class QueueOperationsUITest extends TestCase
         ]);
 
         // 1. Recall
-        $resRecall = $this->actingAs($this->merchant)->post(route('merchant.queues.recall', $ticket));
+        $resRecall = $this->actingAs($this->operator)->post(route('merchant.queues.recall', $ticket));
         $resRecall->assertSessionHas('status');
         $this->assertNotNull($ticket->fresh()->recalled_at);
 
         // 2. Start Service
-        $resStart = $this->actingAs($this->merchant)->post(route('merchant.queues.start-service', $ticket));
+        $resStart = $this->actingAs($this->operator)->post(route('merchant.queues.start-service', $ticket));
         $resStart->assertSessionHas('status');
         $this->assertEquals(QueueTicket::STATUS_SEDANG_DILAYANI, $ticket->fresh()->status);
 
         // 3. Complete Ticket
-        $resComplete = $this->actingAs($this->merchant)->post(route('merchant.queues.complete', $ticket));
+        $resComplete = $this->actingAs($this->operator)->post(route('merchant.queues.complete', $ticket));
         $resComplete->assertSessionHas('status');
         $this->assertEquals(QueueTicket::STATUS_SELESAI, $ticket->fresh()->status);
     }
@@ -225,7 +239,7 @@ class QueueOperationsUITest extends TestCase
             'access_token' => 'tok-skip-5',
         ]);
 
-        $response = $this->actingAs($this->merchant)->post(route('merchant.queues.skip', $ticket));
+        $response = $this->actingAs($this->operator)->post(route('merchant.queues.skip', $ticket));
 
         $response->assertSessionHas('status');
         $this->assertEquals(QueueTicket::STATUS_DILEWATI, $ticket->fresh()->status);
@@ -245,7 +259,7 @@ class QueueOperationsUITest extends TestCase
             'access_token' => 'tok-cancel-8',
         ]);
 
-        $response = $this->actingAs($this->merchant)->post(route('merchant.queues.cancel', $ticket), [
+        $response = $this->actingAs($this->operator)->post(route('merchant.queues.cancel', $ticket), [
             'reason' => 'Pelanggan membatalkan janji karena hujan lebat',
         ]);
 
@@ -291,14 +305,13 @@ class QueueOperationsUITest extends TestCase
         ]);
 
         // Attempt recall on alien ticket
-        $resRecall = $this->actingAs($this->merchant)->post(route('merchant.queues.recall', $alienTicket));
+        $resRecall = $this->actingAs($this->operator)->post(route('merchant.queues.recall', $alienTicket));
         $resRecall->assertForbidden();
 
         // Attempt cancel on alien ticket
-        $resCancel = $this->actingAs($this->merchant)->post(route('merchant.queues.cancel', $alienTicket), [
+        $resCancel = $this->actingAs($this->operator)->post(route('merchant.queues.cancel', $alienTicket), [
             'reason' => 'Hacking attempt',
         ]);
         $resCancel->assertForbidden();
     }
 }
-

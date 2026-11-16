@@ -19,11 +19,10 @@ class MerchantReportService
     /**
      * Generate comprehensive queue operational analytics for a merchant.
      *
-     * @param  Business  $business
-     * @param  string  $period 'today', '7_days', '30_days', 'custom'
-     * @param  string|null  $startDate Y-m-d format for custom period
-     * @param  string|null  $endDate Y-m-d format for custom period
-     * @param  bool  $includeTickets Whether to attach full ticket records for the period (for export)
+     * @param  string  $period  'today', '7_days', '30_days', 'custom'
+     * @param  string|null  $startDate  Y-m-d format for custom period
+     * @param  string|null  $endDate  Y-m-d format for custom period
+     * @param  bool  $includeTickets  Whether to attach full ticket records for the period (for export)
      * @return array<string, mixed>
      */
     public function getReportData(
@@ -52,11 +51,13 @@ class MerchantReportService
 
         // Separate status breakdown (M9-03)
         $completedCount = (clone $ticketsQuery)->where('status', QueueTicket::STATUS_SELESAI)->count();
-        $skippedCount = (clone $ticketsQuery)->where('status', QueueTicket::STATUS_DILEWATI)->count();
+        $skippedCount = (clone $ticketsQuery)->whereIn('status', [QueueTicket::STATUS_DILEWATI, QueueTicket::STATUS_TIDAK_HADIR])->count();
         $cancelledCount = (clone $ticketsQuery)->where('status', QueueTicket::STATUS_DIBATALKAN)->count();
         $waitingCount = (clone $ticketsQuery)->where('status', QueueTicket::STATUS_MENUNGGU)->count();
         $calledCount = (clone $ticketsQuery)->where('status', QueueTicket::STATUS_DIPANGGIL)->count();
         $servingCount = (clone $ticketsQuery)->where('status', QueueTicket::STATUS_SEDANG_DILAYANI)->count();
+        $onlineCount = (clone $ticketsQuery)->where('source', QueueTicket::SOURCE_ONLINE)->count();
+        $walkInCount = (clone $ticketsQuery)->where('source', QueueTicket::SOURCE_WALK_IN)->count();
 
         // 1. Average Waiting Time: created_at -> service_started_at (M9-04)
         $waitingTickets = (clone $ticketsQuery)
@@ -108,8 +109,9 @@ class MerchantReportService
             'dibatalkan' => $cancelledCount,
         ];
 
-        // 5. Per-Service Statistics (M9-08)
+        // 5. Per-Service Statistics & Gross Revenue (M9-08)
         $servicesBreakdown = $this->buildServicesBreakdown($business, $dbStart, $dbEnd);
+        $grossRevenue = round((float) $servicesBreakdown->sum('gross_revenue'), 2);
 
         // 6. Peak-Hour Analysis (M9-09 & OQ-15)
         $peakHourData = $this->calculatePeakHour($business->id, $dbStart, $dbEnd, $timezone);
@@ -117,7 +119,7 @@ class MerchantReportService
         // 7. Period Ticket Records (Included only when requested, e.g. for CSV/PDF export)
         $tickets = $includeTickets
             ? (clone $ticketsQuery)
-                ->with('service')
+                ->with(['service' => fn ($query) => $query->withTrashed()])
                 ->orderBy('created_at', 'asc')
                 ->get()
             : collect();
@@ -135,6 +137,9 @@ class MerchantReportService
             'waitingCount' => $waitingCount,
             'calledCount' => $calledCount,
             'servingCount' => $servingCount,
+            'onlineCount' => $onlineCount,
+            'walkInCount' => $walkInCount,
+            'grossRevenue' => $grossRevenue,
             'avgWaitingMinutes' => $avgWaitingMinutes,
             'waitingSamples' => $waitingSamples,
             'avgServiceMinutes' => $avgServiceMinutes,
@@ -169,25 +174,90 @@ class MerchantReportService
         $completedCount = 0;
         $skippedCount = 0;
         $cancelledCount = 0;
+        $waitingCount = 0;
+        $calledCount = 0;
+        $servingCount = 0;
+        $onlineCount = 0;
+        $walkInCount = 0;
+        $totalGrossRevenue = 0.0;
         $waitingWeight = 0.0;
         $waitingSamples = 0;
         $serviceWeight = 0.0;
         $serviceSamples = 0;
+        $trendLabels = [];
+        $trendValues = [];
+        $combinedHourlyBuckets = array_fill(0, 24, 0);
+
+        $firstTimezone = $branches->first()?->timezone ?: 'Asia/Makassar';
+        [$defaultLocalStart, $defaultLocalEnd, $defaultPeriodLabel] = $this->resolveDateRange(
+            $period,
+            $startDate,
+            $endDate,
+            Carbon::now($firstTimezone),
+            $firstTimezone
+        );
+        $periodLabel = $defaultPeriodLabel;
+        $resolvedStartDate = $defaultLocalStart->toDateString();
+        $resolvedEndDate = $defaultLocalEnd->toDateString();
+
+        $reviewsCount = 0;
+        $ratingWeightedSum = 0.0;
+        $ratingWeightedCount = 0;
+        $openBranchesCount = 0;
+        $suspendedBranchesCount = 0;
 
         foreach ($branches as $branch) {
             $report = $this->getReportData($branch, $period, $startDate, $endDate);
+
+            $branchReviewsCount = (int) ($branch->reviews_count ?? $branch->customerReviews()->count());
+            $branchAvgRatingRaw = $branch->getAttributes()['avg_rating'] ?? null;
+            $branchAvgRating = $branchReviewsCount > 0
+                ? round((float) ($branchAvgRatingRaw ?? $branch->customerReviews()->avg('rating') ?? 0), 1)
+                : null;
+
+            if ($branchReviewsCount > 0 && $branchAvgRating !== null) {
+                $ratingWeightedSum += ($branchAvgRating * $branchReviewsCount);
+                $ratingWeightedCount += $branchReviewsCount;
+            }
+            $reviewsCount += $branchReviewsCount;
+
+            if ($branch->isOpen()) {
+                $openBranchesCount++;
+            }
+            if ($branch->is_suspended) {
+                $suspendedBranchesCount++;
+            }
+
+            $branchCompletionRate = $report['totalTickets'] > 0
+                ? (int) round(($report['completedCount'] / $report['totalTickets']) * 100)
+                : 0;
+            $branchGrossRevenue = (float) ($report['grossRevenue'] ?? 0);
 
             $rows[] = [
                 'branch_id' => $branch->id,
                 'branch_name' => $branch->name,
                 'branch_slug' => $branch->slug,
                 'is_active' => (bool) $branch->is_active,
+                'is_suspended' => (bool) $branch->is_suspended,
+                'status' => $branch->status,
+                'area_label' => $branch->areaLabel(),
+                'active_counters_count' => (int) ($branch->active_counters_count ?? $branch->activeCounters()->count()),
+                'active_services_count' => (int) ($branch->active_services_count ?? $branch->services()->count()),
+                'reviews_count' => $branchReviewsCount,
+                'avg_rating' => $branchAvgRating,
                 'timezone' => $report['timezone'],
                 'period_label' => $report['periodLabel'],
                 'total_tickets' => $report['totalTickets'],
                 'completed_count' => $report['completedCount'],
                 'skipped_count' => $report['skippedCount'],
                 'cancelled_count' => $report['cancelledCount'],
+                'waiting_count' => $report['waitingCount'],
+                'called_count' => $report['calledCount'],
+                'serving_count' => $report['servingCount'],
+                'online_count' => $report['onlineCount'],
+                'walk_in_count' => $report['walkInCount'],
+                'gross_revenue' => $branchGrossRevenue,
+                'completion_rate' => $branchCompletionRate,
                 'avg_waiting_minutes' => $report['avgWaitingMinutes'],
                 'avg_service_minutes' => $report['avgServiceMinutes'],
                 'has_data' => $report['hasData'],
@@ -197,6 +267,12 @@ class MerchantReportService
             $completedCount += $report['completedCount'];
             $skippedCount += $report['skippedCount'];
             $cancelledCount += $report['cancelledCount'];
+            $waitingCount += $report['waitingCount'];
+            $calledCount += $report['calledCount'];
+            $servingCount += $report['servingCount'];
+            $onlineCount += $report['onlineCount'];
+            $walkInCount += $report['walkInCount'];
+            $totalGrossRevenue += $branchGrossRevenue;
 
             if ($report['avgWaitingMinutes'] !== null && $report['waitingSamples'] > 0) {
                 $waitingWeight += $report['avgWaitingMinutes'] * $report['waitingSamples'];
@@ -207,22 +283,87 @@ class MerchantReportService
                 $serviceWeight += $report['avgServiceMinutes'] * $report['serviceSamples'];
                 $serviceSamples += $report['serviceSamples'];
             }
+
+            if (empty($trendLabels)) {
+                $trendLabels = $report['trendLabels'];
+                $trendValues = $report['trendValues'];
+            } else {
+                foreach ($report['trendValues'] as $idx => $val) {
+                    if (array_key_exists($idx, $trendValues)) {
+                        $trendValues[$idx] += $val;
+                    }
+                }
+            }
+
+            $branchBuckets = $report['peakHour']['hourly_buckets'] ?? [];
+            foreach ($branchBuckets as $hour => $bucketCount) {
+                $combinedHourlyBuckets[$hour] = ($combinedHourlyBuckets[$hour] ?? 0) + $bucketCount;
+            }
         }
+
+        $maxHourCount = 0;
+        $maxHour = null;
+        foreach ($combinedHourlyBuckets as $hour => $count) {
+            if ($count > $maxHourCount) {
+                $maxHourCount = $count;
+                $maxHour = $hour;
+            }
+        }
+        $peakThresholdMet = $maxHourCount >= self::PEAK_HOUR_THRESHOLD;
 
         return [
             'period' => $period,
+            'periodLabel' => $periodLabel,
+            'startDate' => $resolvedStartDate,
+            'endDate' => $resolvedEndDate,
+            'timezone' => $firstTimezone,
             'rows' => $rows,
             'totals' => [
                 'branches' => count($rows),
+                'open_branches_count' => $openBranchesCount,
+                'suspended_branches_count' => $suspendedBranchesCount,
                 'total_tickets' => $totalTickets,
                 'completed_count' => $completedCount,
                 'skipped_count' => $skippedCount,
                 'cancelled_count' => $cancelledCount,
+                'waiting_count' => $waitingCount,
+                'called_count' => $calledCount,
+                'serving_count' => $servingCount,
+                'online_count' => $onlineCount,
+                'walk_in_count' => $walkInCount,
+                'gross_revenue' => round($totalGrossRevenue, 2),
+                'completion_rate' => $totalTickets > 0 ? (int) round(($completedCount / $totalTickets) * 100) : 0,
+                'reviews_count' => $reviewsCount,
+                'avg_rating' => $ratingWeightedCount > 0 ? round($ratingWeightedSum / $ratingWeightedCount, 1) : null,
                 'avg_waiting_minutes' => $waitingSamples > 0
                     ? round($waitingWeight / $waitingSamples, 1)
                     : null,
+                'waiting_samples' => $waitingSamples,
                 'avg_service_minutes' => $serviceSamples > 0
                     ? round($serviceWeight / $serviceSamples, 1)
+                    : null,
+                'service_samples' => $serviceSamples,
+            ],
+            'trendLabels' => $trendLabels,
+            'trendValues' => $trendValues,
+            'statusDistribution' => [
+                'menunggu' => $waitingCount,
+                'dipanggil' => $calledCount,
+                'sedang_dilayani' => $servingCount,
+                'selesai' => $completedCount,
+                'dilewati' => $skippedCount,
+                'dibatalkan' => $cancelledCount,
+            ],
+            'peakHour' => [
+                'threshold_met' => $peakThresholdMet,
+                'threshold' => self::PEAK_HOUR_THRESHOLD,
+                'max_count' => $maxHourCount,
+                'max_hour' => $maxHour,
+                'peak_range' => ($maxHour !== null && $peakThresholdMet)
+                    ? sprintf('%02d:00 – %02d:00', $maxHour, ($maxHour + 1) % 24)
+                    : null,
+                'top_hour_formatted' => $maxHour !== null
+                    ? sprintf('%02d:00 – %02d:00', $maxHour, ($maxHour + 1) % 24)
                     : null,
             ],
             'hasData' => $totalTickets > 0,
@@ -247,7 +388,7 @@ class MerchantReportService
             return [
                 $now->copy()->startOfDay(),
                 $now->copy()->endOfDay(),
-                'Hari Ini (' . $now->translatedFormat('d M Y') . ')',
+                'Hari Ini ('.$now->translatedFormat('d M Y').')',
             ];
         }
 
@@ -278,7 +419,7 @@ class MerchantReportService
             return [
                 $start,
                 $end,
-                $start->translatedFormat('d M Y') . ' – ' . $end->translatedFormat('d M Y'),
+                $start->translatedFormat('d M Y').' – '.$end->translatedFormat('d M Y'),
             ];
         }
 
@@ -332,8 +473,11 @@ class MerchantReportService
      */
     protected function buildServicesBreakdown(Business $business, Carbon $dbStart, Carbon $dbEnd): Collection
     {
-        // Retrieve all services of this business (both active and inactive)
-        $services = Service::where('business_id', $business->id)->orderBy('name')->get();
+        // Retrieve all services of this business (active, inactive, and soft-deleted with historical data)
+        $services = Service::withTrashed()
+            ->where('business_id', $business->id)
+            ->orderBy('name')
+            ->get();
 
         return $services->map(function (Service $service) use ($business, $dbStart, $dbEnd) {
             $serviceTickets = QueueTicket::where('business_id', $business->id)
@@ -342,9 +486,16 @@ class MerchantReportService
                 ->get();
 
             $total = $serviceTickets->count();
+            if ($service->trashed() && $total === 0) {
+                return null;
+            }
+
             $completed = $serviceTickets->where('status', QueueTicket::STATUS_SELESAI)->count();
-            $skipped = $serviceTickets->where('status', QueueTicket::STATUS_DILEWATI)->count();
+            $skipped = $serviceTickets->whereIn('status', [QueueTicket::STATUS_DILEWATI, QueueTicket::STATUS_TIDAK_HADIR])->count();
             $cancelled = $serviceTickets->where('status', QueueTicket::STATUS_DIBATALKAN)->count();
+
+            $unitPrice = (float) ($service->price ?? 0);
+            $grossRevenue = round($completed * $unitPrice, 2);
 
             // Calculate average service duration for this specific service
             $validDurations = [];
@@ -361,14 +512,16 @@ class MerchantReportService
             return [
                 'service_id' => $service->id,
                 'service_name' => $service->name,
-                'is_active' => $service->is_active,
+                'is_active' => $service->is_active && ! $service->trashed(),
+                'unit_price' => $unitPrice,
                 'total_tickets' => $total,
                 'completed_tickets' => $completed,
                 'skipped_tickets' => $skipped,
                 'cancelled_tickets' => $cancelled,
+                'gross_revenue' => $grossRevenue,
                 'avg_service_minutes' => $avgDuration,
             ];
-        });
+        })->filter()->values();
     }
 
     /**
@@ -419,6 +572,7 @@ class MerchantReportService
             'top_hour_formatted' => $maxHour !== null
                 ? sprintf('%02d:00 – %02d:00', $maxHour, ($maxHour + 1) % 24)
                 : null,
+            'hourly_buckets' => $hourlyBuckets,
         ];
     }
 }

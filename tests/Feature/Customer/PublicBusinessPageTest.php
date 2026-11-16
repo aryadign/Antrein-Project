@@ -5,8 +5,6 @@ namespace Tests\Feature\Customer;
 use App\Models\Business;
 use App\Models\BusinessCategory;
 use App\Models\BusinessHour;
-use App\Models\DailyQueue;
-use App\Models\QueueTicket;
 use App\Models\Service;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -17,8 +15,11 @@ class PublicBusinessPageTest extends TestCase
     use RefreshDatabase;
 
     private Business $business;
+
     private BusinessCategory $category;
+
     private Service $activeService;
+
     private Service $inactiveService;
 
     protected function setUp(): void
@@ -195,11 +196,11 @@ class PublicBusinessPageTest extends TestCase
                     'is_open',
                 ],
                 'services',
-                'now_serving',
                 'waiting_count',
+                'wait_range',
             ],
         ]);
+        $this->assertArrayNotHasKey('now_serving', $response->json('data'));
         $this->assertEquals('Aura Aesthetic Clinic', $response->json('data.business.name'));
     }
 }
-

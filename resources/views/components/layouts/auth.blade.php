@@ -7,8 +7,8 @@
 <x-layouts.base :title="$title . ' — AntreIn'">
     <div class="min-h-screen bg-neutral-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
         <div class="sm:mx-auto sm:w-full sm:max-w-md text-center">
-            <a href="/" class="inline-flex items-center gap-1.5 focus:outline-none">
-                <span class="text-3xl font-extrabold tracking-tight text-neutral-950">AntreIn<span class="text-brand-700">.</span></span>
+            <a href="/" class="inline-flex items-center justify-center focus:outline-none">
+                <x-brand-logo size="lg" />
             </a>
             <h2 class="mt-4 text-h2 font-bold tracking-tight text-neutral-950">{{ $heading }}</h2>
             @if ($subheading)

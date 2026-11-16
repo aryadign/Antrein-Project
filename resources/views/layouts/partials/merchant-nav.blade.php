@@ -1,26 +1,26 @@
 @php
     $user = auth()->user();
     $isOwner = $user?->isOwner() ?? false;
-    $canManageOrg = $user?->canManageOrganization() ?? false;
+    $isOperator = $user?->isOperator() ?? false;
 
     $navItems = [
         ['name' => 'Beranda', 'route' => 'merchant.dashboard', 'icon' => 'home'],
-        ['name' => 'Antrean', 'route' => 'merchant.queues', 'icon' => 'queue'],
-        ['name' => 'Ulasan', 'route' => 'merchant.reviews.index', 'icon' => 'star'],
-        ['name' => 'Cabang', 'route' => 'merchant.branches.index', 'icon' => 'building'],
     ];
 
-    if ($canManageOrg) {
-        $navItems[] = ['name' => 'Laporan Grup', 'route' => 'merchant.organization.reports', 'icon' => 'presentation'];
-        $navItems[] = ['name' => 'Organisasi', 'route' => 'merchant.organization.edit', 'icon' => 'office'];
+    if ($isOperator) {
+        $navItems[] = ['name' => 'Antrean', 'route' => 'merchant.queues', 'icon' => 'queue'];
+        $navItems[] = ['name' => 'Layar TV', 'route' => 'merchant.display.index', 'icon' => 'tv'];
+        $navItems[] = ['name' => 'QR Antrean', 'route' => 'merchant.queues.qr', 'icon' => 'qr'];
     }
 
     if ($isOwner) {
+        $navItems[] = ['name' => 'Cabang', 'route' => 'merchant.branches.index', 'icon' => 'building'];
         $navItems[] = ['name' => 'Loket', 'route' => 'merchant.counters.index', 'icon' => 'counter'];
-        $navItems[] = ['name' => 'Layanan', 'route' => 'merchant.services.index', 'icon' => 'scissors'];
-        $navItems[] = ['name' => 'Laporan', 'route' => 'merchant.reports', 'icon' => 'chart'];
+        $navItems[] = ['name' => 'Layanan', 'route' => 'merchant.services.index', 'icon' => 'services'];
         $navItems[] = ['name' => 'Kelola Staf', 'route' => 'merchant.staff.index', 'icon' => 'users'];
-        $navItems[] = ['name' => 'Layar TV', 'route' => 'merchant.display.index', 'icon' => 'tv'];
+        $navItems[] = ['name' => 'Ulasan', 'route' => 'merchant.reviews.index', 'icon' => 'star'];
+        $navItems[] = ['name' => 'Laporan', 'route' => 'merchant.reports', 'icon' => 'chart'];
+        $navItems[] = ['name' => 'QR Antrean', 'route' => 'merchant.queues.qr', 'icon' => 'qr'];
         $navItems[] = ['name' => 'Pengaturan', 'route' => 'merchant.settings', 'icon' => 'cog'];
     }
 
@@ -29,7 +29,9 @@
 
 @foreach ($navItems as $item)
     @php
-        $isActive = $currentRoute === $item['route'] || str_starts_with($currentRoute, $item['route']);
+        $isActive = $currentRoute === $item['route']
+            || ($item['route'] === 'merchant.queues' && str_starts_with($currentRoute, 'merchant.queues') && $currentRoute !== 'merchant.queues.qr')
+            || ($item['route'] !== 'merchant.queues' && str_starts_with($currentRoute, $item['route']));
     @endphp
     <a 
         href="{{ Route::has($item['route']) ? route($item['route']) : '#' . $item['route'] }}" 
@@ -39,6 +41,8 @@
             <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
         @elseif ($item['icon'] === 'queue')
             <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+        @elseif ($item['icon'] === 'qr')
+            <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
         @elseif ($item['icon'] === 'star')
             <svg class="w-5 h-5 shrink-0 text-amber-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
         @elseif ($item['icon'] === 'building')
@@ -49,8 +53,8 @@
             <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/></svg>
         @elseif ($item['icon'] === 'counter')
             <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-        @elseif ($item['icon'] === 'scissors')
-            <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879a3 3 0 11-4.242-4.242 3 3 0 014.242 0M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243 4.243 3 3 0 004.243-4.243z"/></svg>
+        @elseif ($item['icon'] === 'services')
+            <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
         @elseif ($item['icon'] === 'chart')
             <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
         @elseif ($item['icon'] === 'users')

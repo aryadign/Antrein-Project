@@ -23,14 +23,14 @@ class StaffInvitationController extends Controller
     public function show(Request $request, string $token): View|RedirectResponse
     {
         $tokenHash = hash('sha256', $token);
-        $invitation = StaffInvitation::with(['business', 'invitedBy'])
+        $invitation = StaffInvitation::with(['business', 'invitedBy', 'counter'])
             ->where('token_hash', $tokenHash)
             ->first();
 
         if (! $invitation) {
             return view('auth.staff-invitation', [
                 'status' => 'not_found',
-                'message' => 'Tautan undangan tidak valid atau tidak ditemukan.',
+                'message' => 'Undangan tidak valid atau tidak ditemukan.',
                 'invitation' => null,
                 'business' => null,
                 'token' => $token,
@@ -41,7 +41,7 @@ class StaffInvitationController extends Controller
         if ($invitation->isRevoked()) {
             return view('auth.staff-invitation', [
                 'status' => 'revoked',
-                'message' => 'Tautan undangan ini telah dicabut oleh pemilik usaha.',
+                'message' => 'Undangan ini telah dicabut oleh pemilik usaha.',
                 'invitation' => $invitation,
                 'business' => $invitation->business,
                 'token' => $token,
@@ -52,7 +52,7 @@ class StaffInvitationController extends Controller
         if ($invitation->isAccepted()) {
             return view('auth.staff-invitation', [
                 'status' => 'accepted',
-                'message' => 'Tautan undangan ini sudah pernah digunakan dan diterima.',
+                'message' => 'Undangan ini sudah pernah digunakan dan diterima.',
                 'invitation' => $invitation,
                 'business' => $invitation->business,
                 'token' => $token,
@@ -63,7 +63,7 @@ class StaffInvitationController extends Controller
         if ($invitation->isExpired()) {
             return view('auth.staff-invitation', [
                 'status' => 'expired',
-                'message' => 'Tautan undangan ini telah kedaluwarsa. Silakan minta pemilik usaha untuk mengirimkan undangan baru.',
+                'message' => 'Undangan ini telah kedaluwarsa. Silakan minta pemilik usaha untuk mengirimkan undangan baru.',
                 'invitation' => $invitation,
                 'business' => $invitation->business,
                 'token' => $token,
@@ -158,7 +158,7 @@ class StaffInvitationController extends Controller
 
         if (! $invitation || ! $invitation->isValid()) {
             return redirect()->route('invitations.show', ['token' => $token])
-                ->withErrors(['general' => 'Tautan undangan tidak valid, telah dicabut, atau sudah kedaluwarsa.']);
+                ->withErrors(['general' => 'Undangan tidak valid, telah dicabut, atau sudah kedaluwarsa.']);
         }
 
         $user = $request->user();
@@ -231,7 +231,11 @@ class StaffInvitationController extends Controller
 
         // Execute acceptance atomically
         DB::transaction(function () use ($invitation, $user) {
-            BusinessMembership::updateOrCreate(
+            if ($user->isCustomer()) {
+                $user->update(['role' => User::ROLE_MERCHANT]);
+            }
+
+            $membership = BusinessMembership::updateOrCreate(
                 [
                     'business_id' => $invitation->business_id,
                     'user_id' => $user->id,
@@ -243,6 +247,8 @@ class StaffInvitationController extends Controller
                     'joined_at' => now(),
                 ]
             );
+
+            $this->assignInvitedCounter($invitation, $membership);
 
             $invitation->update([
                 'accepted_at' => now(),
@@ -259,5 +265,36 @@ class StaffInvitationController extends Controller
         return redirect()->route('merchant.dashboard')
             ->with('status', sprintf('Selamat bergabung di %s! Anda sekarang dapat mengoperasikan konsol antrean.', $invitation->business->name));
     }
-}
 
+    /**
+     * Assign the counter the owner picked on the invitation. When none was picked (or it was
+     * deactivated meanwhile), keep the default from membership creation, or fall back to the
+     * first active counter so a new operator is never left without a counter.
+     */
+    protected function assignInvitedCounter(StaffInvitation $invitation, BusinessMembership $membership): void
+    {
+        if (! $membership->isOperator()) {
+            return;
+        }
+
+        $invitedCounter = $invitation->business_counter_id
+            ? $invitation->business?->counters()->whereKey($invitation->business_counter_id)->where('is_active', true)->first()
+            : null;
+
+        if ($invitedCounter) {
+            $membership->wasRecentlyCreated
+                ? $membership->assignedCounters()->sync([$invitedCounter->id])
+                : $membership->assignedCounters()->syncWithoutDetaching([$invitedCounter->id]);
+
+            return;
+        }
+
+        if (! $membership->assignedCounters()->exists()) {
+            $fallbackCounter = $invitation->business?->counters()->where('is_active', true)->orderBy('id')->first();
+
+            if ($fallbackCounter) {
+                $membership->assignedCounters()->attach($fallbackCounter->id);
+            }
+        }
+    }
+}

@@ -8,16 +8,31 @@ use App\Models\Business;
 use App\Models\BusinessCategory;
 use App\Models\BusinessHour;
 use App\Models\Service;
+use App\Models\User;
 use App\Services\QrCodeService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class OnboardingController extends Controller
 {
+    /**
+     * Opening hours applied when an owner finishes onboarding without configuring step 2:
+     * Monday to Saturday 09:00–21:00, Sunday closed.
+     *
+     * @var array{open_time: string, close_time: string, closed_days: list<int>}
+     */
+    public const array DEFAULT_HOURS = [
+        'open_time' => '09:00',
+        'close_time' => '21:00',
+        'closed_days' => [0],
+    ];
+
     public function __construct(
         protected QrCodeService $qrCodeService
     ) {}
@@ -36,8 +51,12 @@ class OnboardingController extends Controller
 
         $business = $user->business;
 
-        // If user already fully onboarded and not requesting a specific step, redirect to dashboard
+        // If user already fully onboarded and not requesting a specific step, redirect appropriately
         if ($user->hasCompletedOnboarding() && ! $request->has('step')) {
+            if ($business && ! $business->isApproved()) {
+                return redirect()->route('merchant.approval.status');
+            }
+
             return redirect()->route('merchant.dashboard');
         }
 
@@ -71,6 +90,7 @@ class OnboardingController extends Controller
             'step' => $step,
             'business' => $business,
             'categories' => $categories,
+            'areas' => Business::AREAS,
             'services' => $services,
             'hours' => $hours,
             'publicUrl' => $publicUrl,
@@ -92,68 +112,105 @@ class OnboardingController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'category_id' => ['required', 'integer', 'exists:business_categories,id'],
+            'area' => ['nullable', 'string', Rule::in(array_keys(Business::AREAS))],
             'description' => ['nullable', 'string', 'max:1000'],
             'address' => ['required', 'string', 'max:500'],
             'phone' => ['required', 'string', 'max:20'],
             'timezone' => ['required', 'string', 'in:Asia/Makassar,Asia/Jakarta,Asia/Jayapura'],
+            'logo' => ['nullable', 'image', 'mimes:jpeg,png,webp', 'max:2048'],
+        ], [
+            'logo.image' => 'Logo usaha harus berupa gambar.',
+            'logo.mimes' => 'Logo usaha harus berformat JPG, PNG, atau WEBP.',
+            'logo.max' => 'Ukuran logo usaha maksimal 2 MB.',
         ]);
 
-        DB::transaction(function () use ($user, $validated) {
-            $business = $user->business;
+        $oldLogo = $user->business?->logo_path;
+        $newLogoPath = $request->hasFile('logo')
+            ? $request->file('logo')->storeAs('logos', 'logo-'.Str::random(32).'.'.$request->file('logo')->extension(), 'public')
+            : null;
 
-            // Generate unique slug
-            $baseSlug = Str::slug($validated['name']);
-            if (empty($baseSlug)) {
-                $baseSlug = 'usaha-'.Str::lower(Str::random(6));
+        try {
+            DB::transaction(function () use ($user, $validated, $newLogoPath) {
+                $this->saveBusinessProfile($user, $validated, $newLogoPath);
+            });
+        } catch (\Throwable $exception) {
+            if ($newLogoPath !== null) {
+                Storage::disk('public')->delete($newLogoPath);
             }
 
-            $slug = $baseSlug;
-            $counter = 1;
+            throw $exception;
+        }
 
-            while (
-                Business::query()
-                    ->where('slug', $slug)
-                    ->when($business, fn ($q) => $q->where('id', '!=', $business->id))
-                    ->exists()
-            ) {
-                $counter++;
-                $slug = "{$baseSlug}-{$counter}";
-            }
-
-            if ($business) {
-                $business->update([
-                    'category_id' => $validated['category_id'],
-                    'name' => $validated['name'],
-                    'slug' => $slug,
-                    'description' => $validated['description'] ?? null,
-                    'address' => $validated['address'],
-                    'phone' => $validated['phone'],
-                    'timezone' => $validated['timezone'],
-                ]);
-            } else {
-                $business = Business::create([
-                    'user_id' => $user->id,
-                    'category_id' => $validated['category_id'],
-                    'name' => $validated['name'],
-                    'slug' => $slug,
-                    'description' => $validated['description'] ?? null,
-                    'address' => $validated['address'],
-                    'phone' => $validated['phone'],
-                    'timezone' => $validated['timezone'],
-                    'status' => Business::STATUS_BUKA,
-                ]);
-            }
-
-            ActivityLog::log(
-                action: 'onboarding_step_1',
-                description: 'Profil usaha berhasil dikonfigurasi',
-                business: $business,
-                user: $user
-            );
-        });
+        if ($newLogoPath !== null && $oldLogo) {
+            Storage::disk('public')->delete($oldLogo);
+        }
 
         return redirect()->route('merchant.onboarding', ['step' => 2])
             ->with('status', 'Profil usaha berhasil disimpan! Silakan atur jam operasional.');
+    }
+
+    /**
+     * Create or update the owner's business from the step 1 profile data.
+     *
+     * @param  array{name: string, category_id: int, area?: ?string, description?: ?string, address: string, phone: string, timezone: string}  $validated
+     */
+    protected function saveBusinessProfile(User $user, array $validated, ?string $logoPath): void
+    {
+        $business = $user->business;
+
+        // Generate unique slug
+        $baseSlug = Str::slug($validated['name']);
+        if (empty($baseSlug)) {
+            $baseSlug = 'usaha-'.Str::lower(Str::random(6));
+        }
+
+        $slug = $baseSlug;
+        $counter = 1;
+
+        while (
+            Business::query()
+                ->where('slug', $slug)
+                ->when($business, fn ($q) => $q->where('id', '!=', $business->id))
+                ->exists()
+        ) {
+            $counter++;
+            $slug = "{$baseSlug}-{$counter}";
+        }
+
+        $profile = [
+            'category_id' => $validated['category_id'],
+            'area' => $validated['area'] ?? null,
+            'name' => $validated['name'],
+            'slug' => $slug,
+            'description' => $validated['description'] ?? null,
+            'address' => $validated['address'],
+            'phone' => $validated['phone'],
+            'timezone' => $validated['timezone'],
+        ];
+
+        if ($logoPath !== null) {
+            $profile['logo_path'] = $logoPath;
+        }
+
+        if ($business) {
+            $business->update($profile);
+        } else {
+            $business = Business::create([
+                'user_id' => $user->id,
+                ...$profile,
+                'status' => Business::STATUS_BUKA,
+                'approval_status' => Business::APPROVAL_PENDING,
+            ]);
+        }
+
+        $user->forgetActiveBusiness();
+
+        ActivityLog::log(
+            action: 'onboarding_step_1',
+            description: 'Profil usaha berhasil dikonfigurasi',
+            business: $business,
+            user: $user
+        );
     }
 
     /**
@@ -234,32 +291,50 @@ class OnboardingController extends Controller
             'duration_minutes' => ['required', 'integer', 'min:5', 'max:480'],
             'price' => ['required', 'numeric', 'min:0'],
             'daily_quota' => ['nullable', 'integer', 'min:1'],
+            'image' => ['nullable', 'image', 'mimes:jpeg,png,webp', 'max:2048'],
+        ], [
+            'image.image' => 'Foto layanan harus berupa gambar.',
+            'image.mimes' => 'Foto layanan harus berformat JPG, PNG, atau WEBP.',
+            'image.max' => 'Ukuran foto layanan maksimal 2 MB.',
         ]);
 
-        DB::transaction(function () use ($user, $business, $validated) {
-            $service = Service::create([
-                'business_id' => $business->id,
-                'name' => $validated['name'],
-                'duration_minutes' => $validated['duration_minutes'],
-                'price' => $validated['price'],
-                'daily_quota' => $validated['daily_quota'] ?? null,
-                'is_active' => true,
-            ]);
+        $imagePath = $request->hasFile('image')
+            ? $request->file('image')->store('services/'.$business->id, 'public')
+            : null;
 
-            ActivityLog::log(
-                action: 'onboarding_step_3',
-                description: sprintf('Layanan perdana "%s" berhasil ditambahkan', $service->name),
-                business: $business,
-                user: $user
-            );
-        });
+        try {
+            DB::transaction(function () use ($user, $business, $validated, $imagePath) {
+                $service = Service::create([
+                    'business_id' => $business->id,
+                    'name' => $validated['name'],
+                    'duration_minutes' => $validated['duration_minutes'],
+                    'price' => $validated['price'],
+                    'daily_quota' => $validated['daily_quota'] ?? null,
+                    'image_path' => $imagePath,
+                    'is_active' => true,
+                ]);
+
+                ActivityLog::log(
+                    action: 'onboarding_step_3',
+                    description: sprintf('Layanan perdana "%s" berhasil ditambahkan', $service->name),
+                    business: $business,
+                    user: $user
+                );
+            });
+        } catch (\Throwable $exception) {
+            if ($imagePath !== null) {
+                Storage::disk('public')->delete($imagePath);
+            }
+
+            throw $exception;
+        }
 
         return redirect()->route('merchant.onboarding', ['step' => 4])
-            ->with('status', 'Layanan perdana berhasil ditambahkan! Lihat tautan dan QR Code antrean Anda.');
+            ->with('status', 'Layanan perdana berhasil ditambahkan! Lihat QR Code antrean Anda.');
     }
 
     /**
-     * Complete the onboarding and redirect to merchant dashboard.
+     * Complete the onboarding and redirect to the waiting approval page (or dashboard if approved).
      */
     public function complete(Request $request): RedirectResponse
     {
@@ -276,15 +351,95 @@ class OnboardingController extends Controller
                 ->withErrors(['general' => 'Harap lengkapi seluruh tahapan onboarding terlebih dahulu.']);
         }
 
+        if ($business->hours()->count() === 0) {
+            $this->applyDefaultHours($business);
+        }
+
         ActivityLog::log(
             action: 'onboarding_completed',
-            description: 'Onboarding usaha selesai. Membuka dashboard operasional.',
+            description: 'Onboarding usaha selesai. Menunggu verifikasi administrator AntreIn.',
             business: $business,
             user: $user
         );
 
+        if (! $business->isApproved()) {
+            return redirect()->route('merchant.approval.status')
+                ->with('status', 'Pendaftaran UMKM Anda telah dikirim dan sedang dalam proses peninjauan oleh Admin AntreIn.');
+        }
+
         return redirect()->route('merchant.dashboard')
             ->with('status', 'Selamat! Profil usaha Anda telah aktif dan siap menerima antrean.');
+    }
+
+    /**
+     * Display the registration waiting/rejection status page for UMKM owners.
+     */
+    public function approvalStatus(Request $request): View|RedirectResponse
+    {
+        $user = $request->user();
+        $business = $user->business;
+
+        if (! $business || ! $user->hasCompletedOnboarding()) {
+            return redirect()->route('merchant.onboarding');
+        }
+
+        if ($business->isApproved()) {
+            return redirect()->route('merchant.dashboard');
+        }
+
+        $business->load(['category', 'services', 'hours']);
+
+        return view('merchant.approval-status', [
+            'business' => $business,
+        ]);
+    }
+
+    /**
+     * Resubmit a rejected UMKM registration for admin review.
+     */
+    public function resubmit(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+        $business = $user->business;
+
+        if (! $business || $user->isOperator()) {
+            abort(403, 'Akses terbatas untuk Pemilik Usaha.');
+        }
+
+        if ($business->isRejected()) {
+            $business->update([
+                'approval_status' => Business::APPROVAL_PENDING,
+                'rejection_reason' => null,
+                'reviewed_at' => null,
+                'reviewed_by' => null,
+            ]);
+
+            ActivityLog::log(
+                action: 'business_resubmitted',
+                description: sprintf('Pemilik usaha mengajukan ulang pendaftaran UMKM "%s" untuk ditinjau admin.', $business->name),
+                business: $business,
+                user: $user
+            );
+        }
+
+        return redirect()->route('merchant.approval.status')
+            ->with('status', 'Pengajuan ulang UMKM Anda telah dikirim dan sedang dalam proses verifikasi admin.');
+    }
+
+    /**
+     * Give a business that skipped step 2 a sensible weekly schedule (see DEFAULT_HOURS).
+     */
+    protected function applyDefaultHours(Business $business): void
+    {
+        foreach (range(0, 6) as $dayOfWeek) {
+            BusinessHour::create([
+                'business_id' => $business->id,
+                'day_of_week' => $dayOfWeek,
+                'open_time' => self::DEFAULT_HOURS['open_time'],
+                'close_time' => self::DEFAULT_HOURS['close_time'],
+                'is_closed' => in_array($dayOfWeek, self::DEFAULT_HOURS['closed_days'], true),
+            ]);
+        }
     }
 
     /**

@@ -6,6 +6,7 @@ use App\Models\Business;
 use App\Models\BusinessMembership;
 use App\Models\User;
 use App\Services\DevDemoService;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -22,7 +23,8 @@ class DevDemoAccessTest extends TestCase
         $response->assertSee('Admin AntreIn');
         $response->assertSee('Owner UMKM');
         $response->assertSee('Operator Loket 1');
-        $response->assertSee('Pelanggan (Tamu)');
+        $response->assertSee('Pelanggan Demo');
+        $response->assertSee('pelanggan@antrein.id');
         $response->assertSee('admin@antrein.id');
         $response->assertSee('owner@garasi.id');
         $response->assertSee('operator@garasi.id');
@@ -64,8 +66,8 @@ class DevDemoAccessTest extends TestCase
 
         $dashboard = $this->get(route('admin.dashboard'));
         $dashboard->assertStatus(200);
-        $dashboard->assertSee('action="' . route('logout') . '"', false);
-        $dashboard->assertSee('href="' . route('admin.settings') . '"', false);
+        $dashboard->assertSee('action="'.route('logout').'"', false);
+        $dashboard->assertSee('href="'.route('admin.settings').'"', false);
         $dashboard->assertDontSee('href="#logout"', false);
         $dashboard->assertDontSee('href="#settings"', false);
 
@@ -95,7 +97,7 @@ class DevDemoAccessTest extends TestCase
 
             $dashboard = $this->get(route('merchant.dashboard'));
             $dashboard->assertStatus(200);
-            $dashboard->assertSee('action="' . route('logout') . '"', false);
+            $dashboard->assertSee('action="'.route('logout').'"', false);
             $dashboard->assertDontSee('href="#logout"', false);
 
             $logoutResponse = $this->post(route('logout'));
@@ -162,7 +164,7 @@ class DevDemoAccessTest extends TestCase
         $response->assertStatus(403);
     }
 
-    public function test_quick_login_as_customer_logs_out_session_and_redirects_to_guest_queue(): void
+    public function test_quick_login_as_customer_authenticates_demo_customer_and_redirects_to_portal(): void
     {
         $admin = User::factory()->admin()->create();
 
@@ -170,8 +172,12 @@ class DevDemoAccessTest extends TestCase
             'persona' => 'customer',
         ]);
 
-        $this->assertGuest();
-        $response->assertRedirect(route('customer.queue', ['slug' => DevDemoService::DEMO_SLUG]));
+        $this->assertAuthenticated();
+        /** @var User $user */
+        $user = auth()->user();
+        $this->assertTrue($user->isCustomer());
+        $this->assertSame(DevDemoService::CUSTOMER_EMAIL, $user->email);
+        $response->assertRedirect(route('customer.dashboard'));
     }
 
     public function test_customer_guest_can_access_barbershop_public_queue_with_services(): void
@@ -222,7 +228,7 @@ class DevDemoAccessTest extends TestCase
         $response->assertRedirect(route('merchant.dashboard'));
     }
 
-    public function test_switch_persona_to_customer_clears_session_and_redirects_to_guest_queue(): void
+    public function test_switch_persona_to_customer_authenticates_demo_customer_and_redirects_to_portal(): void
     {
         /** @var DevDemoService $devDemo */
         $devDemo = app(DevDemoService::class);
@@ -232,8 +238,12 @@ class DevDemoAccessTest extends TestCase
             'persona' => 'customer',
         ]);
 
-        $this->assertGuest();
-        $response->assertRedirect(route('customer.queue', ['slug' => DevDemoService::DEMO_SLUG]));
+        $this->assertAuthenticated();
+        /** @var User $user */
+        $user = auth()->user();
+        $this->assertTrue($user->isCustomer());
+        $this->assertSame(DevDemoService::CUSTOMER_EMAIL, $user->email);
+        $response->assertRedirect(route('customer.dashboard'));
     }
 
     public function test_invalid_persona_is_rejected_with_validation_error(): void
@@ -268,7 +278,7 @@ class DevDemoAccessTest extends TestCase
 
     public function test_dev_demo_access_routes_abort_404_in_production(): void
     {
-        $this->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class);
+        $this->withoutMiddleware(PreventRequestForgery::class);
         $this->app->detectEnvironment(fn () => 'production');
 
         $this->post('/dev/quick-login', ['persona' => 'admin'])

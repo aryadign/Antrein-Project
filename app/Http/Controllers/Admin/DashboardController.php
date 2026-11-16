@@ -29,7 +29,7 @@ class DashboardController extends Controller
             'today' => [
                 $now->copy()->startOfDay(),
                 $now->copy()->endOfDay(),
-                'Hari Ini ('. $now->toDateString() .')',
+                'Hari Ini ('.$now->toDateString().')',
             ],
             '30_days' => [
                 $now->copy()->subDays(29)->startOfDay(),
@@ -39,7 +39,7 @@ class DashboardController extends Controller
             'this_month' => [
                 $now->copy()->startOfMonth(),
                 $now->copy()->endOfMonth(),
-                'Bulan Ini ('. $now->translatedFormat('F Y') .')',
+                'Bulan Ini ('.$now->translatedFormat('F Y').')',
             ],
             'all' => [
                 Carbon::create(2025, 1, 1)->startOfDay(),
@@ -55,11 +55,18 @@ class DashboardController extends Controller
 
         // Platform-wide overall metrics (Absolute snapshot)
         $totalBusinesses = Business::count();
-        $activeBusinesses = Business::where('is_suspended', false)->count();
+        $activeBusinesses = Business::where('is_suspended', false)->where('approval_status', Business::APPROVAL_APPROVED)->count();
+        $pendingBusinesses = Business::where('approval_status', Business::APPROVAL_PENDING)->count();
         $suspendedBusinesses = Business::where('is_suspended', true)->count();
         $totalUsers = User::count();
         $totalQueues = QueueTicket::count();
         $completedQueues = QueueTicket::where('status', QueueTicket::STATUS_SELESAI)->count();
+
+        $pendingApprovalBusinesses = Business::with(['category', 'user'])
+            ->where('approval_status', Business::APPROVAL_PENDING)
+            ->latest('id')
+            ->limit(5)
+            ->get();
 
         // Period-specific metrics (anti-duplicate, direct table scoping in app timezone)
         $periodTicketsQuery = QueueTicket::query()->whereBetween('created_at', [$startDate, $endDate]);
@@ -78,7 +85,7 @@ class DashboardController extends Controller
             'dipanggil' => (clone $periodTicketsQuery)->where('status', QueueTicket::STATUS_DIPANGGIL)->count(),
             'sedang_dilayani' => (clone $periodTicketsQuery)->where('status', QueueTicket::STATUS_SEDANG_DILAYANI)->count(),
             'selesai' => (clone $periodTicketsQuery)->where('status', QueueTicket::STATUS_SELESAI)->count(),
-            'dilewati' => (clone $periodTicketsQuery)->where('status', QueueTicket::STATUS_DILEWATI)->count(),
+            'dilewati' => (clone $periodTicketsQuery)->whereIn('status', [QueueTicket::STATUS_DILEWATI, QueueTicket::STATUS_TIDAK_HADIR])->count(),
             'dibatalkan' => (clone $periodTicketsQuery)->where('status', QueueTicket::STATUS_DIBATALKAN)->count(),
         ];
 
@@ -112,6 +119,8 @@ class DashboardController extends Controller
         return view('admin.dashboard', [
             'totalBusinesses' => $totalBusinesses,
             'activeBusinesses' => $activeBusinesses,
+            'pendingBusinesses' => $pendingBusinesses,
+            'pendingApprovalBusinesses' => $pendingApprovalBusinesses,
             'suspendedBusinesses' => $suspendedBusinesses,
             'totalUsers' => $totalUsers,
             'totalQueues' => $totalQueues,
@@ -128,4 +137,3 @@ class DashboardController extends Controller
         ]);
     }
 }
-

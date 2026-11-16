@@ -45,6 +45,7 @@ class CustomerTicketStatusNotification extends Notification implements ShouldQue
             QueueTicket::STATUS_SEDANG_DILAYANI => 'Sedang Dilayani',
             QueueTicket::STATUS_SELESAI => 'Pelayanan Selesai',
             QueueTicket::STATUS_DILEWATI => 'Dilewati',
+            QueueTicket::STATUS_TIDAK_HADIR => 'Tidak hadir',
             QueueTicket::STATUS_DIBATALKAN => 'Dibatalkan',
             default => ucfirst(str_replace('_', ' ', $this->status)),
         };
@@ -53,20 +54,20 @@ class CustomerTicketStatusNotification extends Notification implements ShouldQue
 
         $mail = (new MailMessage)
             ->subject($subject)
-            ->greeting('Halo, ' . $this->ticket->customer_name . '!')
+            ->greeting('Halo, '.$this->ticket->customer_name.'!')
             ->line(sprintf('Pembaruan status untuk nomor antrean Anda di **%s**:', $businessName));
 
         match ($this->status) {
             QueueTicket::STATUS_DIPANGGIL => $mail
-                ->line(sprintf('📢 Nomor antrean Anda **%s** telah **DIPANGGIL**%s.', 
-                    $this->ticket->ticket_number, 
-                    $counterName ? ' ke **' . $counterName . '**' : ''))
+                ->line(sprintf('📢 Nomor antrean Anda **%s** telah **DIPANGGIL**%s.',
+                    $this->ticket->ticket_number,
+                    $counterName ? ' ke **'.$counterName.'**' : ''))
                 ->line('Silakan segera menuju meja pelayanan/loket yang ditentukan.'),
 
             QueueTicket::STATUS_SEDANG_DILAYANI => $mail
-                ->line(sprintf('Nomor antrean Anda **%s** saat ini **SEDANG DILAYANI**%s.', 
-                    $this->ticket->ticket_number, 
-                    $counterName ? ' di **' . $counterName . '**' : '')),
+                ->line(sprintf('Nomor antrean Anda **%s** saat ini **SEDANG DILAYANI**%s.',
+                    $this->ticket->ticket_number,
+                    $counterName ? ' di **'.$counterName.'**' : '')),
 
             QueueTicket::STATUS_SELESAI => $mail
                 ->line(sprintf('Pelayanan untuk nomor antrean **%s** telah **SELESAI**.', $this->ticket->ticket_number))
@@ -76,6 +77,10 @@ class CustomerTicketStatusNotification extends Notification implements ShouldQue
                 ->line(sprintf('Nomor antrean Anda **%s** telah **DILEWATI** karena Anda belum hadir saat dipanggil.', $this->ticket->ticket_number))
                 ->line('Silakan hubungi staf/operator di lokasi jika Anda memerlukan bantuan lebih lanjut.'),
 
+            QueueTicket::STATUS_TIDAK_HADIR => $mail
+                ->line(sprintf('Nomor antrean Anda **%s** otomatis berstatus **TIDAK HADIR** karena melebihi batas waktu 15 menit setelah dipanggil.', $this->ticket->ticket_number))
+                ->line('Anda dapat melakukan pendaftaran antrean baru jika masih membutuhkan layanan.'),
+
             QueueTicket::STATUS_DIBATALKAN => $mail
                 ->line(sprintf('Nomor antrean Anda **%s** telah **DIBATALKAN**.', $this->ticket->ticket_number))
                 ->line(sprintf('Alasan: *%s*', $this->ticket->cancellation_reason ?: 'Pembatalan operasional antrean.')),
@@ -84,12 +89,11 @@ class CustomerTicketStatusNotification extends Notification implements ShouldQue
         };
 
         return $mail
-            ->line(sprintf('Layanan: **%s** | Waktu: **%s** (%s)', 
-                $this->ticket->service?->name ?? 'Layanan', 
-                $currentTime, 
+            ->line(sprintf('Layanan: **%s** | Waktu: **%s** (%s)',
+                $this->ticket->service?->name ?? 'Layanan',
+                $currentTime,
                 $timezone))
             ->action('Lihat Detail & Lacak Antrean', $trackUrl)
             ->line('Anda menerima email ini karena menyetujui pemberitahuan perkembangan status antrean AntreIn.');
     }
 }
-

@@ -77,10 +77,9 @@
                                     <span class="text-caption px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 font-medium">Sisa 12 kuota</span>
                                 </div>
                                 <p class="text-body text-neutral-600 mt-1">Cuci rambut, potong model pria, pijat kepala ringan, dan pomade styling.</p>
-                                <div class="mt-2.5 flex items-center gap-4 text-caption text-neutral-500">
+                                <div class="mt-2.5 flex flex-wrap items-center gap-2 text-caption text-neutral-500">
                                     <span class="font-bold text-neutral-900 text-body">Rp 45.000</span>
-                                    <span>•</span>
-                                    <span>Durasi ±30 menit</span>
+                                    <span class="rounded-md bg-neutral-100 px-2 py-0.5 font-medium text-neutral-600">Durasi ±30 menit</span>
                                 </div>
                             </div>
                             
@@ -101,10 +100,9 @@
                                     <span class="text-caption px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 font-medium">Sisa 8 kuota</span>
                                 </div>
                                 <p class="text-body text-neutral-600 mt-1">Shaving hangat dengan razor higienis dan aftershave soothing balm.</p>
-                                <div class="mt-2.5 flex items-center gap-4 text-caption text-neutral-500">
+                                <div class="mt-2.5 flex flex-wrap items-center gap-2 text-caption text-neutral-500">
                                     <span class="font-bold text-neutral-900 text-body">Rp 25.000</span>
-                                    <span>•</span>
-                                    <span>Durasi ±15 menit</span>
+                                    <span class="rounded-md bg-neutral-100 px-2 py-0.5 font-medium text-neutral-600">Durasi ±15 menit</span>
                                 </div>
                             </div>
                             
@@ -125,10 +123,9 @@
                                     <span class="text-caption px-2 py-0.5 rounded bg-rose-100 text-rose-700 font-medium">Kuota Penuh</span>
                                 </div>
                                 <p class="text-body text-neutral-500 mt-1">Potong rambut + Shaving + Creambath herbal + Pijat relaksasi bahu.</p>
-                                <div class="mt-2.5 flex items-center gap-4 text-caption text-neutral-500">
+                                <div class="mt-2.5 flex flex-wrap items-center gap-2 text-caption text-neutral-500">
                                     <span class="font-bold text-neutral-700 text-body">Rp 70.000</span>
-                                    <span>•</span>
-                                    <span>Durasi ±45 menit</span>
+                                    <span class="rounded-md bg-neutral-100 px-2 py-0.5 font-medium text-neutral-600">Durasi ±45 menit</span>
                                 </div>
                             </div>
                             

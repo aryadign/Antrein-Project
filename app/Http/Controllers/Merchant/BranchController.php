@@ -7,12 +7,14 @@ use App\Models\ActivityLog;
 use App\Models\Business;
 use App\Models\BusinessCategory;
 use App\Models\BusinessHour;
+use App\Models\BusinessOrganization;
 use App\Models\Service;
 use App\Support\UniqueBranchSlug;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class BranchController extends Controller
@@ -58,15 +60,37 @@ class BranchController extends Controller
     }
 
     /**
-     * Switch the merchant's active branch for the current session.
+     * Switch the merchant's active branch (or combined organization scope) for the current session.
      */
     public function switch(Request $request): RedirectResponse|JsonResponse
     {
+        $user = $request->user();
+        $rawSelection = (string) $request->input('business_id', '');
+
+        if ($rawSelection === 'all') {
+            if (! $user->canManageOrganization()) {
+                abort(403, 'Hanya pengelola organisasi yang dapat melihat ringkasan semua cabang.');
+            }
+
+            $request->session()->put('merchant_dashboard_scope', 'all');
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'data' => [
+                        'scope' => 'all',
+                    ],
+                ]);
+            }
+
+            return redirect()->route('merchant.dashboard')
+                ->with('status', 'Menampilkan ringkasan gabungan seluruh cabang.');
+        }
+
         $validated = $request->validate([
             'business_id' => ['required', 'integer', 'exists:businesses,id'],
         ]);
 
-        $user = $request->user();
         $business = Business::findOrFail($validated['business_id']);
 
         if (! $user->canAccessBusiness($business)) {
@@ -74,12 +98,14 @@ class BranchController extends Controller
         }
 
         $request->session()->put('active_business_id', $business->id);
+        $request->session()->put('merchant_dashboard_scope', 'single');
         $user->forgetActiveBusiness();
 
         if ($request->wantsJson()) {
             return response()->json([
                 'success' => true,
                 'data' => [
+                    'scope' => 'single',
                     'business_id' => $business->id,
                     'business_name' => $business->name,
                     'business_slug' => $business->slug,
@@ -104,8 +130,10 @@ class BranchController extends Controller
                 'timezone' => $organization?->timezone ?: 'Asia/Makassar',
                 'status' => Business::STATUS_TUTUP,
                 'is_active' => true,
+                'area' => $request->user()->business?->area,
             ]),
             'categories' => BusinessCategory::query()->where('is_active', true)->orderBy('name')->get(),
+            'areas' => Business::AREAS,
             'sourceBranch' => $request->user()->business,
             'isEdit' => false,
         ]);
@@ -136,6 +164,7 @@ class BranchController extends Controller
                 'organization_id' => $organization->id,
                 'user_id' => $user->id,
                 'category_id' => $validated['category_id'],
+                'area' => $validated['area'] ?? null,
                 'name' => trim($validated['name']),
                 'slug' => $slug,
                 'description' => $validated['description'] ?? null,
@@ -179,6 +208,7 @@ class BranchController extends Controller
             'organization' => $organization,
             'branch' => $business,
             'categories' => BusinessCategory::query()->where('is_active', true)->orderBy('name')->get(),
+            'areas' => Business::AREAS,
             'sourceBranch' => null,
             'isEdit' => true,
         ]);
@@ -195,6 +225,7 @@ class BranchController extends Controller
 
         $business->update([
             'category_id' => $validated['category_id'],
+            'area' => $validated['area'] ?? null,
             'name' => trim($validated['name']),
             'slug' => UniqueBranchSlug::generate($validated['slug'] ?? null, $validated['name'], $business->id),
             'description' => $validated['description'] ?? null,
@@ -259,7 +290,7 @@ class BranchController extends Controller
     /**
      * Ensure the target branch belongs to the organization managed by the user.
      */
-    protected function authorizeBranch(Request $request, Business $business): \App\Models\BusinessOrganization
+    protected function authorizeBranch(Request $request, Business $business): BusinessOrganization
     {
         $organization = $request->user()->managedOrganization();
 
@@ -281,6 +312,7 @@ class BranchController extends Controller
             'name' => ['required', 'string', 'max:150'],
             'slug' => ['nullable', 'string', 'max:180', 'alpha_dash', 'unique:businesses,slug'.($business ? ','.$business->id : '')],
             'category_id' => ['required', 'integer', 'exists:business_categories,id'],
+            'area' => ['nullable', 'string', Rule::in(array_keys(Business::AREAS))],
             'description' => ['nullable', 'string', 'max:1000'],
             'address' => ['required', 'string', 'max:500'],
             'phone' => ['required', 'string', 'max:20'],

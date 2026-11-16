@@ -17,13 +17,19 @@ class ReportExportTest extends TestCase
     use RefreshDatabase;
 
     private User $merchantA;
+
     private Business $businessA;
+
     private Service $serviceA;
+
     private DailyQueue $queueA;
 
     private User $merchantB;
+
     private Business $businessB;
+
     private Service $serviceB;
+
     private DailyQueue $queueB;
 
     private User $admin;
@@ -31,6 +37,8 @@ class ReportExportTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        $this->travelTo(Carbon::today('Asia/Makassar')->setTime(12, 0));
 
         $category = BusinessCategory::create([
             'name' => 'Kecantikan & Barbershop',
@@ -54,6 +62,7 @@ class ReportExportTest extends TestCase
             'business_id' => $this->businessA->id,
             'name' => 'Gentleman Haircut',
             'duration_minutes' => 30,
+            'price' => 75000,
             'is_active' => true,
         ]);
 
@@ -164,6 +173,10 @@ class ReportExportTest extends TestCase
         $this->assertStringContainsString('Pelanggan Pertama', $content);
         $this->assertStringContainsString('A-001', $content);
         $this->assertStringContainsString('Asia/Makassar', $content);
+        $this->assertStringContainsString('Estimasi Pemasukan Kotor (Rp)', $content);
+        $this->assertStringContainsString('Harga Satuan (Rp)', $content);
+        $this->assertStringContainsString('Pemasukan Kotor (Rp)', $content);
+        $this->assertStringContainsString('75000', $content);
     }
 
     public function test_csv_export_prevents_formula_injection(): void
@@ -200,7 +213,7 @@ class ReportExportTest extends TestCase
 
         $response->assertOk();
         $content = $response->streamedContent();
-        $this->assertStringContainsString($today . ' s/d ' . $today, $content);
+        $this->assertStringContainsString($today.' s/d '.$today, $content);
     }
 
     public function test_csv_export_cross_tenant_isolation(): void
@@ -312,10 +325,10 @@ class ReportExportTest extends TestCase
                 'service_id' => $this->serviceA->id,
                 'ticket_number' => sprintf('A-%03d', $i),
                 'sequence_number' => $i,
-                'customer_name' => 'Pelanggan Uji ' . $i,
+                'customer_name' => 'Pelanggan Uji '.$i,
                 'source' => QueueTicket::SOURCE_WALK_IN,
                 'status' => QueueTicket::STATUS_SELESAI,
-                'access_token' => 'token-test-' . $i,
+                'access_token' => 'token-test-'.$i,
                 'created_at' => Carbon::now('Asia/Makassar')->subMinutes(50),
                 'service_started_at' => Carbon::now('Asia/Makassar')->subMinutes(30),
                 'completed_at' => Carbon::now('Asia/Makassar')->subMinutes(10),

@@ -99,14 +99,14 @@ class DisplayManagementController extends Controller
 
         ActivityLog::log(
             action: $isRegeneration ? 'display_token_regenerated' : 'display_token_generated',
-            description: sprintf('Kredensial tautan layar antrean publik %s', $isRegeneration ? 'diperbarui (rotasi token)' : 'dibuat'),
+            description: sprintf('Kredensial akses layar antrean publik %s', $isRegeneration ? 'diperbarui (rotasi token)' : 'dibuat'),
             business: $business,
             user: $user
         );
 
         $message = $isRegeneration
-            ? 'Tautan layar antrean baru berhasil dibuat. Tautan lama otomatis tidak dapat digunakan lagi.'
-            : 'Tautan layar antrean publik berhasil dibuat.';
+            ? 'Akses layar antrean baru berhasil dibuat. Akses lama otomatis tidak dapat digunakan lagi.'
+            : 'Akses layar antrean publik berhasil dibuat.';
 
         return redirect()->route('merchant.display.index')->with('status', $message);
     }
@@ -128,7 +128,7 @@ class DisplayManagementController extends Controller
 
         ActivityLog::log(
             action: 'display_access_revoked',
-            description: 'Tautan layar antrean publik dicabut dan akses dinonaktifkan',
+            description: 'Akses layar antrean publik dicabut dan dinonaktifkan',
             business: $business,
             user: $user
         );
@@ -137,4 +137,3 @@ class DisplayManagementController extends Controller
             ->with('status', 'Akses layar antrean publik berhasil dicabut dan dinonaktifkan.');
     }
 }
-

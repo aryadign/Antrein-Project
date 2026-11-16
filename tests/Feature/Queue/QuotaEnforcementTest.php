@@ -4,7 +4,7 @@ namespace Tests\Feature\Queue;
 
 use App\Models\Business;
 use App\Models\BusinessCategory;
-use App\Models\DailyQueue;
+use App\Models\BusinessMembership;
 use App\Models\QueueTicket;
 use App\Models\Service;
 use App\Models\User;
@@ -17,9 +17,13 @@ class QuotaEnforcementTest extends TestCase
     use RefreshDatabase;
 
     private QueueService $queueService;
+
     private User $merchant;
+
     private Business $business;
+
     private Service $limitedService;
+
     private Service $unlimitedService;
 
     protected function setUp(): void
@@ -74,7 +78,7 @@ class QuotaEnforcementTest extends TestCase
             customerName: 'Patient 1',
             customerPhone: '081234567001'
         );
-        $this->assertEquals('A-001', $t1->ticket_number);
+        $this->assertEquals('TKT-001', $t1->ticket_number);
 
         // 2nd ticket (hits quota limit of 2)
         $t2 = $this->queueService->generateOnlineTicket(
@@ -83,10 +87,11 @@ class QuotaEnforcementTest extends TestCase
             customerName: 'Patient 2',
             customerPhone: '081234567002'
         );
-        $this->assertEquals('A-002', $t2->ticket_number);
+        $this->assertEquals('TKT-002', $t2->ticket_number);
 
         // 3rd ticket should be rejected via online endpoint
-        $response = $this->postJson(route('customer.queue.take', ['slug' => $this->business->slug]), [
+        $customer = User::factory()->customer()->create();
+        $response = $this->actingAs($customer)->postJson(route('customer.queue.take', ['slug' => $this->business->slug]), [
             'service_id' => $this->limitedService->id,
             'customer_name' => 'Patient 3',
             'customer_phone' => '081234567003',
@@ -98,8 +103,16 @@ class QuotaEnforcementTest extends TestCase
         ]);
         $this->assertStringContainsString('telah habis', $response->json('message'));
 
-        // Also rejected via walk-in
-        $walkInResponse = $this->actingAs($this->merchant)->postJson(route('merchant.queues.walk-in'), [
+        // Also rejected via walk-in by Operator
+        $operator = User::factory()->merchant()->create();
+        BusinessMembership::create([
+            'business_id' => $this->business->id,
+            'user_id' => $operator->id,
+            'role' => BusinessMembership::ROLE_OPERATOR,
+            'is_active' => true,
+        ]);
+
+        $walkInResponse = $this->actingAs($operator)->postJson(route('merchant.queues.walk-in'), [
             'service_id' => $this->limitedService->id,
             'customer_name' => 'Patient 3 Walk-in',
         ]);
@@ -153,7 +166,7 @@ class QuotaEnforcementTest extends TestCase
             customerPhone: '081234567003'
         );
 
-        $this->assertEquals('A-003', $t3->ticket_number);
+        $this->assertEquals('TKT-003', $t3->ticket_number);
     }
 
     public function test_unlimited_service_has_no_quota_restriction(): void
@@ -165,7 +178,7 @@ class QuotaEnforcementTest extends TestCase
                 customerName: "Unlimited Patient {$i}",
                 customerPhone: "08123456700{$i}"
             );
-            $this->assertEquals("A-00{$i}", $t->ticket_number);
+            $this->assertEquals("TKT-00{$i}", $t->ticket_number);
         }
 
         $this->assertEquals(5, QueueTicket::where('service_id', $this->unlimitedService->id)->count());

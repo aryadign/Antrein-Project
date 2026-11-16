@@ -18,12 +18,21 @@ class CounterManagementTest extends TestCase
     use RefreshDatabase;
 
     protected User $ownerA;
+
+    protected User $operatorA;
+
+    protected BusinessMembership $operatorMembershipA;
+
     protected Business $businessA;
+
     protected Service $serviceA;
+
     protected DailyQueue $dailyQueueA;
 
     protected User $ownerB;
+
     protected Business $businessB;
+
     protected Service $serviceB;
 
     protected function setUp(): void
@@ -45,6 +54,13 @@ class CounterManagementTest extends TestCase
             'slug' => 'barbershop-mantap-a',
             'status' => Business::STATUS_BUKA,
             'timezone' => 'Asia/Makassar',
+        ]);
+        $this->operatorA = User::factory()->merchant()->create();
+        $this->operatorMembershipA = BusinessMembership::create([
+            'business_id' => $this->businessA->id,
+            'user_id' => $this->operatorA->id,
+            'role' => BusinessMembership::ROLE_OPERATOR,
+            'is_active' => true,
         ]);
         $this->serviceA = Service::create([
             'business_id' => $this->businessA->id,
@@ -351,6 +367,8 @@ class CounterManagementTest extends TestCase
             'code' => 'L-02',
             'is_active' => true,
         ]);
+        $counter1->assignedMemberships()->syncWithoutDetaching([$this->operatorMembershipA->id]);
+        $counter2->assignedMemberships()->syncWithoutDetaching([$this->operatorMembershipA->id]);
 
         // Two waiting tickets
         $ticket1 = QueueTicket::create([
@@ -378,7 +396,7 @@ class CounterManagementTest extends TestCase
         ]);
 
         // 1. Loket 1 calls next -> gets Ticket 1
-        $response1 = $this->actingAs($this->ownerA)->post(route('merchant.queues.call-next'), [
+        $response1 = $this->actingAs($this->operatorA)->post(route('merchant.queues.call-next'), [
             'counter_id' => $counter1->id,
         ]);
         $response1->assertRedirect();
@@ -388,7 +406,7 @@ class CounterManagementTest extends TestCase
         $this->assertEquals($counter1->id, $ticket1->counter_id);
 
         // 2. Loket 2 calls next IN PARALLEL while Ticket 1 is still active -> SUCCESS, gets Ticket 2
-        $response2 = $this->actingAs($this->ownerA)->post(route('merchant.queues.call-next'), [
+        $response2 = $this->actingAs($this->operatorA)->post(route('merchant.queues.call-next'), [
             'counter_id' => $counter2->id,
         ]);
         $response2->assertRedirect();
@@ -435,12 +453,12 @@ class CounterManagementTest extends TestCase
         ]);
 
         // Call next on Counter 1
-        $this->actingAs($this->ownerA)->post(route('merchant.queues.call-next'), [
+        $this->actingAs($this->operatorA)->post(route('merchant.queues.call-next'), [
             'counter_id' => $counter1->id,
         ])->assertRedirect();
 
         // Attempting to call next AGAIN on Counter 1 while ticket is active is BLOCKED
-        $response = $this->actingAs($this->ownerA)->post(route('merchant.queues.call-next'), [
+        $response = $this->actingAs($this->operatorA)->post(route('merchant.queues.call-next'), [
             'counter_id' => $counter1->id,
         ]);
         $response->assertSessionHasErrors(['queue_error']);
@@ -458,6 +476,8 @@ class CounterManagementTest extends TestCase
             'code' => 'L-02',
             'is_active' => true,
         ]);
+        $counter1->assignedMemberships()->syncWithoutDetaching([$this->operatorMembershipA->id]);
+        $counter2->assignedMemberships()->syncWithoutDetaching([$this->operatorMembershipA->id]);
 
         // 4 tickets in queue sequence 1, 2, 3, 4
         for ($i = 1; $i <= 4; $i++) {
@@ -475,21 +495,21 @@ class CounterManagementTest extends TestCase
         }
 
         // Loket 2 calls first -> MUST get ticket #1
-        $this->actingAs($this->ownerA)->post(route('merchant.queues.call-next'), ['counter_id' => $counter2->id]);
+        $this->actingAs($this->operatorA)->post(route('merchant.queues.call-next'), ['counter_id' => $counter2->id]);
         $t1 = QueueTicket::where('sequence_number', 1)->first();
         $this->assertEquals($counter2->id, $t1->counter_id);
         $this->assertEquals(QueueTicket::STATUS_DIPANGGIL, $t1->status);
 
         // Loket 1 calls next -> MUST get ticket #2
-        $this->actingAs($this->ownerA)->post(route('merchant.queues.call-next'), ['counter_id' => $counter1->id]);
+        $this->actingAs($this->operatorA)->post(route('merchant.queues.call-next'), ['counter_id' => $counter1->id]);
         $t2 = QueueTicket::where('sequence_number', 2)->first();
         $this->assertEquals($counter1->id, $t2->counter_id);
         $this->assertEquals(QueueTicket::STATUS_DIPANGGIL, $t2->status);
 
         // Loket 2 finishes ticket #1 and calls next -> MUST get ticket #3
-        $this->actingAs($this->ownerA)->post(route('merchant.queues.start-service', $t1));
-        $this->actingAs($this->ownerA)->post(route('merchant.queues.complete', $t1));
-        $this->actingAs($this->ownerA)->post(route('merchant.queues.call-next'), ['counter_id' => $counter2->id]);
+        $this->actingAs($this->operatorA)->post(route('merchant.queues.start-service', $t1));
+        $this->actingAs($this->operatorA)->post(route('merchant.queues.complete', $t1));
+        $this->actingAs($this->operatorA)->post(route('merchant.queues.call-next'), ['counter_id' => $counter2->id]);
         $t3 = QueueTicket::where('sequence_number', 3)->first();
         $this->assertEquals($counter2->id, $t3->counter_id);
         $this->assertEquals(QueueTicket::STATUS_DIPANGGIL, $t3->status);
@@ -545,8 +565,9 @@ class CounterManagementTest extends TestCase
             'code' => 'L-02',
             'is_active' => true,
         ]);
+        $counter2->assignedMemberships()->syncWithoutDetaching([$this->operatorMembershipA->id]);
 
-        $response = $this->actingAs($this->ownerA)->post(route('merchant.queues.select-counter'), [
+        $response = $this->actingAs($this->operatorA)->post(route('merchant.queues.select-counter'), [
             'counter_id' => $counter2->id,
         ]);
 
@@ -571,8 +592,8 @@ class CounterManagementTest extends TestCase
         $this->actingAs($this->ownerA)->delete(route('merchant.counters.destroy', $counterB))
             ->assertStatus(403);
 
-        // Owner A cannot call next on Counter B
-        $response = $this->actingAs($this->ownerA)->post(route('merchant.queues.call-next'), [
+        // Operator A cannot call next on Counter B
+        $response = $this->actingAs($this->operatorA)->post(route('merchant.queues.call-next'), [
             'counter_id' => $counterB->id,
         ]);
         $response->assertSessionHasErrors(['queue_error']);

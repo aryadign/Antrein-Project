@@ -3,7 +3,7 @@
     heading="Manajemen Cabang"
     description="Kelola seluruh unit operasional dan cabang usaha dalam organisasi Anda"
 >
-    <div class="space-y-6">
+    <div class="space-y-5 sm:space-y-6">
         {{-- Flash Status Message --}}
         @if (session('status'))
             <div class="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-medium flex items-center justify-between">
@@ -13,7 +13,7 @@
                     </svg>
                     <span>{{ session('status') }}</span>
                 </div>
-                <button type="button" onclick="this.parentElement.remove()" class="text-emerald-500 hover:text-emerald-700">&times;</button>
+                <button type="button" onclick="this.parentElement.remove()" class="-my-2 -mr-2 inline-flex size-11 shrink-0 items-center justify-center rounded-lg text-lg text-emerald-500 hover:bg-emerald-100 hover:text-emerald-700" aria-label="Tutup pesan">&times;</button>
             </div>
         @endif
 
@@ -31,63 +31,16 @@
             </div>
         @endif
 
-        {{-- Top Summary Stats Cards --}}
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-            <div class="p-5 rounded-2xl bg-white border border-neutral-200 shadow-xs">
-                <div class="flex items-center justify-between text-neutral-500 text-xs font-semibold uppercase tracking-wider">
-                    <span>Total Cabang</span>
-                    <span class="p-2 rounded-lg bg-brand-50 text-brand-700">
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
-                    </span>
-                </div>
-                <div class="mt-3 text-3xl font-extrabold text-neutral-900 tabular-nums">
-                    {{ $totalBranches }}
-                </div>
-                <div class="mt-1 text-xs text-neutral-500">Unit terdaftar dalam brand</div>
-            </div>
-
-            <div class="p-5 rounded-2xl bg-white border border-neutral-200 shadow-xs">
-                <div class="flex items-center justify-between text-neutral-500 text-xs font-semibold uppercase tracking-wider">
-                    <span>Cabang Aktif</span>
-                    <span class="p-2 rounded-lg bg-emerald-50 text-emerald-700">
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                    </span>
-                </div>
-                <div class="mt-3 text-3xl font-extrabold text-emerald-700 tabular-nums">
-                    {{ $activeBranches }}
-                </div>
-                <div class="mt-1 text-xs text-neutral-500">Menerima operasional antrean</div>
-            </div>
-
-            <div class="p-5 rounded-2xl bg-white border border-neutral-200 shadow-xs">
-                <div class="flex items-center justify-between text-neutral-500 text-xs font-semibold uppercase tracking-wider">
-                    <span>Total Layanan</span>
-                    <span class="p-2 rounded-lg bg-purple-50 text-purple-700">
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879a3 3 0 11-4.242-4.242 3 3 0 014.242 0M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243 4.243 3 3 0 004.243-4.243z"/></svg>
-                    </span>
-                </div>
-                <div class="mt-3 text-3xl font-extrabold text-neutral-900 tabular-nums">
-                    {{ $totalServices }}
-                </div>
-                <div class="mt-1 text-xs text-neutral-500">Layanan di semua cabang</div>
-            </div>
-
-            <div class="p-5 rounded-2xl bg-white border border-neutral-200 shadow-xs">
-                <div class="flex items-center justify-between text-neutral-500 text-xs font-semibold uppercase tracking-wider">
-                    <span>Total Loket</span>
-                    <span class="p-2 rounded-lg bg-blue-50 text-blue-700">
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                    </span>
-                </div>
-                <div class="mt-3 text-3xl font-extrabold text-neutral-900 tabular-nums">
-                    {{ $totalCounters }}
-                </div>
-                <div class="mt-1 text-xs text-neutral-500">Loket pelayanan aktif</div>
-            </div>
+        {{-- Top Summary Stats --}}
+        <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <x-stat-tile label="Total Cabang" :value="$totalBranches" hint="Unit terdaftar dalam brand" />
+            <x-stat-tile label="Cabang Aktif" :value="$activeBranches" hint="Menerima operasional antrean" tone="success" />
+            <x-stat-tile label="Total Layanan" :value="$totalServices" hint="Layanan di semua cabang" />
+            <x-stat-tile label="Total Loket" :value="$totalCounters" hint="Loket pelayanan aktif" />
         </div>
 
         {{-- Actions Bar --}}
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 rounded-2xl bg-white border border-neutral-200">
+        <div class="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-4 shadow-xs sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             <div>
                 <h3 class="text-sm font-bold text-neutral-900">Daftar Cabang</h3>
                 <p class="text-xs text-neutral-500">
@@ -95,9 +48,21 @@
                 </p>
             </div>
 
-            <div class="flex items-center gap-3">
+            <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto">
                 @if ($canManage)
-                    <a href="{{ route('merchant.branches.create') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-white bg-brand-700 hover:bg-brand-800 shadow-sm transition">
+                    <a href="{{ route('merchant.organization.edit') }}" class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-neutral-300 bg-white px-4 text-sm font-semibold text-neutral-800 transition hover:bg-neutral-50 sm:w-auto">
+                        <span>Identitas Brand</span>
+                    </a>
+                    @if ($totalBranches > 1)
+                        <form method="POST" action="{{ route('merchant.branches.switch') }}" class="w-full sm:w-auto">
+                            @csrf
+                            <input type="hidden" name="business_id" value="all">
+                            <button type="submit" class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-brand-200 bg-brand-50 px-4 text-sm font-bold text-brand-700 transition hover:bg-brand-100 sm:w-auto">
+                                Ringkasan di Beranda
+                            </button>
+                        </form>
+                    @endif
+                    <a href="{{ route('merchant.branches.create') }}" class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-brand-700 px-4 text-sm font-bold text-white shadow-sm transition hover:bg-brand-800 sm:w-auto">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                         </svg>
@@ -108,27 +73,32 @@
         </div>
 
         {{-- Branches Grid --}}
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 lg:gap-6">
             @forelse ($branches as $branch)
                 @php
                     $isCurrentActive = $branch->id === $activeBranchId;
                 @endphp
-                <div class="rounded-2xl bg-white border {{ $isCurrentActive ? 'border-brand-500 ring-2 ring-brand-500/20' : 'border-neutral-200' }} shadow-xs p-6 flex flex-col justify-between transition hover:shadow-md">
+                <div class="rounded-2xl bg-white border {{ $isCurrentActive ? 'border-brand-500 ring-2 ring-brand-500/20' : 'border-neutral-200' }} shadow-xs p-4 sm:p-6 flex min-w-0 flex-col justify-between transition hover:shadow-md">
                     <div>
                         {{-- Header Row: Badge & Current active indicator --}}
                         <div class="flex items-start justify-between gap-2 mb-3">
-                            <div>
+                            <div class="flex flex-wrap items-center gap-1">
                                 <span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider {{ $branch->is_active ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-neutral-100 text-neutral-600 border border-neutral-200' }}">
                                     {{ $branch->is_active ? 'Aktif' : 'Nonaktif' }}
                                 </span>
-                                <span class="inline-block ml-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-neutral-100 text-neutral-700">
+                                <span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-neutral-100 text-neutral-700">
                                     {{ $branch->status }}
                                 </span>
+                                @if ($branch->areaLabel())
+                                    <span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-brand-50 text-brand-700 border border-brand-200">
+                                        {{ $branch->areaLabel() }}
+                                    </span>
+                                @endif
                             </div>
 
                             @if ($isCurrentActive)
-                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-brand-50 text-brand-700 border border-brand-200">
-                                    <span class="w-1.5 h-1.5 rounded-full bg-brand-600"></span>
+                                <span class="inline-flex shrink-0 items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-brand-50 text-brand-700 border border-brand-200">
+                                    <x-customer.icon name="check" class="size-3" />
                                     <span>Cabang Aktif</span>
                                 </span>
                             @endif
@@ -178,7 +148,7 @@
                             <form method="POST" action="{{ route('merchant.branches.switch') }}">
                                 @csrf
                                 <input type="hidden" name="business_id" value="{{ $branch->id }}">
-                                <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-3.5 py-2 text-xs font-bold text-brand-700 bg-brand-50 hover:bg-brand-100 rounded-xl transition">
+                                <button type="submit" class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-brand-50 px-3.5 text-xs font-bold text-brand-700 transition hover:bg-brand-100">
                                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                                     </svg>
@@ -186,27 +156,27 @@
                                 </button>
                             </form>
                         @else
-                            <div class="text-center py-2 text-xs font-bold text-brand-700 bg-brand-50/50 rounded-xl border border-brand-100">
+                            <div class="flex h-11 items-center justify-center rounded-xl border border-brand-100 bg-brand-50/50 text-xs font-bold text-brand-700">
                                 Sedang Dioperasikan
                             </div>
                         @endif
 
                         <div class="flex items-center justify-between gap-2 pt-1">
-                            <a href="/q/{{ $branch->slug }}" target="_blank" class="text-[11px] font-semibold text-neutral-500 hover:text-brand-700 inline-flex items-center gap-1">
+                            <a href="{{ route('customer.queue', $branch->slug) }}" target="_blank" rel="noopener" class="inline-flex min-h-11 items-center gap-1 text-xs font-semibold text-neutral-500 hover:text-brand-700">
                                 <span>Lihat Antrean</span>
                                 <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
                             </a>
 
                             @if ($canManage)
-                                <div class="flex items-center gap-2">
-                                    <a href="{{ route('merchant.branches.edit', $branch) }}" class="text-[11px] font-semibold text-neutral-600 hover:text-neutral-900">
+                                <div class="flex items-center gap-1">
+                                    <a href="{{ route('merchant.branches.edit', $branch) }}" class="inline-flex min-h-11 items-center rounded-lg px-2.5 text-xs font-semibold text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900">
                                         Ubah
                                     </a>
 
                                     <form method="POST" action="{{ route('merchant.branches.toggle-active', $branch) }}" onsubmit="return confirm('Apakah Anda yakin ingin mengubah status aktif cabang ini?')">
                                         @csrf
                                         @method('PATCH')
-                                        <button type="submit" class="text-[11px] font-semibold {{ $branch->is_active ? 'text-danger-600 hover:text-danger-700' : 'text-emerald-600 hover:text-emerald-700' }}">
+                                        <button type="submit" class="inline-flex min-h-11 items-center rounded-lg px-2.5 text-xs font-semibold hover:bg-neutral-100 {{ $branch->is_active ? 'text-danger-600 hover:text-danger-700' : 'text-emerald-600 hover:text-emerald-700' }}">
                                             {{ $branch->is_active ? 'Nonaktifkan' : 'Aktifkan' }}
                                         </button>
                                     </form>
@@ -224,7 +194,7 @@
 
         {{-- Pagination --}}
         @if ($branches->hasPages())
-            <div class="p-4 bg-white rounded-2xl border border-neutral-200">
+            <div class="rounded-xl border border-neutral-200 bg-white p-4">
                 {{ $branches->links() }}
             </div>
         @endif

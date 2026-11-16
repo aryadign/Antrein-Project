@@ -14,35 +14,33 @@
                 required
                 autofocus
                 autocomplete="username"
-                :invalid="$errors->has('email')"
+                :error="$errors->has('email')"
             />
             <x-input-error :messages="$errors->get('email')" class="mt-1" />
         </div>
 
         <div>
             <x-form-label for="password" value="Kata Sandi Baru" :required="true" />
-            <x-input
+            <x-password-input
                 id="password"
                 name="password"
-                type="password"
                 required
                 autocomplete="new-password"
                 placeholder="Minimal 8 karakter"
-                :invalid="$errors->has('password')"
+                :error="$errors->has('password')"
             />
             <x-input-error :messages="$errors->get('password')" class="mt-1" />
         </div>
 
         <div>
             <x-form-label for="password_confirmation" value="Konfirmasi Kata Sandi Baru" :required="true" />
-            <x-input
+            <x-password-input
                 id="password_confirmation"
                 name="password_confirmation"
-                type="password"
                 required
                 autocomplete="new-password"
                 placeholder="Ulangi kata sandi baru"
-                :invalid="$errors->has('password_confirmation')"
+                :error="$errors->has('password_confirmation')"
             />
             <x-input-error :messages="$errors->get('password_confirmation')" class="mt-1" />
         </div>

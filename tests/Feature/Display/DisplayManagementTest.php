@@ -2,10 +2,8 @@
 
 namespace Tests\Feature\Display;
 
-use App\Models\ActivityLog;
 use App\Models\Business;
 use App\Models\BusinessCategory;
-use App\Models\BusinessCounter;
 use App\Models\BusinessMembership;
 use App\Models\Service;
 use App\Models\User;
@@ -17,7 +15,9 @@ class DisplayManagementTest extends TestCase
     use RefreshDatabase;
 
     protected User $owner;
+
     protected Business $business;
+
     protected User $operator;
 
     protected function setUp(): void
@@ -70,18 +70,18 @@ class DisplayManagementTest extends TestCase
         ]);
     }
 
-    public function test_owner_can_access_display_management_page(): void
+    public function test_operator_can_access_display_management_page(): void
     {
-        $response = $this->actingAs($this->owner)->get(route('merchant.display.index'));
+        $response = $this->actingAs($this->operator)->get(route('merchant.display.index'));
 
         $response->assertOk();
         $response->assertViewIs('merchant.display.index');
         $response->assertSee('Layar Antrean Publik (TV Display)');
     }
 
-    public function test_operator_cannot_access_display_management_page(): void
+    public function test_owner_cannot_access_display_management_page(): void
     {
-        $response = $this->actingAs($this->operator)->get(route('merchant.display.index'));
+        $response = $this->actingAs($this->owner)->get(route('merchant.display.index'));
 
         $response->assertForbidden();
     }
@@ -93,12 +93,12 @@ class DisplayManagementTest extends TestCase
         $response->assertRedirect(route('login'));
     }
 
-    public function test_owner_can_generate_display_token_and_enable_display(): void
+    public function test_operator_can_generate_display_token_and_enable_display(): void
     {
         $this->assertNull($this->business->display_token_hash);
         $this->assertFalse((bool) $this->business->is_display_enabled);
 
-        $response = $this->actingAs($this->owner)->post(route('merchant.display.generate'));
+        $response = $this->actingAs($this->operator)->post(route('merchant.display.generate'));
 
         $response->assertRedirect(route('merchant.display.index'));
         $response->assertSessionHas('status');
@@ -116,10 +116,12 @@ class DisplayManagementTest extends TestCase
         $this->assertArrayNotHasKey('display_token', $this->business->getAttributes());
 
         // Assert one-time token notice is shown when flashed in session
-        $indexResponse = $this->actingAs($this->owner)
+        $indexResponse = $this->actingAs($this->operator)
             ->withSession(['one_time_display_token' => $rawToken])
             ->get(route('merchant.display.index'));
-        $indexResponse->assertSee('Salin & Simpan Tautan Layar Display Sekarang', false);
+        $indexResponse->assertSee('Buka atau Pindai Layar Display Sekarang', false);
+        $indexResponse->assertSee('Buka Layar Monitor');
+        $indexResponse->assertDontSee('Salin Tautan');
 
         // Verify activity log
         $this->assertDatabaseHas('activity_logs', [
@@ -128,10 +130,10 @@ class DisplayManagementTest extends TestCase
         ]);
     }
 
-    public function test_owner_can_toggle_display_status(): void
+    public function test_operator_can_toggle_display_status(): void
     {
         // First enable
-        $response = $this->actingAs($this->owner)->post(route('merchant.display.toggle'), [
+        $response = $this->actingAs($this->operator)->post(route('merchant.display.toggle'), [
             'is_display_enabled' => '1',
         ]);
 
@@ -143,7 +145,7 @@ class DisplayManagementTest extends TestCase
         $this->assertNotNull($this->business->display_token_hash);
 
         // Then disable
-        $response = $this->actingAs($this->owner)->post(route('merchant.display.toggle'), [
+        $response = $this->actingAs($this->operator)->post(route('merchant.display.toggle'), [
             'is_display_enabled' => '0',
         ]);
 
@@ -152,12 +154,12 @@ class DisplayManagementTest extends TestCase
         $this->assertFalse($this->business->is_display_enabled);
     }
 
-    public function test_owner_can_regenerate_display_token_and_old_token_is_invalidated(): void
+    public function test_operator_can_regenerate_display_token_and_old_token_is_invalidated(): void
     {
         $oldToken = $this->business->generateDisplayToken();
         $oldTokenHash = $this->business->display_token_hash;
 
-        $response = $this->actingAs($this->owner)->post(route('merchant.display.generate'));
+        $response = $this->actingAs($this->operator)->post(route('merchant.display.generate'));
 
         $response->assertRedirect(route('merchant.display.index'));
         $response->assertSessionHas('one_time_display_token');
@@ -177,12 +179,12 @@ class DisplayManagementTest extends TestCase
         ]);
     }
 
-    public function test_owner_can_revoke_display_access(): void
+    public function test_operator_can_revoke_display_access(): void
     {
         $this->business->generateDisplayToken();
         $this->assertTrue($this->business->isDisplayActive());
 
-        $response = $this->actingAs($this->owner)->delete(route('merchant.display.revoke'));
+        $response = $this->actingAs($this->operator)->delete(route('merchant.display.revoke'));
 
         $response->assertRedirect(route('merchant.display.index'));
 
@@ -198,17 +200,17 @@ class DisplayManagementTest extends TestCase
         ]);
     }
 
-    public function test_operator_cannot_perform_display_management_actions(): void
+    public function test_owner_cannot_perform_display_management_actions(): void
     {
-        $response1 = $this->actingAs($this->operator)->post(route('merchant.display.generate'));
+        $response1 = $this->actingAs($this->owner)->post(route('merchant.display.generate'));
         $response1->assertForbidden();
 
-        $response2 = $this->actingAs($this->operator)->post(route('merchant.display.toggle'), [
+        $response2 = $this->actingAs($this->owner)->post(route('merchant.display.toggle'), [
             'is_display_enabled' => '1',
         ]);
         $response2->assertForbidden();
 
-        $response3 = $this->actingAs($this->operator)->delete(route('merchant.display.revoke'));
+        $response3 = $this->actingAs($this->owner)->delete(route('merchant.display.revoke'));
         $response3->assertForbidden();
     }
 }

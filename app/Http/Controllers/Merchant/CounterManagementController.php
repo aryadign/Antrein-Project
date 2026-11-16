@@ -53,6 +53,45 @@ class CounterManagementController extends Controller
     }
 
     /**
+     * Toggle whether the business operates multiple stations/counters or a single unified queue station.
+     */
+    public function toggleStationMode(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+        /** @var Business $business */
+        $business = $user->business;
+
+        $validated = $request->validate([
+            'use_stations' => ['required', 'boolean'],
+        ]);
+
+        $useStations = (bool) $validated['use_stations'];
+
+        $business->update(['use_stations' => $useStations]);
+
+        if (! $useStations) {
+            session()->forget('merchant_active_counter_id');
+        }
+
+        ActivityLog::log(
+            action: 'station_mode_updated',
+            description: $useStations
+                ? 'Mode Multi-Station / Multi-Loket diaktifkan'
+                : 'Mode 1 Station (tanpa konsep multi-station) diaktifkan',
+            business: $business,
+            user: $user
+        );
+
+        return redirect()->route('merchant.counters.index')
+            ->with(
+                'status',
+                $useStations
+                    ? 'Mode Multi-Station diaktifkan. Semua loket aktif beroperasi paralel dan tampil pada estimasi serta layar TV.'
+                    : 'Mode 1 Station diaktifkan. Operasional, estimasi waktu tunggu, slot booking, dan layar TV kini berjalan pada 1 station utama.'
+            );
+    }
+
+    /**
      * Store a newly created counter for this business.
      */
     public function store(Request $request): RedirectResponse

@@ -18,9 +18,13 @@ class RateLimitingSecurityTest extends TestCase
     use RefreshDatabase;
 
     private User $user;
+
     private Business $business;
+
     private Service $service;
+
     private DailyQueue $dailyQueue;
+
     private QueueTicket $ticket;
 
     protected function setUp(): void
@@ -100,7 +104,7 @@ class RateLimitingSecurityTest extends TestCase
     {
         RateLimiter::clear('forgot-password|127.0.0.1');
 
-        $expectedMessage = 'Jika alamat email Anda terdaftar, kami telah mengirimkan tautan untuk mengatur ulang kata sandi Anda.';
+        $expectedMessage = 'Jika alamat email Anda terdaftar, kami telah mengirimkan instruksi untuk mengatur ulang kata sandi Anda.';
 
         $existingUserResponse = $this->post(route('password.email'), [
             'email' => 'merchant@example.com',

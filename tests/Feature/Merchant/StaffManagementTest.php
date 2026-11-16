@@ -2,14 +2,13 @@
 
 namespace Tests\Feature\Merchant;
 
-use App\Models\ActivityLog;
 use App\Models\Business;
 use App\Models\BusinessCategory;
+use App\Models\BusinessCounter;
 use App\Models\BusinessMembership;
 use App\Models\DailyQueue;
 use App\Models\QueueTicket;
 use App\Models\Service;
-use App\Models\StaffInvitation;
 use App\Models\User;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -21,11 +20,15 @@ class StaffManagementTest extends TestCase
     use RefreshDatabase;
 
     private User $ownerA;
+
     private Business $businessA;
+
     private Service $serviceA;
+
     private DailyQueue $queueA;
 
     private User $ownerB;
+
     private Business $businessB;
 
     private User $admin;
@@ -134,9 +137,11 @@ class StaffManagementTest extends TestCase
         $response = $this->actingAs($this->ownerA)->get(route('merchant.staff.index'));
 
         $response->assertStatus(200);
-        $response->assertSee('Kelola Staf & Hak Akses');
+        $response->assertSee('Kelola Staf &amp; Akun Operator', false);
         $response->assertSee($this->ownerA->email);
-        $response->assertSee('Pemilik Usaha');
+        $response->assertSee('Pemilik');
+        $response->assertSee('Tambah Akun Staf');
+        $response->assertDontSee('Undang Staf Baru');
     }
 
     /**
@@ -248,9 +253,9 @@ class StaffManagementTest extends TestCase
     }
 
     /**
-     * Test P1-02: Operator cannot cancel ticket; only Owner can cancel.
+     * Test Operator-only queue operations: Owner cannot cancel ticket; only Operator can operate/cancel.
      */
-    public function test_operator_cannot_cancel_ticket_but_owner_can(): void
+    public function test_owner_cannot_cancel_ticket_but_operator_can(): void
     {
         $operator = User::factory()->merchant()->create();
         BusinessMembership::create([
@@ -273,19 +278,19 @@ class StaffManagementTest extends TestCase
             'access_token' => 'tok12345678901234567890123456789012',
         ]);
 
-        // Operator attempts to cancel -> 403 Forbidden
-        $response = $this->actingAs($operator)->post(route('merchant.queues.cancel', $ticket), [
-            'reason' => 'Alasan staf',
-        ]);
-        $response->assertStatus(403);
-        $ticket->refresh();
-        $this->assertEquals(QueueTicket::STATUS_WAITING, $ticket->status);
-
-        // Owner cancels -> Success
+        // Owner attempts to cancel -> 403 Forbidden
         $ownerResponse = $this->actingAs($this->ownerA)->post(route('merchant.queues.cancel', $ticket), [
             'reason' => 'Pembatalan oleh pemilik',
         ]);
-        $ownerResponse->assertRedirect();
+        $ownerResponse->assertStatus(403);
+        $ticket->refresh();
+        $this->assertEquals(QueueTicket::STATUS_WAITING, $ticket->status);
+
+        // Operator cancels -> Success
+        $response = $this->actingAs($operator)->post(route('merchant.queues.cancel', $ticket), [
+            'reason' => 'Alasan operasional loket',
+        ]);
+        $response->assertRedirect();
         $ticket->refresh();
         $this->assertEquals(QueueTicket::STATUS_CANCELLED, $ticket->status);
     }
@@ -346,94 +351,120 @@ class StaffManagementTest extends TestCase
     }
 
     /**
-     * Test P1-01: Owner can issue staff operator invitations.
+     * Test P1-01: Owner can directly create an operator staff account with encrypted password reference.
      */
-    public function test_owner_can_issue_staff_invitation(): void
+    public function test_owner_can_create_operator_staff_directly_with_encrypted_password(): void
     {
-        $response = $this->actingAs($this->ownerA)->post(route('merchant.staff.invitations.store'), [
-            'email' => 'calonstaf@example.com',
+        $response = $this->actingAs($this->ownerA)->post(route('merchant.staff.store'), [
+            'name' => 'Kadek Operator',
+            'email' => 'kadek.op@example.com',
+            'password' => 'Rahasia123!',
+            'business_id' => $this->businessA->id,
         ]);
 
         $response->assertRedirect(route('merchant.staff.index'));
         $response->assertSessionHas('status');
-        $response->assertSessionHas('invitation_url');
 
-        $this->assertDatabaseHas('staff_invitations', [
-            'business_id' => $this->businessA->id,
-            'invited_by_user_id' => $this->ownerA->id,
-            'email' => 'calonstaf@example.com',
-            'role' => StaffInvitation::ROLE_OPERATOR,
-        ]);
+        $staffUser = User::where('email', 'kadek.op@example.com')->first();
+        $this->assertNotNull($staffUser);
+        $this->assertTrue(Hash::check('Rahasia123!', $staffUser->password));
+
+        $membership = BusinessMembership::where('user_id', $staffUser->id)->first();
+        $this->assertNotNull($membership);
+        $this->assertEquals($this->businessA->id, $membership->business_id);
+        $this->assertEquals(BusinessMembership::ROLE_OPERATOR, $membership->role);
+        $this->assertTrue($membership->is_active);
+        $this->assertSame('Rahasia123!', $membership->getDecryptedStaffPassword());
 
         $this->assertDatabaseHas('activity_logs', [
             'business_id' => $this->businessA->id,
-            'action' => 'staff_invitation_created',
+            'action' => 'staff_account_created',
         ]);
+
+        // View shows encrypted password for owner reveal toggle
+        $this->actingAs($this->ownerA)->get(route('merchant.staff.index'))
+            ->assertOk()
+            ->assertSee('Kadek Operator')
+            ->assertSee('kadek.op@example.com')
+            ->assertSee('Rahasia123!');
     }
 
     /**
-     * Test P1-01: Owner cannot invite self, existing members, or users in another business.
+     * Test P1-01: Direct staff creation validates duplicate emails, short passwords, and cross-tenant branches.
      */
-    public function test_invitation_validation_rules(): void
+    public function test_direct_staff_creation_validation_rules(): void
     {
-        // 1. Cannot invite owner self
-        $this->actingAs($this->ownerA)->post(route('merchant.staff.invitations.store'), [
+        // 1. Duplicate email (owner email)
+        $this->actingAs($this->ownerA)->post(route('merchant.staff.store'), [
+            'name' => 'Duplicate Owner',
             'email' => $this->ownerA->email,
+            'password' => 'Antrein123!',
         ])->assertSessionHasErrors('email');
 
-        // 2. Cannot invite existing member
-        $operator = User::factory()->merchant()->create(['email' => 'existing@example.com']);
-        BusinessMembership::create([
+        // 2. Existing user email
+        User::factory()->merchant()->create(['email' => 'existing@example.com']);
+        $this->actingAs($this->ownerA)->post(route('merchant.staff.store'), [
+            'name' => 'Existing User',
+            'email' => 'existing@example.com',
+            'password' => 'Antrein123!',
+        ])->assertSessionHasErrors('email');
+
+        // 3. Password too short (< 8 chars)
+        $this->actingAs($this->ownerA)->post(route('merchant.staff.store'), [
+            'name' => 'Short Pass',
+            'email' => 'short@example.com',
+            'password' => '1234',
+        ])->assertSessionHasErrors('password');
+
+        // 4. Foreign business_id rejected
+        $this->actingAs($this->ownerA)->post(route('merchant.staff.store'), [
+            'name' => 'Foreign Branch',
+            'email' => 'foreign@example.com',
+            'password' => 'Antrein123!',
+            'business_id' => $this->businessB->id,
+        ])->assertSessionHasErrors('business_id');
+    }
+
+    /**
+     * Test P1-01: Owner can update an operator's login password and encrypted reference.
+     */
+    public function test_owner_can_update_operator_password(): void
+    {
+        $operator = User::factory()->merchant()->create([
+            'name' => 'Operator Password',
+            'email' => 'op.pwd@example.com',
+            'password' => Hash::make('OldPassword123'),
+        ]);
+        $membership = BusinessMembership::create([
             'business_id' => $this->businessA->id,
             'user_id' => $operator->id,
             'role' => BusinessMembership::ROLE_OPERATOR,
             'is_active' => true,
         ]);
 
-        $this->actingAs($this->ownerA)->post(route('merchant.staff.invitations.store'), [
-            'email' => 'existing@example.com',
-        ])->assertSessionHasErrors('email');
-
-        // 3. Cannot invite user from another business
-        $otherOperator = User::factory()->merchant()->create(['email' => 'other.member@example.com']);
-        BusinessMembership::create([
-            'business_id' => $this->businessB->id,
-            'user_id' => $otherOperator->id,
-            'role' => BusinessMembership::ROLE_OPERATOR,
-            'is_active' => true,
+        $response = $this->actingAs($this->ownerA)->patch(route('merchant.staff.password', $membership), [
+            'password' => 'NewPassword999!',
         ]);
-
-        $this->actingAs($this->ownerA)->post(route('merchant.staff.invitations.store'), [
-            'email' => 'other.member@example.com',
-        ])->assertSessionHasErrors('email');
-
-        // 4. Cannot invite admin
-        $this->actingAs($this->ownerA)->post(route('merchant.staff.invitations.store'), [
-            'email' => $this->admin->email,
-        ])->assertSessionHasErrors('email');
-    }
-
-    /**
-     * Test P1-01: Owner can revoke pending invitation.
-     */
-    public function test_owner_can_revoke_pending_invitation(): void
-    {
-        [$plainToken, $tokenHash] = StaffInvitation::generateSecureToken();
-        $invitation = StaffInvitation::create([
-            'business_id' => $this->businessA->id,
-            'invited_by_user_id' => $this->ownerA->id,
-            'email' => 'tobe.revoked@example.com',
-            'role' => StaffInvitation::ROLE_OPERATOR,
-            'token_hash' => $tokenHash,
-            'expires_at' => now()->addDays(3),
-        ]);
-
-        $response = $this->actingAs($this->ownerA)->delete(route('merchant.staff.invitations.revoke', $invitation));
 
         $response->assertRedirect(route('merchant.staff.index'));
-        $invitation->refresh();
-        $this->assertNotNull($invitation->revoked_at);
-        $this->assertTrue($invitation->isRevoked());
+        $response->assertSessionHas('status');
+
+        $operator->refresh();
+        $membership->refresh();
+
+        $this->assertTrue(Hash::check('NewPassword999!', $operator->password));
+        $this->assertSame('NewPassword999!', $membership->getDecryptedStaffPassword());
+
+        $this->assertDatabaseHas('activity_logs', [
+            'business_id' => $this->businessA->id,
+            'action' => 'staff_password_updated',
+        ]);
+
+        // Primary owner password cannot be altered via this endpoint
+        $ownerMembership = BusinessMembership::where('user_id', $this->ownerA->id)->firstOrFail();
+        $this->actingAs($this->ownerA)->patch(route('merchant.staff.password', $ownerMembership), [
+            'password' => 'HackerPass123!',
+        ])->assertStatus(403);
     }
 
     /**
@@ -477,116 +508,62 @@ class StaffManagementTest extends TestCase
             ->assertStatus(403);
     }
 
-    /**
-     * Test P1-01: Invitation acceptance flow by guest creating new account.
-     */
-    public function test_guest_can_register_and_accept_invitation(): void
+    public function test_owner_can_create_staff_with_specific_counter_or_auto_fallback(): void
     {
-        [$plainToken, $tokenHash] = StaffInvitation::generateSecureToken();
-        $invitation = StaffInvitation::create([
+        $secondCounter = BusinessCounter::create([
             'business_id' => $this->businessA->id,
-            'invited_by_user_id' => $this->ownerA->id,
-            'email' => 'new.staff@example.com',
-            'role' => StaffInvitation::ROLE_OPERATOR,
-            'token_hash' => $tokenHash,
-            'expires_at' => now()->addDays(3),
+            'name' => 'Pos Layanan 2',
+            'code' => 'L-02',
+            'is_active' => true,
         ]);
 
-        // 1. View invitation page
-        $showResponse = $this->get(route('invitations.show', ['token' => $plainToken]));
-        $showResponse->assertStatus(200);
-        $showResponse->assertSee($this->businessA->name);
-        $showResponse->assertSee('new.staff@example.com');
+        $this->actingAs($this->ownerA)->get(route('merchant.staff.index'))
+            ->assertOk()
+            ->assertSee('name="business_counter_id"', false)
+            ->assertSee('Pos Layanan 2');
 
-        // 2. Accept and create account
-        $acceptResponse = $this->post(route('invitations.accept', ['token' => $plainToken]), [
-            'name' => 'Staf Baru',
+        // Explicit counter
+        $this->actingAs($this->ownerA)->post(route('merchant.staff.store'), [
+            'name' => 'Staf Pos 2',
+            'email' => 'staf.loket2@example.com',
             'password' => 'Antrein123!',
-            'password_confirmation' => 'Antrein123!',
-        ]);
+            'business_counter_id' => $secondCounter->id,
+        ])->assertRedirect(route('merchant.staff.index'));
 
-        $acceptResponse->assertRedirect(route('merchant.dashboard'));
+        $membership2 = BusinessMembership::whereHas('user', fn ($query) => $query->where('email', 'staf.loket2@example.com'))->firstOrFail();
+        $this->assertSame([$secondCounter->id], $membership2->assignedCounters()->pluck('business_counters.id')->all());
 
-        $user = User::where('email', 'new.staff@example.com')->first();
-        $this->assertNotNull($user);
-        $this->assertAuthenticatedAs($user);
+        // Fallback to first active counter when omitted
+        $this->actingAs($this->ownerA)->post(route('merchant.staff.store'), [
+            'name' => 'Staf Otomatis',
+            'email' => 'staf.otomatis@example.com',
+            'password' => 'Antrein123!',
+        ])->assertRedirect(route('merchant.staff.index'));
 
-        $membership = BusinessMembership::where('user_id', $user->id)->first();
-        $this->assertNotNull($membership);
-        $this->assertEquals($this->businessA->id, $membership->business_id);
-        $this->assertEquals(BusinessMembership::ROLE_OPERATOR, $membership->role);
-
-        $invitation->refresh();
-        $this->assertNotNull($invitation->accepted_at);
-        $this->assertTrue($invitation->isAccepted());
+        $membershipAuto = BusinessMembership::whereHas('user', fn ($query) => $query->where('email', 'staf.otomatis@example.com'))->firstOrFail();
+        $firstCounter = $this->businessA->counters()->where('is_active', true)->orderBy('id')->firstOrFail();
+        $this->assertSame([$firstCounter->id], $membershipAuto->assignedCounters()->pluck('business_counters.id')->all());
     }
 
-    /**
-     * Test P1-01: Invitation acceptance flow by existing user logging in.
-     */
-    public function test_existing_user_can_login_and_accept_invitation(): void
+    public function test_staff_creation_rejects_counter_from_other_business_or_inactive(): void
     {
-        $existingUser = User::factory()->merchant()->create([
-            'email' => 'registered.staff@example.com',
-            'password' => Hash::make('password123'),
-        ]);
-
-        [$plainToken, $tokenHash] = StaffInvitation::generateSecureToken();
-        $invitation = StaffInvitation::create([
+        $foreignCounter = $this->businessB->counters()->firstOrFail();
+        $inactiveCounter = BusinessCounter::create([
             'business_id' => $this->businessA->id,
-            'invited_by_user_id' => $this->ownerA->id,
-            'email' => 'registered.staff@example.com',
-            'role' => StaffInvitation::ROLE_OPERATOR,
-            'token_hash' => $tokenHash,
-            'expires_at' => now()->addDays(3),
+            'name' => 'Loket Nonaktif',
+            'code' => 'L-09',
+            'is_active' => false,
         ]);
 
-        $acceptResponse = $this->post(route('invitations.accept', ['token' => $plainToken]), [
-            'password' => 'password123',
-        ]);
+        foreach ([$foreignCounter, $inactiveCounter] as $counter) {
+            $this->actingAs($this->ownerA)->post(route('merchant.staff.store'), [
+                'name' => 'Staf Salah',
+                'email' => 'staf.salah@example.com',
+                'password' => 'Antrein123!',
+                'business_counter_id' => $counter->id,
+            ])->assertSessionHasErrors('business_counter_id');
+        }
 
-        $acceptResponse->assertRedirect(route('merchant.dashboard'));
-        $this->assertAuthenticatedAs($existingUser);
-
-        $membership = BusinessMembership::where('user_id', $existingUser->id)->first();
-        $this->assertNotNull($membership);
-        $this->assertEquals($this->businessA->id, $membership->business_id);
-        $this->assertEquals(BusinessMembership::ROLE_OPERATOR, $membership->role);
-    }
-
-    /**
-     * Test P1-01: Expired, revoked, or mismatched invitation rejection.
-     */
-    public function test_invalid_invitation_tokens_are_rejected(): void
-    {
-        // Expired invitation
-        [$expiredToken, $expiredHash] = StaffInvitation::generateSecureToken();
-        StaffInvitation::create([
-            'business_id' => $this->businessA->id,
-            'invited_by_user_id' => $this->ownerA->id,
-            'email' => 'expired@example.com',
-            'role' => StaffInvitation::ROLE_OPERATOR,
-            'token_hash' => $expiredHash,
-            'expires_at' => now()->subDay(),
-        ]);
-
-        $this->get(route('invitations.show', ['token' => $expiredToken]))
-            ->assertSee('Undangan Telah Kedaluwarsa');
-
-        // Mismatched logged-in user
-        [$validToken, $validHash] = StaffInvitation::generateSecureToken();
-        StaffInvitation::create([
-            'business_id' => $this->businessA->id,
-            'invited_by_user_id' => $this->ownerA->id,
-            'email' => 'target@example.com',
-            'role' => StaffInvitation::ROLE_OPERATOR,
-            'token_hash' => $validHash,
-            'expires_at' => now()->addDays(3),
-        ]);
-
-        $otherUser = User::factory()->merchant()->create(['email' => 'wrong.account@example.com']);
-        $this->actingAs($otherUser)
-            ->get(route('invitations.show', ['token' => $validToken]))
-            ->assertSee('Akun Tidak Sesuai');
+        $this->assertDatabaseMissing('users', ['email' => 'staf.salah@example.com']);
     }
 }

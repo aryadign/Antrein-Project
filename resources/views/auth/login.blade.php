@@ -1,4 +1,4 @@
-<x-layouts.auth title="Masuk" heading="Masuk ke Akun Anda" subheading="Kelola operasional antrean usaha atau akses panel kontrol.">
+<x-layouts.auth title="Masuk" heading="Masuk ke Akun Anda" subheading="Untuk Pelanggan, Pemilik UMKM, Staf Operator, dan Admin AntreIn.">
     @if (session('status'))
         <div class="mb-4 rounded-md bg-emerald-50 p-4 text-sm font-medium text-emerald-800 border border-emerald-200">
             {{ session('status') }}
@@ -24,49 +24,29 @@
                 required
                 autofocus
                 autocomplete="username"
-                placeholder="nama@usaha.id"
-                :invalid="$errors->has('email')"
+                placeholder="nama@email.id"
+                :error="$errors->has('email')"
             />
             <x-input-error :messages="$errors->get('email')" class="mt-1" />
         </div>
 
-        <div x-data="{ showPassword: false }">
-            <div class="flex items-center justify-between mb-1.5">
+        <div>
+            <div class="mb-1.5 flex items-center justify-between">
                 <x-form-label for="password" value="Kata Sandi" :required="true" class="mb-0" />
                 @if (Route::has('password.request'))
-                    <a href="{{ route('password.request') }}" class="text-caption font-medium text-brand-700 hover:text-brand-800 hover:underline">
+                    <a href="{{ route('password.request') }}" class="inline-flex min-h-11 items-center text-caption font-medium text-brand-700 hover:text-brand-800 hover:underline">
                         Lupa kata sandi?
                     </a>
                 @endif
             </div>
-            <div class="relative">
-                <x-input
-                    id="password"
-                    name="password"
-                    type="password"
-                    x-bind:type="showPassword ? 'text' : 'password'"
-                    required
-                    autocomplete="current-password"
-                    placeholder="••••••••"
-                    :invalid="$errors->has('password')"
-                    class="pr-10"
-                />
-                <button
-                    type="button"
-                    @click="showPassword = !showPassword"
-                    class="absolute inset-y-0 right-0 flex items-center pr-3.5 text-neutral-400 hover:text-neutral-600 focus:outline-none"
-                    aria-label="Tampilkan atau sembunyikan kata sandi"
-                    tabindex="-1"
-                >
-                    <svg x-show="!showPassword" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                    <svg x-show="showPassword" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display: none;">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
-                    </svg>
-                </button>
-            </div>
+            <x-password-input
+                id="password"
+                name="password"
+                required
+                autocomplete="current-password"
+                placeholder="Masukkan kata sandi"
+                :error="$errors->has('password')"
+            />
             <x-input-error :messages="$errors->get('password')" class="mt-1" />
         </div>
 
@@ -80,13 +60,34 @@
             </x-button>
         </div>
 
-        <div class="mt-6 text-center text-sm text-neutral-600">
-            Belum memiliki akun usaha?
-            <a href="{{ route('register') }}" class="font-semibold text-brand-700 hover:text-brand-800 hover:underline">
+        <div class="mt-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-center text-sm text-neutral-600">
+            <span>Belum punya akun?</span>
+            <a href="{{ route('register', ['type' => 'customer']) }}" class="inline-flex min-h-11 items-center font-semibold text-brand-700 hover:text-brand-800 hover:underline">
+                Daftar Pelanggan
+            </a>
+            <span class="text-neutral-300">&bull;</span>
+            <a href="{{ route('register', ['type' => 'merchant']) }}" class="inline-flex min-h-11 items-center font-semibold text-neutral-800 hover:text-brand-700 hover:underline">
                 Daftar UMKM Baru
             </a>
         </div>
     </form>
+
+    {{-- Jalur pelanggan --}}
+    <div class="mt-4 flex flex-col gap-3 rounded-xl border border-brand-100 bg-brand-50/70 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex items-start gap-3">
+            <span class="flex size-10 shrink-0 items-center justify-center rounded-lg bg-white text-brand-700 ring-1 ring-brand-100">
+                <x-customer.icon name="ticket" class="size-5" />
+            </span>
+            <div class="text-sm">
+                <p class="font-semibold text-neutral-900">Ingin mengambil nomor antrean?</p>
+                <p class="text-neutral-600">Masuk atau daftar akun pelanggan untuk mengambil hingga 3 antrean aktif.</p>
+            </div>
+        </div>
+        <a href="{{ route('customer.dashboard') }}" class="inline-flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-white px-4 text-sm font-semibold text-brand-700 ring-1 ring-brand-200 transition hover:bg-brand-100">
+            Jelajahi Toko
+            <x-customer.icon name="arrow-right" class="size-4" />
+        </a>
+    </div>
 
     {{-- Developer Quick Demo Access Panel (Local & Testing Only) --}}
     @if (app()->environment(['local', 'testing']))
@@ -96,12 +97,9 @@
         >
             <div class="rounded-xl border border-amber-300 bg-amber-50/60 p-4 space-y-3">
                 <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-2">
-                        <span class="flex h-2 w-2 rounded-full bg-amber-500" :class="{ 'animate-pulse': !submitting, 'animate-ping': submitting }"></span>
-                        <span class="text-xs font-mono font-bold uppercase tracking-wider text-amber-900">
-                            Akses Cepat Pengujian (Dev Mode)
-                        </span>
-                    </div>
+                    <span class="text-xs font-mono font-bold uppercase tracking-wider text-amber-900">
+                        Akses Cepat Pengujian (Dev Mode)
+                    </span>
                     <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-200/80 text-amber-900 font-semibold">
                         LOCAL / TEST ONLY
                     </span>
@@ -172,7 +170,7 @@
                         </button>
                     </form>
 
-                    {{-- Customer Guest --}}
+                    {{-- Customer Demo --}}
                     <form method="POST" action="{{ route('dev.quick-login') }}" @submit="submitting = true; selected = 'customer'">
                         @csrf
                         <input type="hidden" name="persona" value="customer">
@@ -182,12 +180,12 @@
                             class="w-full text-left p-2.5 rounded-lg bg-white border border-neutral-200 hover:border-amber-400 hover:bg-amber-50/30 transition shadow-sm group disabled:opacity-60 disabled:cursor-not-allowed"
                         >
                             <div class="flex items-center justify-between">
-                                <span class="text-xs font-bold text-neutral-900 group-hover:text-amber-700">Pelanggan (Tamu)</span>
-                                <span class="text-[10px] font-mono font-semibold px-1 rounded bg-amber-100 text-amber-800">Guest</span>
+                                <span class="text-xs font-bold text-neutral-900 group-hover:text-amber-700">Pelanggan Demo</span>
+                                <span class="text-[10px] font-mono font-semibold px-1 rounded bg-amber-100 text-amber-800">Pelanggan</span>
                             </div>
-                            <div class="text-[11px] text-neutral-500 mt-0.5 truncate">
-                                <span x-show="!submitting || selected !== 'customer'">Buka Antrean Barbershop</span>
-                                <span x-show="submitting && selected === 'customer'" class="text-amber-600 font-semibold" style="display: none;">Membuka antrean...</span>
+                            <div class="text-[11px] text-neutral-500 font-mono mt-0.5 truncate">
+                                <span x-show="!submitting || selected !== 'customer'">pelanggan@antrein.id</span>
+                                <span x-show="submitting && selected === 'customer'" class="text-amber-600 font-semibold" style="display: none;">Menyiapkan sesi...</span>
                             </div>
                         </button>
                     </form>

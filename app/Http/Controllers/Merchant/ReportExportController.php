@@ -64,7 +64,7 @@ class ReportExportController extends Controller
         );
 
         $timezone = $report['timezone'];
-        $nowFormatted = Carbon::now($timezone)->translatedFormat('d F Y H:i:s') . ' ' . $timezone;
+        $nowFormatted = Carbon::now($timezone)->translatedFormat('d F Y H:i:s').' '.$timezone;
 
         return response()->streamDownload(function () use ($business, $report, $timezone, $nowFormatted) {
             $handle = fopen('php://output', 'w');
@@ -77,7 +77,7 @@ class ReportExportController extends Controller
             fputcsv($handle, ['Nama UMKM', self::sanitizeCsvValue($business->name)]);
             fputcsv($handle, ['Kategori', self::sanitizeCsvValue($business->category?->name ?? 'UMKM')]);
             fputcsv($handle, ['Periode Laporan', self::sanitizeCsvValue($report['periodLabel'])]);
-            fputcsv($handle, ['Rentang Tanggal', self::sanitizeCsvValue($report['startDate'] . ' s/d ' . $report['endDate'])]);
+            fputcsv($handle, ['Rentang Tanggal', self::sanitizeCsvValue($report['startDate'].' s/d '.$report['endDate'])]);
             fputcsv($handle, ['Zona Waktu Operasional', self::sanitizeCsvValue($timezone)]);
             fputcsv($handle, ['Waktu Pengunduhan', self::sanitizeCsvValue($nowFormatted)]);
             fputcsv($handle, []);
@@ -93,6 +93,11 @@ class ReportExportController extends Controller
             fputcsv($handle, ['Tiket Dilewati', $report['skippedCount'], 'Pelanggan tidak hadir']);
             fputcsv($handle, ['Tiket Dibatalkan', $report['cancelledCount'], 'Pembatalan sebelum pelayanan']);
             fputcsv($handle, [
+                'Estimasi Pemasukan Kotor (Rp)',
+                (float) $report['grossRevenue'],
+                'Dihitung dari tiket selesai dikalikan harga produk/jasa terdaftar',
+            ]);
+            fputcsv($handle, [
                 'Rata-rata Waktu Tunggu (Menit)',
                 $report['avgWaitingMinutes'] !== null ? number_format($report['avgWaitingMinutes'], 1) : 'Belum ada data',
                 'Dihitung dari tiket dibuat hingga mulai dilayani',
@@ -104,7 +109,7 @@ class ReportExportController extends Controller
             ]);
 
             $peakHourText = $report['peakHour']['threshold_met']
-                ? $report['peakHour']['peak_range'] . ' (' . $report['peakHour']['max_count'] . ' tiket)'
+                ? $report['peakHour']['peak_range'].' ('.$report['peakHour']['max_count'].' tiket)'
                 : 'Belum mencapai ambang batas (minimal 50 tiket/jam)';
             fputcsv($handle, ['Jam Sibuk (Puncak Antrean)', self::sanitizeCsvValue($peakHourText), 'Berdasarkan waktu kedatangan pelanggan']);
             fputcsv($handle, []);
@@ -114,10 +119,12 @@ class ReportExportController extends Controller
             fputcsv($handle, [
                 'Nama Layanan',
                 'Status Layanan',
+                'Harga Satuan (Rp)',
                 'Total Tiket',
                 'Selesai',
                 'Dilewati',
                 'Dibatalkan',
+                'Pemasukan Kotor (Rp)',
                 'Rata-rata Pelayanan (Menit)',
             ]);
 
@@ -125,10 +132,12 @@ class ReportExportController extends Controller
                 fputcsv($handle, [
                     self::sanitizeCsvValue($svc['service_name']),
                     $svc['is_active'] ? 'Aktif' : 'Nonaktif',
+                    (float) $svc['unit_price'],
                     $svc['total_tickets'],
                     $svc['completed_tickets'],
                     $svc['skipped_tickets'],
                     $svc['cancelled_tickets'],
+                    (float) $svc['gross_revenue'],
                     $svc['avg_service_minutes'] !== null ? number_format($svc['avg_service_minutes'], 1) : '-',
                 ]);
             }
@@ -147,6 +156,7 @@ class ReportExportController extends Controller
                 'Waktu Selesai',
                 'Waktu Tunggu (Menit)',
                 'Durasi Layanan (Menit)',
+                'Pemasukan Kotor (Rp)',
             ]);
 
             /** @var QueueTicket $ticket */
@@ -159,6 +169,10 @@ class ReportExportController extends Controller
                     ? round($ticket->service_started_at->diffInSeconds($ticket->completed_at) / 60, 1)
                     : '-';
 
+                $ticketGrossRevenue = $ticket->status === QueueTicket::STATUS_SELESAI
+                    ? (float) ($ticket->service?->price ?? 0)
+                    : 0;
+
                 fputcsv($handle, [
                     self::sanitizeCsvValue($ticket->ticket_number),
                     self::sanitizeCsvValue($ticket->customer_name),
@@ -170,13 +184,14 @@ class ReportExportController extends Controller
                     $ticket->completed_at ? $ticket->completed_at->timezone($timezone)->format('Y-m-d H:i') : '-',
                     $waitingMins,
                     $servingMins,
+                    $ticketGrossRevenue,
                 ]);
             }
 
             fclose($handle);
         }, $filename, [
             'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
             'Cache-Control' => 'no-cache, no-store, must-revalidate',
             'Pragma' => 'no-cache',
             'Expires' => '0',
@@ -226,7 +241,7 @@ class ReportExportController extends Controller
         );
 
         $timezone = $report['timezone'];
-        $generatedAt = Carbon::now($timezone)->translatedFormat('d F Y H:i') . ' ' . $timezone;
+        $generatedAt = Carbon::now($timezone)->translatedFormat('d F Y H:i').' '.$timezone;
 
         $pdf = Pdf::loadView('merchant.reports.pdf', [
             'business' => $business,
@@ -256,7 +271,7 @@ class ReportExportController extends Controller
         $str = (string) $value;
 
         if (preg_match('/^\s*[=\+\-@\t\r]/', $str)) {
-            return "'" . $str;
+            return "'".$str;
         }
 
         return $str;
@@ -273,6 +288,7 @@ class ReportExportController extends Controller
             QueueTicket::STATUS_SEDANG_DILAYANI => 'Sedang Dilayani',
             QueueTicket::STATUS_SELESAI => 'Selesai',
             QueueTicket::STATUS_DILEWATI => 'Dilewati',
+            QueueTicket::STATUS_TIDAK_HADIR => 'Tidak hadir',
             QueueTicket::STATUS_DIBATALKAN => 'Dibatalkan',
             default => ucfirst($status),
         };

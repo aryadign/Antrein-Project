@@ -17,8 +17,11 @@ class TicketNumberingTest extends TestCase
     use RefreshDatabase;
 
     private QueueService $queueService;
+
     private Business $business;
+
     private Service $service;
+
     private User $merchant;
 
     protected function setUp(): void
@@ -54,7 +57,7 @@ class TicketNumberingTest extends TestCase
         ]);
     }
 
-    public function test_ticket_numbering_starts_at_a001_and_increments_sequentially(): void
+    public function test_ticket_numbering_starts_at_tkt001_and_increments_sequentially(): void
     {
         $ticket1 = $this->queueService->generateOnlineTicket(
             business: $this->business,
@@ -63,7 +66,7 @@ class TicketNumberingTest extends TestCase
             customerPhone: '081234567801'
         );
 
-        $this->assertEquals('A-001', $ticket1->ticket_number);
+        $this->assertEquals('TKT-001', $ticket1->ticket_number);
         $this->assertEquals(1, $ticket1->sequence_number);
 
         $ticket2 = $this->queueService->generateOnlineTicket(
@@ -73,7 +76,7 @@ class TicketNumberingTest extends TestCase
             customerPhone: '081234567802'
         );
 
-        $this->assertEquals('A-002', $ticket2->ticket_number);
+        $this->assertEquals('TKT-002', $ticket2->ticket_number);
         $this->assertEquals(2, $ticket2->sequence_number);
 
         $dailyQueue = DailyQueue::find($ticket1->daily_queue_id);
@@ -106,13 +109,13 @@ class TicketNumberingTest extends TestCase
             customerPhone: '081234567813'
         );
 
-        $this->assertEquals('A-001', $ticket1->ticket_number);
+        $this->assertEquals('TKT-001', $ticket1->ticket_number);
         $this->assertEquals(QueueTicket::SOURCE_ONLINE, $ticket1->source);
 
-        $this->assertEquals('A-002', $ticket2->ticket_number);
+        $this->assertEquals('TKT-002', $ticket2->ticket_number);
         $this->assertEquals(QueueTicket::SOURCE_WALK_IN, $ticket2->source);
 
-        $this->assertEquals('A-003', $ticket3->ticket_number);
+        $this->assertEquals('TKT-003', $ticket3->ticket_number);
         $this->assertEquals(QueueTicket::SOURCE_ONLINE, $ticket3->source);
 
         $dailyQueue = DailyQueue::find($ticket1->daily_queue_id);
@@ -154,8 +157,8 @@ class TicketNumberingTest extends TestCase
             customerPhone: '081234567892'
         );
 
-        $this->assertEquals('A-001', $ticketA1->ticket_number);
-        $this->assertEquals('A-001', $ticketB1->ticket_number);
+        $this->assertEquals('TKT-001', $ticketA1->ticket_number);
+        $this->assertEquals('TKT-001', $ticketB1->ticket_number);
         $this->assertNotEquals($ticketA1->daily_queue_id, $ticketB1->daily_queue_id);
     }
 }

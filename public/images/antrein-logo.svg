@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+    <defs>
+        <linearGradient id="antrein-brand-grad" x1="16" y1="16" x2="106" y2="108" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#2563EB"/>
+            <stop offset="50%" stop-color="#1D4ED8"/>
+            <stop offset="100%" stop-color="#1E40AF"/>
+        </linearGradient>
+    </defs>
+
+    <!-- Outer open circular ring matching official AntreIn Q+A mark -->
+    <path
+        d="M 72.6 92.2 A 39 39 0 1 1 89.6 78.9"
+        stroke="url(#antrein-brand-grad)"
+        stroke-width="11"
+        stroke-linecap="butt"
+    />
+
+    <!-- Bottom-left slanted tail -->
+    <path
+        d="M 31.5 82.0 L 20.5 101.5 L 32.2 101.5 L 40.5 87.5 Z"
+        fill="url(#antrein-brand-grad)"
+    />
+
+    <!-- Inner bold rounded 'A' arch + bottom-right continuous pill loop (with hollow pill slot) -->
+    <path
+        d="M 35.0 74.5
+           L 49.5 44.5
+           C 53.0 37.5 63.0 37.5 66.5 44.5
+           C 72.0 55.8 78.5 67.2 98.8 87.2
+           C 104.2 92.5 103.8 100.8 98.0 105.2
+           C 92.4 109.4 84.5 108.0 79.8 102.6
+           L 66.0 86.2
+           C 60.2 79.4 51.8 79.2 44.2 85.4
+           L 35.0 74.5
+           Z
+           M 58.0 55.2
+           L 47.6 73.2
+           C 54.4 69.2 63.4 70.0 70.6 77.2
+           L 86.4 95.6
+           C 88.4 97.9 91.6 98.2 93.6 96.4
+           C 95.5 94.7 95.4 91.7 93.3 89.6
+           C 76.2 73.2 65.4 65.5 58.0 55.2
+           Z"
+        fill="url(#antrein-brand-grad)"
+        fill-rule="evenodd"
+        clip-rule="evenodd"
+    />
+</svg>

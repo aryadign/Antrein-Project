@@ -1,5 +1,5 @@
 <x-layouts.customer 
-    title="Tautan Pelacakan Kedaluwarsa"
+    title="Tiket Pelacakan Kedaluwarsa"
     :business="$business"
     :backUrl="$business ? route('customer.queue', ['slug' => $business->slug]) : '/'"
 >
@@ -12,7 +12,7 @@
             </div>
 
             <h1 class="text-xl sm:text-2xl font-extrabold text-neutral-950 tracking-tight">
-                Tautan Pelacakan Kedaluwarsa
+                Tiket Pelacakan Kedaluwarsa
             </h1>
 
             <p class="text-sm text-neutral-600 mt-2 leading-relaxed">
@@ -21,7 +21,7 @@
 
             <div class="p-4 rounded-xl bg-neutral-50 border border-neutral-200 mt-5 text-caption text-neutral-500 text-left">
                 <div class="font-semibold text-neutral-700 mb-0.5">Kebijakan Privasi Pelanggan:</div>
-                Untuk melindungi privasi Anda, data nama dan riwayat nomor telepon otomatis disembunyikan dari tautan publik setelah tiket kedaluwarsa.
+                Untuk melindungi privasi Anda, data nama dan riwayat nomor telepon otomatis disembunyikan setelah tiket kedaluwarsa.
             </div>
 
             <div class="mt-6 pt-2">

@@ -317,6 +317,12 @@
         </tr>
     </table>
 
+    {{-- Gross Revenue Summary Box --}}
+    <div class="info-box" style="background-color: #f0fdf4; border-left-color: #16a34a; color: #14532d;">
+        <strong>Estimasi Pemasukan Kotor: Rp {{ number_format($report['grossRevenue'], 0, ',', '.') }}</strong>
+        &bull; Dihitung dari {{ number_format($report['completedCount']) }} tiket selesai &times; harga produk/jasa yang ditentukan UMKM.
+    </div>
+
     {{-- Peak hour & Distribution note --}}
     <div class="info-box">
         <strong>Analisis Jam Sibuk:</strong>
@@ -333,12 +339,14 @@
     <table class="data-table">
         <thead>
             <tr>
-                <th style="width: 32%;">Nama Layanan</th>
-                <th style="width: 14%;" class="text-center">Status Layanan</th>
-                <th style="width: 13%;" class="text-center">Total Tiket</th>
-                <th style="width: 13%;" class="text-center">Selesai</th>
-                <th style="width: 13%;" class="text-center">Dilewati / Batal</th>
-                <th style="width: 15%;" class="text-right">Rata-rata Pelayanan</th>
+                <th style="width: 24%;">Nama Layanan</th>
+                <th style="width: 10%;" class="text-center">Status</th>
+                <th style="width: 14%;" class="text-right">Harga Satuan</th>
+                <th style="width: 9%;" class="text-center">Total</th>
+                <th style="width: 9%;" class="text-center">Selesai</th>
+                <th style="width: 10%;" class="text-center">Lewat / Batal</th>
+                <th style="width: 14%;" class="text-right">Pemasukan Kotor</th>
+                <th style="width: 10%;" class="text-right">Avg Layanan</th>
             </tr>
         </thead>
         <tbody>
@@ -352,21 +360,34 @@
                             <span class="badge badge-neutral">Nonaktif</span>
                         @endif
                     </td>
+                    <td class="text-right">Rp {{ number_format($svc['unit_price'], 0, ',', '.') }}</td>
                     <td class="text-center font-bold">{{ number_format($svc['total_tickets']) }}</td>
                     <td class="text-center">{{ number_format($svc['completed_tickets']) }}</td>
                     <td class="text-center">{{ number_format($svc['skipped_tickets'] + $svc['cancelled_tickets']) }}</td>
+                    <td class="text-right font-bold">Rp {{ number_format($svc['gross_revenue'], 0, ',', '.') }}</td>
                     <td class="text-right">
                         {{ $svc['avg_service_minutes'] !== null ? number_format($svc['avg_service_minutes'], 1) . ' mnt' : '—' }}
                     </td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="6" class="text-center" style="padding: 12px; color: #94a3b8;">
+                    <td colspan="8" class="text-center" style="padding: 12px; color: #94a3b8;">
                         Tidak ada konfigurasi layanan yang ditemukan pada UMKM ini.
                     </td>
                 </tr>
             @endforelse
         </tbody>
+        @if ($report['servicesBreakdown']->isNotEmpty())
+            <tfoot>
+                <tr style="background-color: #f0fdf4; font-weight: bold;">
+                    <td colspan="4" style="text-transform: uppercase; font-size: 8px; color: #166534;">Total Estimasi Pemasukan Kotor</td>
+                    <td class="text-center" style="color: #166534;">{{ number_format($report['completedCount']) }}</td>
+                    <td></td>
+                    <td class="text-right" style="color: #14532d;">Rp {{ number_format($report['grossRevenue'], 0, ',', '.') }}</td>
+                    <td></td>
+                </tr>
+            </tfoot>
+        @endif
     </table>
 
     {{-- Section: Rincian Tiket Antrean --}}

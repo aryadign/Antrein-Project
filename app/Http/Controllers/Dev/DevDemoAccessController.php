@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Dev;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
 use App\Services\DevDemoService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -39,29 +38,14 @@ class DevDemoAccessController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        // Customer Guest Flow: tidak memiliki authenticated merchant/admin session
-        if ($persona === 'customer') {
-            try {
-                $this->demoService->ensureOwnerUser();
-            } catch (\Throwable $e) {
-                Log::error('Dev Demo Customer setup failed: ' . $e->getMessage());
-
-                return redirect()->route('login')
-                    ->with('error', 'Gagal memuat unit usaha demo pelanggan. Pastikan migration dan seeder telah dijalankan.');
-            }
-
-            return redirect()->route('customer.queue', ['slug' => DevDemoService::DEMO_SLUG])
-                ->with('success', 'Masuk sebagai Tamu Pelanggan (Barbershop Garasi).');
-        }
-
         // Step 3: Mencari / memastikan dedicated demo account
         try {
             $user = $this->demoService->resolveOrCreatePersonaUser($persona);
         } catch (\Throwable $e) {
-            Log::error("Dev Demo {$persona} resolution failed: " . $e->getMessage());
+            Log::error("Dev Demo {$persona} resolution failed: ".$e->getMessage());
 
             return redirect()->route('login')
-                ->with('error', 'Gagal memproses akun demo ' . ucfirst($persona) . '. Silakan jalankan: php artisan db:seed');
+                ->with('error', 'Gagal memproses akun demo '.ucfirst($persona).'. Silakan jalankan: php artisan db:seed');
         }
 
         if (! $user) {
@@ -79,6 +63,11 @@ class DevDemoAccessController extends Controller
         if ($persona === 'admin' && ! $user->isAdmin()) {
             return redirect()->route('login')
                 ->with('error', "Akun '{$user->email}' tidak memiliki hak akses platform admin.");
+        }
+
+        if ($persona === 'customer' && ! $user->isCustomer()) {
+            return redirect()->route('login')
+                ->with('error', "Akun '{$user->email}' tidak terdaftar sebagai pelanggan.");
         }
 
         if (in_array($persona, ['owner', 'operator'], true) && ! $user->isMerchant()) {
@@ -106,11 +95,16 @@ class DevDemoAccessController extends Controller
         // Step 11: Redirect sesuai persona
         if ($user->isAdmin()) {
             return redirect()->route('admin.dashboard')
-                ->with('success', 'Masuk sebagai ' . $user->name . ' (Admin AntreIn)');
+                ->with('success', 'Masuk sebagai '.$user->name.' (Admin AntreIn)');
+        }
+
+        if ($user->isCustomer()) {
+            return redirect()->route('customer.dashboard')
+                ->with('success', 'Masuk sebagai '.$user->name.' (Pelanggan AntreIn)');
         }
 
         return redirect()->route('merchant.dashboard')
-            ->with('success', 'Masuk sebagai ' . $user->name . ' (' . ucfirst($user->businessRole() ?? 'Merchant') . ')');
+            ->with('success', 'Masuk sebagai '.$user->name.' ('.ucfirst($user->businessRole() ?? 'Merchant').')');
     }
 
     /**

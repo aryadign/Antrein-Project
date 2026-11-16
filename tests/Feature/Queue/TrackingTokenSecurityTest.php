@@ -18,8 +18,11 @@ class TrackingTokenSecurityTest extends TestCase
     use RefreshDatabase;
 
     private QueueService $queueService;
+
     private Business $business;
+
     private Service $service;
+
     private User $merchant;
 
     protected function setUp(): void
@@ -83,7 +86,7 @@ class TrackingTokenSecurityTest extends TestCase
         $response->assertJson([
             'success' => true,
             'data' => [
-                'ticket_number' => 'A-001',
+                'ticket_number' => 'TKT-001',
                 'customer_name' => 'I Made Wijaya',
                 'customer_phone_masked' => '081***890',
                 'status' => QueueTicket::STATUS_WAITING,

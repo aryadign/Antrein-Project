@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Business;
 use App\Models\QueueTicket;
 use App\Models\Service;
+use App\Services\QrCodeService;
 use App\Services\QueueService;
 use App\Services\WaitingTimeEstimationService;
 use Carbon\Carbon;
@@ -24,18 +25,30 @@ class QueueTicketController extends Controller
 {
     public function __construct(
         protected QueueService $queueService,
-        protected WaitingTimeEstimationService $waitingTimeEstimationService
+        protected WaitingTimeEstimationService $waitingTimeEstimationService,
+        protected QrCodeService $qrCodeService
     ) {}
 
     /**
-     * Display the public UMKM page with service catalog and intake options.
+     * Display the public UMKM page with service catalog, sibling branches, and Shopee-style reviews.
      */
     public function show(Request $request, string $slug): JsonResponse|View
     {
         /** @var Business $business */
         $business = Business::where('slug', $slug)
-            ->with(['category', 'hours'])
+            ->with(['category', 'hours', 'organization'])
+            ->withAvg('customerReviews as reviews_avg_rating', 'rating')
+            ->withCount('customerReviews as reviews_count')
+            ->withCount('activeCounters as active_counters_count')
+            ->withAvg(['services as avg_service_minutes' => fn ($q) => $q->where('is_active', true)], 'duration_minutes')
+            ->withMin(['services as min_service_minutes' => fn ($q) => $q->where('is_active', true)], 'duration_minutes')
+            ->withMax(['services as max_service_minutes' => fn ($q) => $q->where('is_active', true)], 'duration_minutes')
             ->firstOrFail();
+
+        abort_unless($business->isApproved(), 404);
+
+        // Opportunistically expire 15-minute no-show calls so queue waiting count stays accurate
+        $this->queueService->expireStaleCalledTickets($business);
 
         $dailyQueue = $this->queueService->getOrCreateDailyQueue($business);
 
@@ -49,12 +62,61 @@ class QueueTicketController extends Controller
             return $service;
         });
 
-        $servingTicket = $this->queueService->getCurrentServingTicket($business);
-
         $waitingCount = QueueTicket::where('business_id', $business->id)
             ->where('daily_queue_id', $dailyQueue->id)
             ->where('status', QueueTicket::STATUS_MENUNGGU)
             ->count();
+
+        $waitRange = $business->customerWaitRange($waitingCount);
+        $activeTicketCount = $request->user()?->activeTicketsCount() ?? 0;
+
+        // Shopee-style review breakdown & filtering
+        $totalReviewsCount = (int) ($business->reviews_count ?? 0);
+        $rawRatingCounts = $business->customerReviews()
+            ->selectRaw('rating, COUNT(*) as aggregate')
+            ->groupBy('rating')
+            ->pluck('aggregate', 'rating');
+
+        $ratingBreakdown = [];
+        for ($star = 5; $star >= 1; $star--) {
+            $count = (int) ($rawRatingCounts->get($star) ?? 0);
+            $ratingBreakdown[$star] = [
+                'count' => $count,
+                'percent' => $totalReviewsCount > 0 ? (int) round(($count / $totalReviewsCount) * 100) : 0,
+            ];
+        }
+
+        $reviewsWithCommentCount = $business->customerReviews()
+            ->whereNotNull('comment')
+            ->where('comment', '!=', '')
+            ->count();
+
+        $selectedStar = $request->integer('bintang');
+        if ($selectedStar < 1 || $selectedStar > 5) {
+            $selectedStar = null;
+        }
+        $withCommentOnly = $request->boolean('dengan_komentar');
+        $reviewSort = (string) $request->query('urut_ulasan', 'terbaru');
+        if (! in_array($reviewSort, ['terbaru', 'rating_tinggi', 'rating_rendah'], true)) {
+            $reviewSort = 'terbaru';
+        }
+
+        $reviewsQuery = $business->customerReviews()->with('service:id,name');
+        if ($selectedStar !== null) {
+            $reviewsQuery->where('rating', $selectedStar);
+        }
+        if ($withCommentOnly) {
+            $reviewsQuery->whereNotNull('comment')->where('comment', '!=', '');
+        }
+        match ($reviewSort) {
+            'rating_tinggi' => $reviewsQuery->orderByDesc('rating')->latest(),
+            'rating_rendah' => $reviewsQuery->orderBy('rating')->latest(),
+            default => $reviewsQuery->latest(),
+        };
+
+        $reviews = $reviewsQuery->paginate(10, ['*'], 'ulasan_page')->withQueryString();
+
+        $siblingBranches = $business->siblingBranches();
 
         // Resolve today's schedule based on business timezone
         $timezone = $business->timezone ?: 'Asia/Makassar';
@@ -71,6 +133,7 @@ class QueueTicketController extends Controller
                         'slug' => $business->slug,
                         'description' => $business->description,
                         'category' => $business->category?->name,
+                        'area' => $business->areaLabel(),
                         'address' => $business->address,
                         'phone' => $business->phone,
                         'status' => $business->status,
@@ -85,14 +148,15 @@ class QueueTicketController extends Controller
                         'id' => $s->id,
                         'name' => $s->name,
                         'description' => $s->description,
+                        'image_url' => $s->imageUrl(),
                         'duration_minutes' => $s->duration_minutes,
                         'price' => $s->price,
                         'daily_quota' => $s->daily_quota,
                         'remaining_quota' => $s->remaining_quota,
                         'is_quota_full' => $s->is_quota_full,
                     ]),
-                    'now_serving' => $servingTicket?->ticket_number,
                     'waiting_count' => $waitingCount,
+                    'wait_range' => $waitRange,
                 ],
             ]);
         }
@@ -101,23 +165,45 @@ class QueueTicketController extends Controller
             'business' => $business,
             'services' => $servicesWithQuota,
             'dailyQueue' => $dailyQueue,
-            'servingTicket' => $servingTicket,
             'waitingCount' => $waitingCount,
+            'waitRange' => $waitRange,
+            'activeTicketCount' => $activeTicketCount,
+            'maxActiveTickets' => 3,
             'todayHour' => $todayHour,
+            'siblingBranches' => $siblingBranches,
+            'reviews' => $reviews,
+            'ratingBreakdown' => $ratingBreakdown,
+            'reviewsWithCommentCount' => $reviewsWithCommentCount,
+            'selectedStar' => $selectedStar,
+            'withCommentOnly' => $withCommentOnly,
+            'reviewSort' => $reviewSort,
         ]);
     }
 
     /**
-     * Display the dedicated online queue intake form.
+     * Display the dedicated online queue intake form with real-time booking slot options.
      */
     public function create(Request $request, string $slug): View
     {
         /** @var Business $business */
         $business = Business::where('slug', $slug)
             ->with(['category', 'hours'])
+            ->withCount('activeCounters as active_counters_count')
+            ->withAvg(['services as avg_service_minutes' => fn ($q) => $q->where('is_active', true)], 'duration_minutes')
+            ->withMin(['services as min_service_minutes' => fn ($q) => $q->where('is_active', true)], 'duration_minutes')
+            ->withMax(['services as max_service_minutes' => fn ($q) => $q->where('is_active', true)], 'duration_minutes')
             ->firstOrFail();
 
+        abort_unless($business->isApproved(), 404);
+
+        $this->queueService->expireStaleCalledTickets($business);
+
         $dailyQueue = $this->queueService->getOrCreateDailyQueue($business);
+
+        $waitingCount = QueueTicket::where('business_id', $business->id)
+            ->where('daily_queue_id', $dailyQueue->id)
+            ->where('status', QueueTicket::STATUS_MENUNGGU)
+            ->count();
 
         $services = $business->services()->active()->get()->map(function (Service $service) use ($dailyQueue) {
             $remaining = $service->getRemainingQuotaForDailyQueue($dailyQueue);
@@ -127,14 +213,40 @@ class QueueTicketController extends Controller
             return $service;
         });
 
+        $slotService = $this->queueService->slots();
+        $bookingSlotsByService = [];
+        foreach ($services as $service) {
+            $bookingSlotsByService[(string) $service->id] = $slotService
+                ->getSlotsForService($business, $service, $dailyQueue)
+                ->map(fn (array $slot): array => [
+                    'slot_key' => $slot['slot_key'],
+                    'label' => $slot['label'],
+                    'booked_count' => $slot['booked_count'],
+                    'capacity' => $slot['capacity'],
+                    'remaining' => $slot['remaining'],
+                    'is_started' => $slot['is_started'],
+                    'is_full' => $slot['is_full'],
+                    'is_available' => $slot['is_available'],
+                ])
+                ->values()
+                ->all();
+        }
+
         $selectedServiceId = (int) $request->query('service_id');
         $idempotencyKey = (string) Str::uuid();
+        $user = $request->user();
 
         return view('customer.form', [
             'business' => $business,
             'services' => $services,
+            'bookingSlotsByService' => $bookingSlotsByService,
             'selectedServiceId' => $selectedServiceId,
             'idempotencyKey' => $idempotencyKey,
+            'waitingCount' => $waitingCount,
+            'waitRange' => $business->customerWaitRange($waitingCount),
+            'activeTicketCount' => $user?->activeTicketsCount() ?? 0,
+            'maxActiveTickets' => 3,
+            'customerUser' => $user,
         ]);
     }
 
@@ -165,10 +277,12 @@ class QueueTicketController extends Controller
         // 2. Validate Business
         /** @var Business $business */
         $business = Business::where('slug', $slug)->firstOrFail();
+        abort_unless($business->isApproved(), 404);
 
         // 3. Validate Inputs
         $validated = $request->validate([
             'service_id' => ['required', 'integer', 'exists:services,id'],
+            'booking_slot' => ['nullable', 'string', 'max:40'],
             'customer_name' => ['required', 'string', 'max:100'],
             'customer_phone' => ['nullable', 'string', 'max:30'],
             'notify_email' => ['nullable', 'boolean'],
@@ -204,7 +318,9 @@ class QueueTicketController extends Controller
                 idempotencyKey: $validated['idempotency_key'] ?? null,
                 activeSessionTicketIds: is_array($activeSessionTicketIds) ? $activeSessionTicketIds : [],
                 customerEmail: $customerEmail,
-                customerEmailConsentedAt: $consentedAt
+                customerEmailConsentedAt: $consentedAt,
+                customer: $request->user(),
+                bookingSlot: $validated['booking_slot'] ?? null
             );
 
             // Record this ticket ID into customer browser session for session protection
@@ -212,6 +328,7 @@ class QueueTicketController extends Controller
 
             $queuePosition = $this->queueService->calculateQueuePosition($ticket);
             $waitEstimate = $this->waitingTimeEstimationService->estimateForTicket($ticket, $queuePosition);
+            $scheduleEstimate = $this->waitingTimeEstimationService->estimateScheduleForTicket($ticket, $queuePosition);
 
             $maskedPhone = null;
             if ($ticket->customer_phone) {
@@ -229,6 +346,8 @@ class QueueTicketController extends Controller
                         'ticket_id' => $ticket->id,
                         'ticket_number' => $ticket->ticket_number,
                         'sequence_number' => $ticket->sequence_number,
+                        'booking_slot' => $ticket->bookingSlotWindowLabel(),
+                        'booking_slot_start' => $ticket->bookingSlotLabel(),
                         'access_token' => $ticket->access_token,
                         'tracking_token' => $ticket->access_token,
                         'customer_name' => $ticket->customer_name,
@@ -237,14 +356,20 @@ class QueueTicketController extends Controller
                         'status' => $ticket->status,
                         'queue_position' => $queuePosition,
                         'estimated_wait_minutes' => $waitEstimate['minutes'],
+                        'estimated_wait_min_minutes' => $waitEstimate['min_minutes'],
+                        'estimated_wait_max_minutes' => $waitEstimate['max_minutes'],
+                        'estimated_wait_range' => $waitEstimate['range_label'],
                         'estimated_wait_reason' => $waitEstimate['reason'],
+                        'estimated_serve_time' => $scheduleEstimate['estimated_serve_time_label'],
+                        'schedule_estimate' => $scheduleEstimate,
                         'tracking_url' => route('customer.queue.track', ['token' => $ticket->access_token]),
                     ],
                 ], 201);
             }
 
             return redirect()->route('customer.queue.track', ['token' => $ticket->access_token])
-                ->with('status', 'Tiket antrean Anda berhasil dibuat!');
+                ->with('status', 'Tiket antrean Anda berhasil dibuat!')
+                ->with('ticket_created', true);
         } catch (DomainException $e) {
             if ($request->wantsJson()) {
                 return response()->json([
@@ -259,6 +384,7 @@ class QueueTicketController extends Controller
 
     /**
      * Public ticket tracking lookup via secure access token.
+     * Strictly scoped to the customer's own ticket (no now_serving leakage of other customers).
      */
     public function track(Request $request, string $token): JsonResponse|Response|View
     {
@@ -284,6 +410,10 @@ class QueueTicketController extends Controller
             ->with(['business.category', 'business.hours', 'service', 'counter', 'review'])
             ->firstOrFail();
 
+        // Sweep stale 15-minute 'dipanggil' tickets and refresh this ticket cleanly
+        $this->queueService->expireStaleCalledTickets($ticket->business);
+        $ticket->refresh();
+
         $isExpired = $this->queueService->isTokenExpired($ticket);
 
         if ($isExpired) {
@@ -303,7 +433,6 @@ class QueueTicketController extends Controller
 
         $position = $this->queueService->calculateQueuePosition($ticket);
         $aheadCount = max(0, $position - 1);
-        $servingTicket = $this->queueService->getCurrentServingTicket($ticket->business);
 
         // Mask phone number for privacy
         $maskedPhone = null;
@@ -316,11 +445,14 @@ class QueueTicketController extends Controller
         }
 
         $estimate = $this->waitingTimeEstimationService->estimateForTicket($ticket, $position);
+        $scheduleEstimate = $this->waitingTimeEstimationService->estimateScheduleForTicket($ticket, $position);
 
         $data = [
             'ticket_id' => $ticket->id,
             'ticket_number' => $ticket->ticket_number,
             'sequence_number' => $ticket->sequence_number,
+            'booking_slot' => $ticket->bookingSlotWindowLabel(),
+            'booking_slot_start' => $ticket->bookingSlotLabel(),
             'customer_name' => $ticket->customer_name,
             'customer_phone_masked' => $maskedPhone,
             'customer_phone' => $maskedPhone,
@@ -329,7 +461,14 @@ class QueueTicketController extends Controller
             'queue_position' => $position,
             'ahead_count' => $aheadCount,
             'estimated_wait_minutes' => $estimate['minutes'],
+            'estimated_wait_min_minutes' => $estimate['min_minutes'],
+            'estimated_wait_max_minutes' => $estimate['max_minutes'],
+            'estimated_wait_range' => $estimate['range_label'],
             'estimated_wait_reason' => $estimate['reason'],
+            'estimated_serve_time' => $scheduleEstimate['estimated_serve_time_label'],
+            'has_delay_shift' => $scheduleEstimate['has_delay_shift'],
+            'shift_notice' => $scheduleEstimate['shift_notice'],
+            'schedule_estimate' => $scheduleEstimate,
             'service_name' => $ticket->service->name,
             'business_name' => $ticket->business->name,
             'service' => [
@@ -340,8 +479,8 @@ class QueueTicketController extends Controller
             'business' => [
                 'name' => $ticket->business->name,
                 'slug' => $ticket->business->slug,
+                'area' => $ticket->business->areaLabel(),
             ],
-            'now_serving' => $servingTicket ? $servingTicket->ticket_number : null,
             'counter' => $ticket->counter ? [
                 'name' => $ticket->counter->name,
                 'code' => $ticket->counter->code,
@@ -372,11 +511,75 @@ class QueueTicketController extends Controller
             'data' => $data,
             'position' => $position,
             'aheadCount' => $aheadCount,
-            'servingTicket' => $servingTicket,
             'maskedPhone' => $maskedPhone,
             'estimate' => $estimate,
+            'scheduleEstimate' => $scheduleEstimate,
             'isExpired' => false,
             'review' => $ticket->review,
+            'qrSvg' => $this->qrCodeService->generateSvg(route('customer.queue.track', ['token' => $ticket->access_token]), 200),
         ]);
+    }
+
+    /**
+     * Let the customer holding the access token cancel their own waiting ticket.
+     */
+    public function cancel(Request $request, string $token): JsonResponse|RedirectResponse|Response
+    {
+        /** @var QueueTicket $ticket */
+        $ticket = QueueTicket::where('access_token', $token)
+            ->with(['business', 'counter'])
+            ->firstOrFail();
+
+        if ($ticket->user_id !== null && $request->user() && $ticket->user_id !== $request->user()->id) {
+            abort(403, 'Anda tidak memiliki izin untuk membatalkan tiket antrean ini.');
+        }
+
+        if ($this->queueService->isTokenExpired($ticket)) {
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 'expired',
+                    'message' => 'Tiket antrean ini telah kedaluwarsa dan tidak lagi dapat dibatalkan.',
+                ], 410);
+            }
+
+            return response()->view('customer.expired', [
+                'business' => $ticket->business,
+                'isExpired' => true,
+            ], 410);
+        }
+
+        $validated = $request->validate([
+            'cancellation_reason' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        try {
+            $ticket = $this->queueService->cancelTicketByCustomer($ticket, $validated['cancellation_reason'] ?? null);
+        } catch (DomainException $e) {
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                ], 422);
+            }
+
+            return back()->withErrors(['queue_error' => $e->getMessage()]);
+        }
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Antrean Anda berhasil dibatalkan.',
+                'data' => [
+                    'ticket_id' => $ticket->id,
+                    'ticket_number' => $ticket->ticket_number,
+                    'status' => $ticket->status,
+                    'cancellation_reason' => $ticket->cancellation_reason,
+                ],
+            ]);
+        }
+
+        return redirect()->route('customer.queue.track', ['token' => $ticket->access_token])
+            ->with('status', 'Antrean '.$ticket->ticket_number.' berhasil dibatalkan.');
     }
 }

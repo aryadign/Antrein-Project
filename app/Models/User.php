@@ -19,7 +19,10 @@ class User extends Authenticatable
     use HasFactory, Notifiable;
 
     public const string ROLE_ADMIN = 'admin';
+
     public const string ROLE_MERCHANT = 'merchant';
+
+    public const string ROLE_CUSTOMER = 'customer';
 
     /**
      * Cached active branch resolution for the current request.
@@ -86,6 +89,14 @@ class User extends Authenticatable
     public function isMerchant(): bool
     {
         return $this->role === self::ROLE_MERCHANT;
+    }
+
+    /**
+     * Determine whether the user is a registered customer.
+     */
+    public function isCustomer(): bool
+    {
+        return $this->role === self::ROLE_CUSTOMER;
     }
 
     /**
@@ -518,6 +529,22 @@ class User extends Authenticatable
     }
 
     /**
+     * Get queue tickets owned by this customer user.
+     */
+    public function queueTickets(): HasMany
+    {
+        return $this->hasMany(QueueTicket::class);
+    }
+
+    /**
+     * Count currently active queue tickets belonging to this user.
+     */
+    public function activeTicketsCount(): int
+    {
+        return $this->queueTickets()->active()->count();
+    }
+
+    /**
      * Determine whether the user wants to receive email notifications for new online tickets.
      */
     public function wantsEmailOnNewTicket(): bool
@@ -527,6 +554,7 @@ class User extends Authenticatable
         }
 
         $pref = $this->notificationPreference;
+
         return $pref ? (bool) $pref->email_on_new_online_ticket : true;
     }
 
@@ -536,6 +564,7 @@ class User extends Authenticatable
     public function wantsBrowserPushOnNewTicket(): bool
     {
         $pref = $this->notificationPreference;
+
         return $pref ? (bool) $pref->browser_on_new_online_ticket : true;
     }
 }

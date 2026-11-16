@@ -56,6 +56,16 @@ class UserFactory extends Factory
     }
 
     /**
+     * Indicate that the user has customer role.
+     */
+    public function customer(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => User::ROLE_CUSTOMER,
+        ]);
+    }
+
+    /**
      * Indicate that the user is inactive.
      */
     public function inactive(): static

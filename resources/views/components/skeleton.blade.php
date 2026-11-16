@@ -19,7 +19,7 @@
 @endphp
 
 <div 
-    {{ $attributes->merge(['class' => "animate-pulse bg-neutral-200/80 {$variantClasses}"]) }}
+    {{ $attributes->merge(['class' => "bg-neutral-200/80 {$variantClasses}"]) }}
     @if ($customStyles) style="{{ $customStyles }}" @endif
 ></div>
 

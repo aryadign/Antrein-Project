@@ -13,6 +13,9 @@
         } elseif ($currentUser->isOperator()) {
             $currentRoleName = 'Operator Loket';
             $currentRoleBadgeClass = 'bg-emerald-950 text-emerald-300 border-emerald-800';
+        } elseif ($currentUser->isCustomer()) {
+            $currentRoleName = 'Pelanggan';
+            $currentRoleBadgeClass = 'bg-amber-950 text-amber-300 border-amber-800';
         } else {
             $currentRoleName = 'Merchant';
             $currentRoleBadgeClass = 'bg-purple-950 text-purple-300 border-purple-800';
@@ -34,7 +37,7 @@
     }"
     @keydown.escape.window="close()"
     @click.away="close()"
-    class="fixed bottom-4 right-4 z-50 font-sans"
+    class="fixed bottom-28 right-4 z-50 font-sans sm:bottom-4"
     id="dev-role-switcher"
 >
     {{-- Trigger Pill --}}
@@ -45,12 +48,7 @@
         aria-label="Pengalih Persona Demo"
         :aria-expanded="open"
     >
-        <span class="flex h-2 w-2 relative">
-            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-            <span class="relative inline-flex rounded-full h-2 w-2 bg-amber-400"></span>
-        </span>
         <span class="text-xs font-mono font-bold tracking-wider text-amber-300">DEV MODE</span>
-        <span class="text-neutral-500 text-xs">|</span>
         <span class="text-xs font-semibold px-2 py-0.5 rounded-full border {{ $currentRoleBadgeClass }}">
             {{ $currentRoleName }}
         </span>
@@ -160,7 +158,7 @@
                     <div>
                         <div class="text-xs font-bold text-neutral-200 group-hover:text-emerald-400">Wayan Sudirga (Operator)</div>
                         <div class="text-[11px] text-neutral-400 font-mono">
-                            <span x-show="!submitting || selectedPersona !== 'operator'">operator@garasi.id &bull; Loket 1</span>
+                            <span x-show="!submitting || selectedPersona !== 'operator'">operator@garasi.id (Loket 1)</span>
                             <span x-show="submitting && selectedPersona === 'operator'" class="text-emerald-400 font-semibold" style="display: none;">Beralih ke Operator...</span>
                         </div>
                     </div>
@@ -180,17 +178,31 @@
                     class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-left bg-neutral-800/70 hover:bg-neutral-800 border border-neutral-700/50 hover:border-amber-500/50 transition group disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                     <div>
-                        <div class="text-xs font-bold text-neutral-200 group-hover:text-amber-400">Pelanggan (Tamu)</div>
-                        <div class="text-[11px] text-neutral-400">
-                            <span x-show="!submitting || selectedPersona !== 'customer'">Antrean Barbershop Garasi</span>
-                            <span x-show="submitting && selectedPersona === 'customer'" class="text-amber-400 font-semibold" style="display: none;">Membuka antrean demo...</span>
+                        <div class="text-xs font-bold text-neutral-200 group-hover:text-amber-400">Raka Pratama (Pelanggan)</div>
+                        <div class="text-[11px] text-neutral-400 font-mono">
+                            <span x-show="!submitting || selectedPersona !== 'customer'">pelanggan@antrein.id</span>
+                            <span x-show="submitting && selectedPersona === 'customer'" class="text-amber-400 font-semibold" style="display: none;">Beralih ke Pelanggan...</span>
                         </div>
                     </div>
                     <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-800/60">
-                        Guest
+                        Pelanggan
                     </span>
                 </button>
             </form>
+
+            {{-- Customer Portal --}}
+            <a
+                href="{{ route('customer.dashboard') }}"
+                class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-left bg-neutral-800/70 hover:bg-neutral-800 border border-neutral-700/50 hover:border-blue-500/50 transition group"
+            >
+                <div>
+                    <div class="text-xs font-bold text-neutral-200 group-hover:text-blue-400">Portal Pelanggan</div>
+                    <div class="text-[11px] text-neutral-400">Beranda, cari toko &amp; antrean saya</div>
+                </div>
+                <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-950/80 text-blue-300 border border-blue-800/60">
+                    Katalog
+                </span>
+            </a>
         </div>
 
         {{-- Footer Links --}}

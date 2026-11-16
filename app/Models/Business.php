@@ -3,20 +3,60 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class Business extends Model
 {
     use HasFactory, SoftDeletes;
 
     public const string STATUS_BUKA = 'buka';
+
     public const string STATUS_TUTUP = 'tutup';
+
     public const string STATUS_JEDA = 'jeda';
+
+    public const string APPROVAL_PENDING = 'pending';
+
+    public const string APPROVAL_APPROVED = 'approved';
+
+    public const string APPROVAL_REJECTED = 'rejected';
+
+    /**
+     * Supported regional service areas for customer filtering and branch clarity.
+     *
+     * @var list<string>
+     */
+    public const array AREAS = [
+        'Denpasar',
+        'Jimbaran',
+        'Canggu',
+        'Seminyak',
+        'Ubud',
+        'Sanur',
+        'Kuta',
+        'Nusa Dua',
+        'Tabanan',
+        'Gianyar',
+    ];
+
+    /**
+     * Default model attributes for newly instantiated records.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'approval_status' => self::APPROVAL_APPROVED,
+        'use_stations' => true,
+    ];
 
     /**
      * The attributes that are mass assignable.
@@ -32,11 +72,17 @@ class Business extends Model
         'logo_path',
         'description',
         'address',
+        'area',
         'phone',
         'timezone',
         'status',
+        'use_stations',
         'is_active',
         'is_suspended',
+        'approval_status',
+        'rejection_reason',
+        'reviewed_at',
+        'reviewed_by',
         'is_display_enabled',
         'display_token_hash',
         'display_token_created_at',
@@ -50,10 +96,12 @@ class Business extends Model
     protected function casts(): array
     {
         return [
+            'use_stations' => 'boolean',
             'is_active' => 'boolean',
             'is_suspended' => 'boolean',
             'is_display_enabled' => 'boolean',
             'display_token_created_at' => 'datetime',
+            'reviewed_at' => 'datetime',
         ];
     }
 
@@ -73,7 +121,7 @@ class Business extends Model
             try {
                 $organization = null;
 
-                if (\Illuminate\Support\Facades\Schema::connection($connection)->hasTable('business_organizations')) {
+                if (Schema::connection($connection)->hasTable('business_organizations')) {
                     if ($business->organization_id) {
                         $organization = BusinessOrganization::on($connection)->find($business->organization_id);
                     } else {
@@ -89,7 +137,7 @@ class Business extends Model
                         $business->forceFill(['organization_id' => $organization->id])->saveQuietly();
                     }
 
-                    if ($organization && \Illuminate\Support\Facades\Schema::connection($connection)->hasTable('organization_memberships')) {
+                    if ($organization && Schema::connection($connection)->hasTable('organization_memberships')) {
                         OrganizationMembership::on($connection)->firstOrCreate(
                             [
                                 'organization_id' => $organization->id,
@@ -106,7 +154,7 @@ class Business extends Model
 
                 $membership = null;
 
-                if (\Illuminate\Support\Facades\Schema::connection($connection)->hasTable('business_memberships')) {
+                if (Schema::connection($connection)->hasTable('business_memberships')) {
                     // Ownership is scoped per branch: the same user may own/manage several branches.
                     $membership = BusinessMembership::on($connection)->firstOrCreate(
                         [
@@ -122,7 +170,7 @@ class Business extends Model
                     );
                 }
 
-                if (\Illuminate\Support\Facades\Schema::connection($connection)->hasTable('business_counters')) {
+                if (Schema::connection($connection)->hasTable('business_counters')) {
                     $counter = BusinessCounter::on($connection)->firstOrCreate(
                         ['business_id' => $business->id, 'code' => 'L-01'],
                         [
@@ -132,7 +180,7 @@ class Business extends Model
                         ]
                     );
 
-                    if ($membership && \Illuminate\Support\Facades\Schema::connection($connection)->hasTable('counter_operator_assignments')) {
+                    if ($membership && Schema::connection($connection)->hasTable('counter_operator_assignments')) {
                         $counter->assignedMemberships()->syncWithoutDetaching([$membership->id]);
                     }
                 }
@@ -145,7 +193,7 @@ class Business extends Model
             if ($business->wasChanged('user_id') && $business->user_id) {
                 $connection = $business->getConnectionName();
                 try {
-                    if (\Illuminate\Support\Facades\Schema::connection($connection)->hasTable('business_memberships')) {
+                    if (Schema::connection($connection)->hasTable('business_memberships')) {
                         BusinessMembership::on($connection)->updateOrCreate(
                             [
                                 'business_id' => $business->id,
@@ -171,9 +219,9 @@ class Business extends Model
      */
     protected static function generateUniqueOrganizationSlug(Business $business, ?string $connection): string
     {
-        $baseSlug = \Illuminate\Support\Str::slug($business->slug ?: $business->name);
+        $baseSlug = Str::slug($business->slug ?: $business->name);
         if ($baseSlug === '') {
-            $baseSlug = 'organisasi-'.\Illuminate\Support\Str::lower(\Illuminate\Support\Str::random(6));
+            $baseSlug = 'organisasi-'.Str::lower(Str::random(6));
         }
 
         $slug = $baseSlug;
@@ -196,7 +244,31 @@ class Business extends Model
             return null;
         }
 
-        return \Illuminate\Support\Facades\Storage::disk('public')->url($this->logo_path);
+        return Storage::disk('public')->url($this->logo_path);
+    }
+
+    /**
+     * Determine whether the business has been approved by platform administrator.
+     */
+    public function isApproved(): bool
+    {
+        return ($this->approval_status ?? self::APPROVAL_APPROVED) === self::APPROVAL_APPROVED;
+    }
+
+    /**
+     * Determine whether the business is waiting for administrator review.
+     */
+    public function isPendingApproval(): bool
+    {
+        return $this->approval_status === self::APPROVAL_PENDING;
+    }
+
+    /**
+     * Determine whether the business registration was rejected by administrator.
+     */
+    public function isRejected(): bool
+    {
+        return $this->approval_status === self::APPROVAL_REJECTED;
     }
 
     /**
@@ -204,7 +276,10 @@ class Business extends Model
      */
     public function isOpen(): bool
     {
-        return $this->is_active !== false && $this->status === self::STATUS_BUKA && ! $this->is_suspended;
+        return $this->is_active !== false
+            && $this->status === self::STATUS_BUKA
+            && ! $this->is_suspended
+            && $this->isApproved();
     }
 
     /**
@@ -220,7 +295,233 @@ class Business extends Model
      */
     public function isClosed(): bool
     {
-        return $this->is_active === false || $this->status === self::STATUS_TUTUP || $this->is_suspended;
+        return $this->is_active === false || $this->status === self::STATUS_TUTUP || $this->is_suspended || ! $this->isApproved();
+    }
+
+    /**
+     * Scope to stores customers may browse: approved, not suspended, and active.
+     *
+     * @param  Builder<Business>  $query
+     */
+    public function scopeVisibleToCustomers(Builder $query): Builder
+    {
+        return $query->where('is_suspended', false)
+            ->where('approval_status', self::APPROVAL_APPROVED)
+            ->where(fn (Builder $inner) => $inner->whereNull('is_active')->orWhere('is_active', true));
+    }
+
+    /**
+     * Today's opening hours in the business timezone, formatted like "08.00–21.00" (or "Tutup").
+     */
+    public function todayScheduleLabel(): ?string
+    {
+        $hours = $this->todayHours();
+
+        if (! $hours) {
+            return null;
+        }
+
+        return str_replace([':', ' - '], ['.', '–'], $hours->getFormattedSchedule());
+    }
+
+    /**
+     * Today's opening hours row in the business timezone, if the merchant configured one.
+     */
+    public function todayHours(): ?BusinessHour
+    {
+        $today = (int) now($this->timezone ?: config('app.timezone'))->dayOfWeek;
+
+        return $this->hours->firstWhere('day_of_week', $today);
+    }
+
+    /**
+     * Prominent opening-hours badge for customers, e.g. "Buka s/d 21.00" or "Buka pukul 08.00".
+     *
+     * @return array{label: string, tone: 'open'|'paused'|'closed'}
+     */
+    public function customerHoursBadge(): array
+    {
+        $hours = $this->todayHours();
+        $closeTime = $hours && ! $hours->is_closed && $hours->close_time ? str_replace(':', '.', substr((string) $hours->close_time, 0, 5)) : null;
+        $openTime = $hours && ! $hours->is_closed && $hours->open_time ? str_replace(':', '.', substr((string) $hours->open_time, 0, 5)) : null;
+
+        if ($this->isOpen()) {
+            return ['label' => $closeTime ? 'Buka s/d '.$closeTime : 'Buka sekarang', 'tone' => 'open'];
+        }
+
+        if ($this->isPaused() && ! $this->is_suspended) {
+            return ['label' => 'Antrean dijeda', 'tone' => 'paused'];
+        }
+
+        if ($hours?->is_closed) {
+            return ['label' => 'Libur hari ini', 'tone' => 'closed'];
+        }
+
+        $isBeforeOpening = $openTime && now($this->timezone ?: config('app.timezone'))->format('H.i') < $openTime;
+
+        return ['label' => $isBeforeOpening ? 'Buka pukul '.$openTime : 'Tutup', 'tone' => 'closed'];
+    }
+
+    /**
+     * Stock photo shown behind the store card when the merchant has not uploaded a cover.
+     */
+    public function coverImagePath(): ?string
+    {
+        $name = Str::lower($this->name);
+
+        return match (true) {
+            Str::contains($name, ['pastry', 'roti', 'bakery', 'cake', 'kue']) => 'images/stores/pastry.jpg',
+            Str::contains($name, ['teh', 'tea', 'jus', 'boba']) => 'images/stores/kuliner.jpg',
+            Str::contains($name, ['kopi', 'coffee', 'kafe', 'cafe']) => 'images/stores/kopi.jpg',
+            Str::contains($name, ['dapur', 'warung', 'resto', 'rumah makan', 'makan']) => 'images/stores/restoran.jpg',
+            default => $this->category?->coverImagePath(),
+        };
+    }
+
+    /**
+     * Rough walk-up wait for customers browsing stores: people waiting times the average service
+     * duration, rounded up to 5 minutes. Null when nobody waits or no duration is configured.
+     */
+    public function customerWaitMinutes(?int $waitingCount = null): ?int
+    {
+        $waiting = $waitingCount ?? (int) ($this->getAttributes()['waiting_count'] ?? 0);
+
+        if ($waiting < 1) {
+            return null;
+        }
+
+        $averageMinutes = array_key_exists('avg_service_minutes', $this->getAttributes())
+            ? $this->getAttributes()['avg_service_minutes']
+            : $this->services()->active()->avg('duration_minutes');
+
+        if (! $averageMinutes) {
+            return null;
+        }
+
+        return (int) (ceil($waiting * (float) $averageMinutes / 5) * 5);
+    }
+
+    /**
+     * Range-based wait time estimate scaled by the active queue depth and counter count in this store.
+     *
+     * @return array{min_minutes: int, max_minutes: int, label: string}|null
+     */
+    public function customerWaitRange(?int $waitingCount = null): ?array
+    {
+        $waiting = $waitingCount ?? (int) ($this->getAttributes()['waiting_count'] ?? 0);
+
+        $avgMinutes = array_key_exists('avg_service_minutes', $this->getAttributes())
+            ? $this->getAttributes()['avg_service_minutes']
+            : $this->services()->active()->avg('duration_minutes');
+
+        if (! $avgMinutes) {
+            return null;
+        }
+
+        if ($waiting < 1) {
+            return [
+                'min_minutes' => 0,
+                'max_minutes' => 5,
+                'label' => '0–5 mnt',
+            ];
+        }
+
+        $minService = array_key_exists('min_service_minutes', $this->getAttributes())
+            ? ($this->getAttributes()['min_service_minutes'] ?: $avgMinutes)
+            : ($this->services()->active()->min('duration_minutes') ?: $avgMinutes);
+
+        $maxService = array_key_exists('max_service_minutes', $this->getAttributes())
+            ? ($this->getAttributes()['max_service_minutes'] ?: $avgMinutes)
+            : ($this->services()->active()->max('duration_minutes') ?: $avgMinutes);
+
+        $activeCounters = $this->effectiveStationCount();
+
+        $lowService = min((float) $minService, (float) $avgMinutes * 0.85);
+        $highService = max((float) $maxService, (float) $avgMinutes * 1.25);
+
+        $rawMin = ($waiting * $lowService) / $activeCounters;
+        $rawMax = ($waiting * $highService) / $activeCounters;
+
+        $minMinutes = $rawMin < 10
+            ? max(1, (int) round($rawMin))
+            : (int) (floor($rawMin / 5) * 5);
+
+        $maxMinutes = $rawMax < 10
+            ? max($minMinutes + 3, (int) ceil($rawMax))
+            : max($minMinutes + 5, (int) (ceil($rawMax / 5) * 5));
+
+        return [
+            'min_minutes' => $minMinutes,
+            'max_minutes' => $maxMinutes,
+            'label' => sprintf('%d–%d mnt', $minMinutes, $maxMinutes),
+        ];
+    }
+
+    /**
+     * Average rating from loaded `reviews_avg_rating` (via withAvg) or a fresh query, rounded to one decimal.
+     */
+    public function customerRating(): ?float
+    {
+        $average = array_key_exists('reviews_avg_rating', $this->attributes)
+            ? $this->attributes['reviews_avg_rating']
+            : $this->customerReviews()->avg('rating');
+
+        return $average !== null ? round((float) $average, 1) : null;
+    }
+
+    /**
+     * Number of customer reviews from loaded `reviews_count` (via withCount) or a fresh query.
+     */
+    public function customerReviewCount(): int
+    {
+        return (int) (array_key_exists('reviews_count', $this->attributes)
+            ? $this->attributes['reviews_count']
+            : $this->customerReviews()->count());
+    }
+
+    /**
+     * District/area label for store cards and filters.
+     */
+    public function areaLabel(): ?string
+    {
+        if (filled($this->area)) {
+            return trim((string) $this->area);
+        }
+
+        return $this->cityLabel();
+    }
+
+    /**
+     * City shown on customer cards: explicit area or the last segment of the street address.
+     */
+    public function cityLabel(): ?string
+    {
+        if (filled($this->area)) {
+            return trim((string) $this->area);
+        }
+
+        $city = trim((string) Str::afterLast((string) $this->address, ','));
+
+        return $city !== '' ? $city : null;
+    }
+
+    /**
+     * Other approved, active branches under the same organization.
+     *
+     * @return Collection<int, Business>
+     */
+    public function siblingBranches()
+    {
+        if (! $this->organization_id) {
+            return new Collection;
+        }
+
+        return static::query()
+            ->visibleToCustomers()
+            ->where('organization_id', $this->organization_id)
+            ->where('id', '!=', $this->id)
+            ->orderBy('name')
+            ->get();
     }
 
     /**
@@ -261,6 +562,14 @@ class Business extends Model
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /**
+     * Get the admin reviewer who approved or rejected this business.
+     */
+    public function reviewedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reviewed_by');
     }
 
     /**
@@ -370,6 +679,30 @@ class Business extends Model
     public function activeCounters(): HasMany
     {
         return $this->hasMany(BusinessCounter::class)->where('is_active', true);
+    }
+
+    /**
+     * Determine whether this business operates in multi-station / multi-counter mode.
+     */
+    public function usesStations(): bool
+    {
+        return (bool) ($this->use_stations ?? true);
+    }
+
+    /**
+     * Effective parallel service capacity: 1 in single-station mode, or active counter count (min 1).
+     */
+    public function effectiveStationCount(): int
+    {
+        if (! $this->usesStations()) {
+            return 1;
+        }
+
+        $count = array_key_exists('active_counters_count', $this->getAttributes())
+            ? (int) $this->getAttributes()['active_counters_count']
+            : $this->activeCounters()->count();
+
+        return max(1, $count);
     }
 
     /**
@@ -483,4 +816,3 @@ class Business extends Model
         return $this->customerReviews()->count();
     }
 }
-

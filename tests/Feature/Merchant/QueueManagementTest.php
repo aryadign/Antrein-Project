@@ -4,6 +4,7 @@ namespace Tests\Feature\Merchant;
 
 use App\Models\Business;
 use App\Models\BusinessCategory;
+use App\Models\BusinessMembership;
 use App\Models\DailyQueue;
 use App\Models\QueueStatusHistory;
 use App\Models\QueueTicket;
@@ -18,8 +19,13 @@ class QueueManagementTest extends TestCase
     use RefreshDatabase;
 
     private User $merchant;
+
+    private User $operator;
+
     private Business $business;
+
     private Service $service;
+
     private DailyQueue $dailyQueue;
 
     protected function setUp(): void
@@ -42,6 +48,14 @@ class QueueManagementTest extends TestCase
             'phone' => '081234567890',
             'timezone' => 'Asia/Makassar',
             'status' => Business::STATUS_BUKA,
+        ]);
+
+        $this->operator = User::factory()->merchant()->create();
+        BusinessMembership::create([
+            'business_id' => $this->business->id,
+            'user_id' => $this->operator->id,
+            'role' => BusinessMembership::ROLE_OPERATOR,
+            'is_active' => true,
         ]);
 
         $this->service = Service::create([
@@ -74,7 +88,7 @@ class QueueManagementTest extends TestCase
             'access_token' => 'token-sari-01',
         ]);
 
-        $response = $this->actingAs($this->merchant)->get(route('merchant.queues'));
+        $response = $this->actingAs($this->operator)->get(route('merchant.queues'));
 
         $response->assertOk();
         $response->assertSee('Meja Operasional Antrean');
@@ -110,13 +124,13 @@ class QueueManagementTest extends TestCase
         ]);
 
         // Search by name
-        $responseName = $this->actingAs($this->merchant)->get(route('merchant.queues', ['search' => 'Suardana']));
+        $responseName = $this->actingAs($this->operator)->get(route('merchant.queues', ['search' => 'Suardana']));
         $responseName->assertOk();
         $responseName->assertSee('Made Suardana');
         $responseName->assertDontSee('Ketut Wijaya');
 
         // Search by ticket number
-        $responseNumber = $this->actingAs($this->merchant)->get(route('merchant.queues', ['search' => 'A-002']));
+        $responseNumber = $this->actingAs($this->operator)->get(route('merchant.queues', ['search' => 'A-002']));
         $responseNumber->assertOk();
         $responseNumber->assertSee('Ketut Wijaya');
         $responseNumber->assertDontSee('Made Suardana');
@@ -148,7 +162,7 @@ class QueueManagementTest extends TestCase
             'access_token' => 'token-selesai',
         ]);
 
-        $response = $this->actingAs($this->merchant)->get(route('merchant.queues', ['status' => 'selesai']));
+        $response = $this->actingAs($this->operator)->get(route('merchant.queues', ['status' => 'selesai']));
 
         $response->assertOk();
         $response->assertSee('Pelanggan Selesai');
@@ -190,13 +204,13 @@ class QueueManagementTest extends TestCase
         ]);
 
         // Filter by service
-        $resService = $this->actingAs($this->merchant)->get(route('merchant.queues', ['service_id' => $secondService->id]));
+        $resService = $this->actingAs($this->operator)->get(route('merchant.queues', ['service_id' => $secondService->id]));
         $resService->assertOk();
         $resService->assertSee('Pelanggan Spa Walk-in');
         $resService->assertDontSee('Pelanggan Creambath Online');
 
         // Filter by source
-        $resSource = $this->actingAs($this->merchant)->get(route('merchant.queues', ['source' => 'online']));
+        $resSource = $this->actingAs($this->operator)->get(route('merchant.queues', ['source' => 'online']));
         $resSource->assertOk();
         $resSource->assertSee('Pelanggan Creambath Online');
         $resSource->assertDontSee('Pelanggan Spa Walk-in');
@@ -238,7 +252,7 @@ class QueueManagementTest extends TestCase
             'access_token' => 'token-alien-777',
         ]);
 
-        $response = $this->actingAs($this->merchant)->get(route('merchant.queues'));
+        $response = $this->actingAs($this->operator)->get(route('merchant.queues'));
 
         $response->assertOk();
         $response->assertDontSee('X-777');
@@ -267,12 +281,12 @@ class QueueManagementTest extends TestCase
             'from_status' => QueueTicket::STATUS_MENUNGGU,
             'to_status' => QueueTicket::STATUS_DIPANGGIL,
             'actor_type' => QueueStatusHistory::ACTOR_MERCHANT,
-            'actor_id' => $this->merchant->id,
+            'actor_id' => $this->operator->id,
             'note' => 'Memanggil nomor antrean berikutnya (FIFO)',
             'created_at' => now()->subMinutes(15),
         ]);
 
-        $response = $this->actingAs($this->merchant)->get(route('merchant.queues.show', $ticket));
+        $response = $this->actingAs($this->operator)->get(route('merchant.queues.show', $ticket));
 
         $response->assertOk();
         $response->assertSee('A-010');
@@ -318,7 +332,7 @@ class QueueManagementTest extends TestCase
             'access_token' => 'token-alien-show',
         ]);
 
-        $response = $this->actingAs($this->merchant)->get(route('merchant.queues.show', $alienTicket));
+        $response = $this->actingAs($this->operator)->get(route('merchant.queues.show', $alienTicket));
 
         $response->assertForbidden();
     }
@@ -328,9 +342,9 @@ class QueueManagementTest extends TestCase
         $response = $this->actingAs($this->merchant)->get(route('merchant.queues.qr'));
 
         $response->assertOk();
-        $response->assertSee('Tautan &amp; QR Code Antrean', false);
-        $response->assertSee('bali-cantik-salon');
+        $response->assertSee('QR Code Antrean');
+        $response->assertSee('Scan untuk Ambil Antrean');
+        $response->assertDontSee('Salin Tautan');
         $response->assertSee('<svg', false);
     }
 }
-

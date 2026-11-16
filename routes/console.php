@@ -22,3 +22,4 @@ Artisan::command('inspire', function () {
 |
 */
 Schedule::command('queues:anonymize-pii')->daily()->withoutOverlapping();
+Schedule::command('queues:expire-noshow')->everyMinute()->withoutOverlapping();
