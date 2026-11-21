@@ -4,7 +4,7 @@
         $openStoreCount = $stores->filter(fn ($store) => $store->isOpen())->count();
     @endphp
 
-    <div x-data="{ qrOpen: false }">
+    <div x-data="customerQrScanner()" @keydown.escape.window="closeScanner()">
         {{-- Sapaan & pencarian terpadu (Screen 1) --}}
         <div class="border-b border-gray-200 bg-white px-5 pt-6 pb-4 md:border-0 md:bg-transparent md:px-0 md:pt-2 md:pb-6">
             <div class="flex flex-col gap-1">
@@ -26,7 +26,7 @@
                 </form>
                 <button
                     type="button"
-                    @click="qrOpen = true"
+                    @click="openScanner()"
                     class="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-brand-700 px-3 text-xs font-bold text-white shadow-xs transition hover:bg-blue-900 active:scale-95"
                     aria-label="Pindai QR kedai"
                 >
@@ -72,7 +72,7 @@
                             </div>
                         @else
                             <div class="grid grid-cols-2 gap-2">
-                                <button type="button" @click="qrOpen = true" class="flex h-10 items-center justify-center rounded-xl bg-brand-700 px-3 text-xs font-bold text-white shadow-xs transition hover:bg-blue-900 active:scale-[0.99]">
+                                <button type="button" @click="openScanner()" class="flex h-10 items-center justify-center rounded-xl bg-brand-700 px-3 text-xs font-bold text-white shadow-xs transition hover:bg-blue-900 active:scale-[0.99]">
                                     Pindai QR Kedai
                                 </button>
                                 <a href="#toko" class="flex h-10 items-center justify-center rounded-xl border-[1.5px] border-gray-300 bg-white px-3 text-xs font-bold text-gray-900 transition hover:bg-gray-50 active:scale-[0.99]">
@@ -179,31 +179,214 @@
             </section>
         </div>
 
-        {{-- Pindai QR: QR kedai langsung membuka halaman antrean toko saat dipindai kamera ponsel --}}
+        {{-- Pindai QR: kamera di dalam aplikasi membaca QR kedai lalu membuka halaman antreannya --}}
         <div
             x-show="qrOpen"
             x-cloak
             x-transition.opacity.duration.200ms
             class="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center"
-            @keydown.escape.window="qrOpen = false"
         >
             <div
                 x-show="qrOpen"
                 x-transition:enter="transition duration-200 ease-out"
                 x-transition:enter-start="translate-y-6 opacity-0"
                 x-transition:enter-end="translate-y-0 opacity-100"
-                @click.outside="qrOpen = false"
-                class="w-full max-w-[430px] rounded-t-2xl bg-white p-5 sm:rounded-2xl"
+                @click.outside="closeScanner()"
+                class="w-full max-w-[430px] rounded-t-2xl bg-white p-5 shadow-overlay sm:rounded-2xl"
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="qr-title"
             >
-                <p id="qr-title" class="text-base font-bold leading-6 text-gray-900">Pindai QR Kedai</p>
-                <p class="mt-1 text-sm leading-5 text-gray-700">Buka kamera ponsel dan arahkan ke QR yang terpasang di kedai. Halaman antrean kedai akan terbuka otomatis.</p>
-                <button type="button" @click="qrOpen = false" class="mt-4 flex h-12 w-full items-center justify-center rounded-xl bg-brand-700 text-sm font-semibold text-white transition hover:bg-blue-900">
-                    Mengerti
-                </button>
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <p id="qr-title" class="text-base font-bold leading-6 text-gray-900">Pindai QR Kedai</p>
+                        <p class="mt-0.5 text-sm leading-5 text-gray-600">Arahkan kamera ke QR yang terpasang di kedai.</p>
+                    </div>
+                    <button type="button" @click="closeScanner()" class="-mr-2 -mt-1 flex size-11 shrink-0 items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-100 hover:text-gray-900" aria-label="Tutup pemindai">
+                        <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+
+                <div class="relative mt-4 aspect-square w-full overflow-hidden rounded-xl bg-gray-900" x-show="status === 'starting' || status === 'scanning' || status === 'found'">
+                    <video x-ref="video" class="h-full w-full object-cover" playsinline muted aria-hidden="true"></video>
+                    <div class="pointer-events-none absolute inset-[18%] rounded-2xl border-2 border-white/90 shadow-[0_0_0_999px_rgba(0,0,0,0.35)]"></div>
+                    <p x-show="status === 'starting'" class="absolute inset-x-0 bottom-3 text-center text-sm font-medium text-white">Menyalakan kamera…</p>
+                    <p x-show="status === 'found'" class="absolute inset-x-0 bottom-3 text-center text-sm font-semibold text-white">QR terbaca, membuka halaman kedai…</p>
+                </div>
+                <canvas x-ref="canvas" class="hidden"></canvas>
+
+                <div x-show="message" x-cloak class="mt-3 rounded-lg bg-warning-100 px-3 py-2 text-sm leading-5 text-warning-700" role="status" aria-live="polite" x-text="message"></div>
+
+                <div x-show="status === 'unavailable'" x-cloak class="mt-4 rounded-xl bg-gray-50 p-4 text-sm leading-5 text-gray-700">
+                    Kamera tidak bisa dipakai di sini. Anda tetap bisa membuka kamera bawaan ponsel dan mengarahkannya ke QR kedai, atau pilih foto QR dari galeri.
+                </div>
+
+                <div class="mt-4 grid grid-cols-1 gap-2">
+                    <label class="flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border-[1.5px] border-gray-300 bg-white px-3 text-sm font-semibold text-gray-900 transition hover:bg-gray-50 focus-within:ring-2 focus-within:ring-brand-500">
+                        <x-customer.icon name="qr-code" class="size-4" />
+                        Pilih foto QR dari galeri
+                        <input type="file" accept="image/*" class="sr-only" @change="scanImageFile($event)" />
+                    </label>
+                </div>
             </div>
         </div>
     </div>
+
+    @push('scripts')
+    <script>
+        /**
+         * In-app QR scanner for the customer home. Reads the store QR with the camera
+         * (or a gallery photo) and opens that store's queue page on this site.
+         */
+        function customerQrScanner() {
+            return {
+                qrOpen: false,
+                status: 'idle',
+                message: '',
+                stream: null,
+                frameRequest: null,
+                lastWrongCodeAt: 0,
+
+                async openScanner() {
+                    this.qrOpen = true;
+                    this.message = '';
+
+                    if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+                        this.status = 'unavailable';
+                        return;
+                    }
+
+                    this.status = 'starting';
+
+                    try {
+                        const [decode, stream] = await Promise.all([
+                            window.loadJsQR(),
+                            navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false }),
+                        ]);
+
+                        if (!this.qrOpen) {
+                            stream.getTracks().forEach((track) => track.stop());
+                            return;
+                        }
+
+                        this.decode = decode;
+                        this.stream = stream;
+                        this.$refs.video.srcObject = stream;
+                        await this.$refs.video.play();
+                        this.status = 'scanning';
+                        this.scanFrame();
+                    } catch (error) {
+                        this.status = 'unavailable';
+                        this.message = error?.name === 'NotAllowedError'
+                            ? 'Izin kamera ditolak. Izinkan akses kamera untuk situs ini di pengaturan peramban, lalu coba lagi.'
+                            : (error?.name === 'NotFoundError' ? 'Kamera tidak ditemukan di perangkat ini.' : '');
+                    }
+                },
+
+                scanFrame() {
+                    if (this.status !== 'scanning') {
+                        return;
+                    }
+
+                    const video = this.$refs.video;
+
+                    if (video.readyState >= video.HAVE_ENOUGH_DATA && video.videoWidth > 0) {
+                        const scale = Math.min(1, 640 / Math.max(video.videoWidth, video.videoHeight));
+                        const width = Math.round(video.videoWidth * scale);
+                        const height = Math.round(video.videoHeight * scale);
+                        const result = this.decodeFrom(video, width, height);
+
+                        if (result && this.handleCode(result.data)) {
+                            return;
+                        }
+                    }
+
+                    this.frameRequest = requestAnimationFrame(() => this.scanFrame());
+                },
+
+                decodeFrom(source, width, height) {
+                    const canvas = this.$refs.canvas;
+                    canvas.width = width;
+                    canvas.height = height;
+                    const context = canvas.getContext('2d', { willReadFrequently: true });
+                    // White backdrop so transparent PNG/SVG QR images do not read as solid black.
+                    context.fillStyle = '#ffffff';
+                    context.fillRect(0, 0, width, height);
+                    context.drawImage(source, 0, 0, width, height);
+                    const image = context.getImageData(0, 0, width, height);
+
+                    return this.decode(image.data, width, height, { inversionAttempts: 'attemptBoth' });
+                },
+
+                async scanImageFile(event) {
+                    const file = event.target.files?.[0];
+                    event.target.value = '';
+
+                    if (!file) {
+                        return;
+                    }
+
+                    this.decode = this.decode ?? await window.loadJsQR();
+                    const bitmap = await createImageBitmap(file);
+                    const scale = Math.min(1, 1024 / Math.max(bitmap.width, bitmap.height));
+                    const result = this.decodeFrom(bitmap, Math.round(bitmap.width * scale), Math.round(bitmap.height * scale));
+
+                    if (!result) {
+                        this.message = 'QR tidak terbaca dari foto ini. Coba foto yang lebih jelas dan tidak terpotong.';
+                        return;
+                    }
+
+                    this.handleCode(result.data);
+                },
+
+                /**
+                 * Only store queue links (/q/{slug}) and ticket links (/q/track/{token}) are opened,
+                 * always on this site, so a QR can never send the customer to another website.
+                 */
+                handleCode(rawValue) {
+                    let path = null;
+
+                    try {
+                        path = new URL(rawValue, window.location.origin).pathname;
+                    } catch (error) {
+                        path = null;
+                    }
+
+                    if (path && /^\/q\/(track\/)?[A-Za-z0-9_-]+\/?$/.test(path)) {
+                        this.status = 'found';
+                        this.message = '';
+                        this.stopCamera();
+                        window.location.assign(window.location.origin + path);
+
+                        return true;
+                    }
+
+                    if (Date.now() - this.lastWrongCodeAt > 2500) {
+                        this.lastWrongCodeAt = Date.now();
+                        this.message = 'QR ini bukan QR antrean AntreIn. Arahkan ke QR yang terpasang di kedai.';
+                    }
+
+                    return false;
+                },
+
+                stopCamera() {
+                    if (this.frameRequest) {
+                        cancelAnimationFrame(this.frameRequest);
+                        this.frameRequest = null;
+                    }
+
+                    this.stream?.getTracks().forEach((track) => track.stop());
+                    this.stream = null;
+                },
+
+                closeScanner() {
+                    this.stopCamera();
+                    this.qrOpen = false;
+                    this.status = 'idle';
+                    this.message = '';
+                },
+            };
+        }
+    </script>
+    @endpush
 </x-layouts.customer>

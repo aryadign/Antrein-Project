@@ -9,3 +9,9 @@ window.Chart = Chart;
  */
 
 import './echo';
+
+/**
+ * QR decoder for the customer "Pindai QR" scanner, loaded on demand so it is
+ * only downloaded when a customer actually opens the camera.
+ */
+window.loadJsQR = () => import('jsqr').then((module) => module.default);

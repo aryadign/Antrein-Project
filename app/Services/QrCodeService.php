@@ -53,19 +53,31 @@ class QrCodeService
     ];
 
     /**
+     * 18-bit BCH-encoded version information for versions 7 and up.
+     *
+     * @var array<int, int>
+     */
+    private static array $versionInfoBits = [
+        7 => 0x07C94,
+        8 => 0x085BC,
+        9 => 0x09A99,
+        10 => 0x0A4D3,
+    ];
+
+    /**
      * Format information strings for Level M (mask 0 to 7)
      *
      * @var array<int, list<int>>
      */
     private static array $formatBits = [
         0 => [1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0],
-        1 => [1, 0, 1, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0],
-        2 => [1, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1],
-        3 => [1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1],
-        4 => [1, 1, 0, 0, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1],
-        5 => [1, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1],
-        6 => [1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0],
-        7 => [1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0],
+        1 => [1, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1],
+        2 => [1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0],
+        3 => [1, 0, 1, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1],
+        4 => [1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1],
+        5 => [1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 0],
+        6 => [1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 1, 1, 1],
+        7 => [1, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0],
     ];
 
     private static function initGf(): void
@@ -83,7 +95,7 @@ class QrCodeService
             self::$log[$x] = $i;
             $x <<= 1;
             if ($x & 256) {
-                $x ^= 0x11d;
+                $x ^= 0x11D;
             }
         }
     }
@@ -144,10 +156,10 @@ class QrCodeService
     /**
      * Generate an SVG string representation of a QR code for the given text.
      *
-     * @param  string  $text Content to encode (e.g. public queue URL)
-     * @param  int  $size Width and height of the rendered SVG in pixels
-     * @param  string  $darkColor Hex color for dark modules
-     * @param  string  $lightColor Hex color for background
+     * @param  string  $text  Content to encode (e.g. public queue URL)
+     * @param  int  $size  Width and height of the rendered SVG in pixels
+     * @param  string  $darkColor  Hex color for dark modules
+     * @param  string  $lightColor  Hex color for background
      * @return string Valid SVG markup
      */
     public function generateSvg(
@@ -176,7 +188,7 @@ class QrCodeService
         $rectsStr = implode("\n        ", $rects);
 
         return <<<SVG
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="{$viewBox}" width="{$size}" height="{$size}" fill="none" role="img" aria-label="QR Code">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="{$viewBox}" width="{$size}" height="{$size}" fill="none" shape-rendering="crispEdges" role="img" aria-label="QR Code">
     <rect width="100%" height="100%" fill="{$lightColor}" />
     <g fill="{$darkColor}">
         {$rectsStr}
@@ -375,6 +387,21 @@ SVG;
             $reserved[$size - 1 - $i][8] = true;
         }
 
+        // Version information (versions 7+): two 6x3 blocks next to the top-right and
+        // bottom-left finder patterns, least significant bit first.
+        if (isset(self::$versionInfoBits[$version])) {
+            $versionBits = self::$versionInfoBits[$version];
+            for ($i = 0; $i < 18; $i++) {
+                $bit = ($versionBits >> $i) & 1;
+                $a = $size - 11 + ($i % 3);
+                $b = intdiv($i, 3);
+                $matrix[$b][$a] = $bit;
+                $matrix[$a][$b] = $bit;
+                $reserved[$b][$a] = true;
+                $reserved[$a][$b] = true;
+            }
+        }
+
         $dataBits = [];
         foreach ($finalCodewords as $cw) {
             for ($i = 7; $i >= 0; $i--) {
@@ -448,10 +475,12 @@ SVG;
             $maskedMatrix[1][8] = $fBits[13];
             $maskedMatrix[0][8] = $fBits[14];
 
-            for ($i = 0; $i < 7; $i++) {
+            // Second copy: bits 0-7 along the top-right row, bits 8-14 down the bottom-left
+            // column, leaving the dark module at ($size - 8, 8) untouched.
+            for ($i = 0; $i < 8; $i++) {
                 $maskedMatrix[8][$size - 1 - $i] = $fBits[14 - $i];
             }
-            for ($i = 0; $i < 8; $i++) {
+            for ($i = 1; $i < 8; $i++) {
                 $maskedMatrix[$size - 8 + $i][8] = $fBits[7 - $i];
             }
 
@@ -483,4 +512,3 @@ SVG;
         return $bestMatrix;
     }
 }
-
