@@ -4,7 +4,7 @@
     $isOperator = $user?->isOperator() ?? false;
 
     $navItems = [
-        ['name' => 'Beranda', 'route' => 'merchant.dashboard', 'icon' => 'home'],
+        ['name' => 'Dasbor', 'route' => 'merchant.dashboard', 'icon' => 'home'],
     ];
 
     if ($isOperator) {
@@ -33,9 +33,10 @@
             || ($item['route'] === 'merchant.queues' && str_starts_with($currentRoute, 'merchant.queues') && $currentRoute !== 'merchant.queues.qr')
             || ($item['route'] !== 'merchant.queues' && str_starts_with($currentRoute, $item['route']));
     @endphp
-    <a 
-        href="{{ Route::has($item['route']) ? route($item['route']) : '#' . $item['route'] }}" 
-        class="flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-body font-medium transition-colors select-none {{ $isActive ? 'bg-brand-50 text-brand-700 font-semibold' : 'text-neutral-600 hover:text-neutral-950 hover:bg-neutral-100' }}"
+    <a
+        href="{{ Route::has($item['route']) ? route($item['route']) : '#' . $item['route'] }}"
+        @if ($isActive) aria-current="page" @endif
+        class="flex min-h-11 items-center gap-3 px-3 py-2.5 rounded-lg text-body font-medium transition-colors duration-150 ease-out select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 {{ $isActive ? 'bg-brand-50 text-brand-800 font-semibold ring-1 ring-inset ring-brand-100' : 'text-neutral-600 hover:text-neutral-950 hover:bg-neutral-100' }}"
     >
         @if ($item['icon'] === 'home')
             <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
@@ -44,7 +45,7 @@
         @elseif ($item['icon'] === 'qr')
             <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
         @elseif ($item['icon'] === 'star')
-            <svg class="w-5 h-5 shrink-0 text-amber-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+            <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.48 3.5a.56.56 0 011.04 0l2.13 5.11a.56.56 0 00.48.35l5.52.44c.5.04.7.66.32.99l-4.2 3.6a.56.56 0 00-.18.56l1.28 5.39a.56.56 0 01-.84.61l-4.72-2.88a.56.56 0 00-.59 0l-4.72 2.88a.56.56 0 01-.84-.61l1.28-5.39a.56.56 0 00-.18-.56l-4.2-3.6a.56.56 0 01.32-.99l5.52-.44a.56.56 0 00.48-.35l2.13-5.11z"/></svg>
         @elseif ($item['icon'] === 'building')
             <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
         @elseif ($item['icon'] === 'office')

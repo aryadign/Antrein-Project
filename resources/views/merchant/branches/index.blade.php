@@ -40,7 +40,7 @@
         </div>
 
         {{-- Actions Bar --}}
-        <div class="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-4 shadow-xs sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <div class="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-4 shadow-card sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             <div>
                 <h3 class="text-sm font-bold text-neutral-900">Daftar Cabang</h3>
                 <p class="text-xs text-neutral-500">
@@ -78,26 +78,26 @@
                 @php
                     $isCurrentActive = $branch->id === $activeBranchId;
                 @endphp
-                <div class="rounded-2xl bg-white border {{ $isCurrentActive ? 'border-brand-500 ring-2 ring-brand-500/20' : 'border-neutral-200' }} shadow-xs p-4 sm:p-6 flex min-w-0 flex-col justify-between transition hover:shadow-md">
+                <div class="rounded-2xl bg-white border {{ $isCurrentActive ? 'border-brand-500 ring-2 ring-brand-500/20' : 'border-neutral-200' }} shadow-card p-4 sm:p-6 flex min-w-0 flex-col justify-between transition hover:shadow-md">
                     <div>
                         {{-- Header Row: Badge & Current active indicator --}}
                         <div class="flex items-start justify-between gap-2 mb-3">
                             <div class="flex flex-wrap items-center gap-1">
-                                <span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider {{ $branch->is_active ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-neutral-100 text-neutral-600 border border-neutral-200' }}">
+                                <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider {{ $branch->is_active ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-neutral-100 text-neutral-600 border border-neutral-200' }}">
                                     {{ $branch->is_active ? 'Aktif' : 'Nonaktif' }}
                                 </span>
-                                <span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-neutral-100 text-neutral-700">
+                                <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-neutral-100 text-neutral-700">
                                     {{ $branch->status }}
                                 </span>
                                 @if ($branch->areaLabel())
-                                    <span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-brand-50 text-brand-700 border border-brand-200">
+                                    <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-brand-50 text-brand-700 border border-brand-200">
                                         {{ $branch->areaLabel() }}
                                     </span>
                                 @endif
                             </div>
 
                             @if ($isCurrentActive)
-                                <span class="inline-flex shrink-0 items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-brand-50 text-brand-700 border border-brand-200">
+                                <span class="inline-flex shrink-0 items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-brand-50 text-brand-700 border border-brand-200">
                                     <x-customer.icon name="check" class="size-3" />
                                     <span>Cabang Aktif</span>
                                 </span>
@@ -129,15 +129,15 @@
                         <div class="grid grid-cols-3 gap-2 py-3 mt-4 border-y border-neutral-100 text-center">
                             <div>
                                 <span class="block text-sm font-bold text-neutral-900 tabular-nums">{{ $branch->counters_count }}</span>
-                                <span class="text-[10px] text-neutral-400 font-semibold uppercase">Loket</span>
+                                <span class="text-xs text-neutral-500 font-semibold uppercase">Loket</span>
                             </div>
                             <div>
                                 <span class="block text-sm font-bold text-neutral-900 tabular-nums">{{ $branch->services_count }}</span>
-                                <span class="text-[10px] text-neutral-400 font-semibold uppercase">Layanan</span>
+                                <span class="text-xs text-neutral-500 font-semibold uppercase">Layanan</span>
                             </div>
                             <div>
                                 <span class="block text-sm font-bold text-neutral-900 tabular-nums">{{ $branch->memberships_count }}</span>
-                                <span class="text-[10px] text-neutral-400 font-semibold uppercase">Staf</span>
+                                <span class="text-xs text-neutral-500 font-semibold uppercase">Staf</span>
                             </div>
                         </div>
                     </div>

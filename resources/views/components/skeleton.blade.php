@@ -8,7 +8,7 @@
     $variantClasses = match ($variant) {
         'circle' => 'rounded-full',
         'card' => 'rounded-xl h-32 w-full',
-        'button' => 'rounded-md h-10 w-24',
+        'button' => 'rounded-lg h-11 w-24',
         'badge' => 'rounded-full h-6 w-16',
         default => 'rounded h-4 w-full',
     };

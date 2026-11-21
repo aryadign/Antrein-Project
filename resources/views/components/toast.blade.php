@@ -37,12 +37,12 @@
             x-transition:leave="transition ease-in duration-200"
             x-transition:leave-start="opacity-100"
             x-transition:leave-end="opacity-0 scale-95"
-            class="pointer-events-auto flex items-start p-4 rounded-xl shadow-lg border text-body bg-white"
+            class="pointer-events-auto flex items-start p-4 rounded-xl shadow-overlay border text-body bg-white"
             :class="{
-                'border-emerald-200 bg-emerald-50/40 text-emerald-950': msg.type === 'success',
-                'border-rose-200 bg-rose-50/40 text-rose-950': msg.type === 'danger' || msg.type === 'error',
-                'border-amber-200 bg-amber-50/40 text-amber-950': msg.type === 'warning',
-                'border-blue-200 bg-blue-50/40 text-blue-950': msg.type === 'info',
+                'border-emerald-200 text-emerald-950': msg.type === 'success',
+                'border-rose-200 text-rose-950': msg.type === 'danger' || msg.type === 'error',
+                'border-amber-200 text-amber-950': msg.type === 'warning',
+                'border-blue-200 text-blue-950': msg.type === 'info',
             }"
         >
             {{-- Icon --}}
@@ -67,7 +67,8 @@
             {{-- Close Button --}}
             <button 
                 @click="remove(msg.id)"
-                class="shrink-0 ml-3 text-neutral-400 hover:text-neutral-600 transition"
+                type="button"
+                class="-my-1.5 -mr-1.5 ml-2 inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                 aria-label="Tutup"
             >
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>

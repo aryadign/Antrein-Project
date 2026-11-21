@@ -67,11 +67,7 @@ class DisplayService
                     'ticket_number' => $ticket->ticket_number,
                     'sequence_number' => $ticket->sequence_number,
                     'status' => $ticket->status,
-                    'status_label' => match ($ticket->status) {
-                        QueueTicket::STATUS_DIPANGGIL => 'Dipanggil',
-                        QueueTicket::STATUS_SEDANG_DILAYANI => 'Sedang Dilayani',
-                        default => ucfirst(str_replace('_', ' ', $ticket->status)),
-                    },
+                    'status_label' => QueueTicket::labelForStatus($ticket->status),
                     'service_name' => $ticket->service?->name ?? 'Layanan',
                     'booking_slot_window' => $ticket->bookingSlotWindowLabel($ticket->business?->timezone),
                     'called_at' => $ticket->called_at?->toIso8601String(),

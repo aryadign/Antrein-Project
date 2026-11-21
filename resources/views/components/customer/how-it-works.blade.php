@@ -30,7 +30,7 @@
             <li class="relative z-10 flex flex-col items-center gap-1.5 text-center">
                 <span class="flex size-8 items-center justify-center rounded-xl bg-brand-700 text-xs font-extrabold text-white shadow-sm ring-4 ring-brand-50 tabular-nums">{{ $index + 1 }}</span>
                 <span class="text-xs font-bold leading-tight text-gray-900">{{ $step['title'] }}</span>
-                <span class="text-[11px] leading-3.5 text-gray-600">{{ $step['text'] }}</span>
+                <span class="text-xs leading-3.5 text-gray-600">{{ $step['text'] }}</span>
             </li>
         @endforeach
     </ol>

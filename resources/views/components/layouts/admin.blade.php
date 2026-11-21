@@ -34,70 +34,72 @@
             x-transition:leave="transition ease-in-out duration-300 transform"
             x-transition:leave-start="translate-x-0"
             x-transition:leave-end="-translate-x-full"
-            class="fixed inset-y-0 left-0 z-50 w-[min(18rem,85vw)] bg-neutral-950 text-white flex flex-col lg:hidden"
+            class="fixed inset-y-0 left-0 z-50 w-[min(18rem,85vw)] bg-neutral-950 text-white flex flex-col shadow-overlay lg:hidden"
             style="display: none;"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Menu navigasi admin"
         >
             <div class="h-16 pl-5 pr-3 flex items-center justify-between border-b border-neutral-800">
                 <x-brand-logo size="sm" variant="dark" badge="Admin" />
-                <button type="button" @click="sidebarOpen = false" class="inline-flex size-11 items-center justify-center rounded-lg text-neutral-400 hover:bg-neutral-900 hover:text-white" aria-label="Tutup menu">
+                <button type="button" @click="sidebarOpen = false" class="inline-flex size-11 items-center justify-center rounded-lg text-neutral-300 transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400" aria-label="Tutup menu">
                     <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
             
-            <nav class="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
+            <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto" aria-label="Navigasi admin">
                 @include('layouts.partials.admin-nav')
             </nav>
         </div>
 
         {{-- Desktop Static Sidebar --}}
-        <aside class="hidden print:hidden! lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-neutral-950 text-white z-30 border-r border-neutral-800/80">
+        <aside class="hidden print:hidden! lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-neutral-950 text-white z-30 shadow-card">
             <div class="h-16 px-5 flex items-center border-b border-neutral-800/80">
                 <x-brand-logo size="sm" variant="dark" badge="Admin" />
             </div>
 
-            <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+            <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto" aria-label="Navigasi admin">
                 @include('layouts.partials.admin-nav')
             </nav>
 
-            <div class="p-4 border-t border-neutral-800/80 text-caption text-neutral-500">
+            <div class="px-5 py-4 border-t border-neutral-800/80 text-xs text-neutral-400">
                 <p>AntreIn Platform v1.0</p>
-                <p class="text-[11px] text-neutral-600">Enterprise Pilot Release</p>
             </div>
         </aside>
 
         {{-- Main Area --}}
         <div class="lg:pl-64 flex-1 flex flex-col min-w-0">
             {{-- Topbar --}}
-            <header class="h-16 bg-white border-b border-neutral-200 sticky top-0 z-20 flex items-center justify-between gap-2 px-3 sm:px-6 lg:px-8 print:hidden">
+            <header class="h-16 bg-white border-b border-neutral-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] sticky top-0 z-20 flex items-center justify-between gap-2 px-3 sm:px-6 lg:px-8 print:hidden">
                 <div class="flex min-w-0 items-center gap-2 sm:gap-3">
-                    <button type="button" @click="sidebarOpen = true" class="lg:hidden -ml-1 inline-flex size-11 shrink-0 items-center justify-center rounded-lg text-neutral-600 hover:bg-neutral-100 focus:outline-none focus:ring-2 focus:ring-brand-500" aria-label="Buka menu navigasi">
+                    <button type="button" @click="sidebarOpen = true" class="lg:hidden -ml-1 inline-flex size-11 shrink-0 items-center justify-center rounded-lg text-neutral-600 hover:bg-neutral-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500" aria-label="Buka menu navigasi" :aria-expanded="sidebarOpen.toString()">
                         <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
                     </button>
-                    <p class="min-w-0 truncate text-body font-semibold text-neutral-900">{{ $heading ?? $title }}</p>
+                    <p class="min-w-0 truncate text-body font-semibold text-neutral-900" title="{{ $heading ?? $title }}">{{ $heading ?? $title }}</p>
                 </div>
 
                 <div class="flex shrink-0 items-center gap-2 sm:gap-4">
-                    <span class="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-caption font-medium text-emerald-700" title="Platform Online">
+                    <span class="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-caption font-medium text-emerald-700" title="Platform aktif">
                         <svg class="size-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-                        <span><span class="hidden sm:inline">Platform </span>Online</span>
+                        <span><span class="hidden sm:inline">Platform </span>Aktif</span>
                     </span>
 
                     {{-- Admin User Profile Dropdown --}}
                     <x-dropdown align="right" width="48">
                         <x-slot name="trigger">
-                            <button type="button" class="flex min-h-11 items-center gap-2 rounded-lg p-1.5 hover:bg-neutral-100 transition focus:outline-none focus:ring-2 focus:ring-brand-500">
+                            <button type="button" class="flex min-h-11 items-center gap-2 rounded-lg p-1.5 hover:bg-neutral-100 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500" aria-label="Menu akun">
                                 <div class="w-8 h-8 rounded-full bg-neutral-900 text-white flex items-center justify-center font-semibold text-caption">
                                     {{ $adminInitials }}
                                 </div>
-                                <span class="hidden max-w-40 truncate text-label font-medium text-neutral-700 md:inline">{{ $adminUser?->name ?? 'Administrator' }}</span>
+                                <span class="hidden max-w-40 truncate text-label font-medium text-neutral-700 md:inline" title="{{ $adminUser?->name ?? 'Administrator' }}">{{ $adminUser?->name ?? 'Administrator' }}</span>
                                 <svg class="w-4 h-4 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                             </button>
                         </x-slot>
 
                         <x-slot name="content">
                             <div class="px-4 py-2 border-b border-neutral-100">
-                                <p class="text-caption font-medium text-neutral-900">{{ auth()->user()?->name ?? 'Admin AntreIn' }}</p>
-                                <p class="text-[11px] text-neutral-500 truncate">{{ auth()->user()?->email ?? 'admin@antrein.id' }}</p>
+                                <p class="truncate text-sm font-medium text-neutral-900">{{ auth()->user()?->name ?? 'Admin AntreIn' }}</p>
+                                <p class="text-xs text-neutral-500 truncate">{{ auth()->user()?->email ?? 'admin@antrein.id' }}</p>
                             </div>
                             <a href="{{ route('admin.settings') }}" class="flex min-h-11 items-center px-4 text-label text-neutral-700 hover:bg-neutral-50 transition">Pengaturan Platform</a>
                             <form method="POST" action="{{ route('logout') }}" @click.stop>

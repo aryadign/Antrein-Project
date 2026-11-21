@@ -25,16 +25,16 @@
     </div>
 
     <div x-show="open"
-        x-transition:enter="transition ease-out duration-200"
+        x-transition:enter="transition ease-out duration-150"
         x-transition:enter-start="transform opacity-0 scale-95"
         x-transition:enter-end="transform opacity-100 scale-100"
         x-transition:leave="transition ease-in duration-75"
         x-transition:leave-start="transform opacity-100 scale-100"
         x-transition:leave-end="transform opacity-0 scale-95"
-        class="absolute z-50 mt-2 {{ $width }} rounded-xl shadow-lg border border-neutral-200 {{ $alignmentClasses }}"
+        class="absolute z-50 mt-2 {{ $width }} max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-xl shadow-overlay border border-neutral-200/80 {{ $alignmentClasses }}"
         style="display: none;"
         @click="open = false">
-        <div class="rounded-xl ring-1 ring-black ring-opacity-5 {{ $contentClasses }}">
+        <div class="{{ $contentClasses }}">
             {{ $content }}
         </div>
     </div>

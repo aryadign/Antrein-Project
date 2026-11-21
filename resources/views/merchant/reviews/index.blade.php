@@ -3,7 +3,7 @@
         {{-- Header Section --}}
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-                <h1 class="text-h2 font-bold text-neutral-950">Ulasan & Masukan Pelanggan</h1>
+                <h1 class="text-[1.375rem] leading-[1.875rem] font-bold sm:text-[1.75rem] sm:leading-9 text-neutral-950">Ulasan & Masukan Pelanggan</h1>
                 <p class="text-body text-neutral-600 mt-1">
                     Pantau kepuasan pelanggan, ulasan bintang, dan umpan balik setelah pelayanan antrean selesai.
                 </p>
@@ -25,7 +25,7 @@
         {{-- Summary KPI Cards Grid --}}
         <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
             {{-- Average Rating Card --}}
-            <div class="min-w-0 space-y-1.5 rounded-xl border border-neutral-200 bg-white p-3.5 shadow-xs sm:p-5">
+            <div class="min-w-0 space-y-1.5 rounded-xl border border-neutral-200 bg-white p-3.5 shadow-card sm:p-5">
                 <div class="truncate text-caption font-semibold text-neutral-500">
                     Rata-rata Rating
                 </div>
@@ -33,7 +33,7 @@
                     <span class="text-2xl font-extrabold sm:text-3xl text-neutral-950 tabular-nums">
                         {{ $averageRating > 0 ? number_format($averageRating, 1) : '—' }}
                     </span>
-                    <span class="text-sm font-semibold text-neutral-400">/ 5.0</span>
+                    <span class="text-sm font-semibold text-neutral-500">/ 5.0</span>
                 </div>
                 <div class="flex items-center text-amber-400 pt-1">
                     @for ($i = 1; $i <= 5; $i++)
@@ -47,7 +47,7 @@
             </div>
 
             {{-- Total Reviews Card --}}
-            <div class="min-w-0 space-y-1.5 rounded-xl border border-neutral-200 bg-white p-3.5 shadow-xs sm:p-5">
+            <div class="min-w-0 space-y-1.5 rounded-xl border border-neutral-200 bg-white p-3.5 shadow-card sm:p-5">
                 <div class="truncate text-caption font-semibold text-neutral-500">
                     Total Ulasan
                 </div>
@@ -60,7 +60,7 @@
             </div>
 
             {{-- Completed Tickets Card --}}
-            <div class="min-w-0 space-y-1.5 rounded-xl border border-neutral-200 bg-white p-3.5 shadow-xs sm:p-5">
+            <div class="min-w-0 space-y-1.5 rounded-xl border border-neutral-200 bg-white p-3.5 shadow-card sm:p-5">
                 <div class="truncate text-caption font-semibold text-neutral-500">
                     Tiket Selesai
                 </div>
@@ -73,7 +73,7 @@
             </div>
 
             {{-- Review Rate Card --}}
-            <div class="min-w-0 space-y-1.5 rounded-xl border border-neutral-200 bg-white p-3.5 shadow-xs sm:p-5">
+            <div class="min-w-0 space-y-1.5 rounded-xl border border-neutral-200 bg-white p-3.5 shadow-card sm:p-5">
                 <div class="truncate text-caption font-semibold text-neutral-500">
                     Tingkat Respon Ulasan
                 </div>
@@ -87,7 +87,7 @@
         </div>
 
         {{-- Shopee-Style Rating Summary & Breakdown Section --}}
-        <section class="rounded-xl border border-amber-200/80 bg-amber-50/40 p-4 shadow-xs sm:p-5">
+        <section class="rounded-xl border border-amber-200/80 bg-amber-50/40 p-4 shadow-card sm:p-5">
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-12 sm:items-center">
                 <div class="flex items-center gap-3 sm:col-span-4 sm:flex-col sm:items-start sm:gap-1 sm:border-r sm:border-amber-200/70 sm:pr-4">
                     <div class="flex items-baseline gap-1">
@@ -148,7 +148,7 @@
                             'border-neutral-200 bg-white text-neutral-700 hover:border-amber-300' => $selectedStarFilter !== $starChip,
                         ])
                     >
-                        {{ $starChip }} ★ <span class="text-[11px] font-semibold text-neutral-500">({{ $ratingsDistribution[$starChip] ?? 0 }})</span>
+                        {{ $starChip }} ★ <span class="text-xs font-semibold text-neutral-500">({{ $ratingsDistribution[$starChip] ?? 0 }})</span>
                     </a>
                 @endforeach
                 <a
@@ -165,7 +165,7 @@
         </section>
 
         {{-- Filter & Search Controls --}}
-        <div class="rounded-xl border border-neutral-200 bg-white p-3 shadow-xs sm:p-4">
+        <div class="rounded-xl border border-neutral-200 bg-white p-3 shadow-card sm:p-4">
             <form method="GET" action="{{ route('merchant.reviews.index') }}" class="grid grid-cols-2 items-center gap-2 sm:grid-cols-12 sm:gap-3">
                 @if ($withCommentOnly)
                     <input type="hidden" name="dengan_komentar" value="1">
@@ -184,7 +184,7 @@
                             value="{{ request('search') }}"
                             placeholder="Cari nomor tiket, nama, atau komentar..."
                             aria-label="Cari ulasan"
-                            class="h-11 w-full pl-9 pr-3 text-sm rounded-xl border border-neutral-300 bg-neutral-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 text-neutral-800"
+                            class="placeholder:text-neutral-500 h-11 w-full pl-9 pr-3 text-sm rounded-xl border border-neutral-300 bg-neutral-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 text-neutral-800"
                         >
                     </div>
                 </div>
@@ -267,11 +267,11 @@
         </div>
 
         {{-- Reviews List --}}
-        <section class="space-y-4 rounded-xl border border-neutral-200 bg-white p-4 shadow-xs sm:p-5">
+        <section class="space-y-4 rounded-xl border border-neutral-200 bg-white p-4 shadow-card sm:p-5">
             <div class="flex items-center justify-between pb-3 border-b border-neutral-100">
-                <h3 class="text-sm font-bold text-neutral-900">
+                <h2 class="text-sm font-bold text-neutral-900">
                     Daftar Ulasan ({{ $reviews->total() }})
-                </h3>
+                </h2>
             </div>
 
             @if ($reviews->isEmpty())
@@ -318,7 +318,7 @@
                                         @endfor
                                         <span class="text-xs font-bold text-neutral-700 ml-1.5">{{ $review->rating }}.0</span>
                                     </div>
-                                    <span class="text-2xs text-neutral-400 tabular-nums">
+                                    <span class="text-2xs text-neutral-500 tabular-nums">
                                         {{ $review->created_at->setTimezone($business->timezone ?? 'Asia/Makassar')->translatedFormat('d M Y, H:i') }}
                                     </span>
                                 </div>

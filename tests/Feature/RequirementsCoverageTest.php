@@ -41,7 +41,7 @@ class RequirementsCoverageTest extends TestCase
         $response = $this->get(route('home'));
 
         $response->assertOk();
-        $response->assertSee('Masuk Pelanggan');
+        $response->assertSee('href="'.route('login').'"', false);
         $response->assertSee('Daftar Pelanggan');
         $response->assertSee(route('register', ['type' => 'customer']), false);
         $response->assertDontSee('tanpa login');

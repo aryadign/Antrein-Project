@@ -34,7 +34,7 @@
                     </x-customer.store-cover>
                 </div>
 
-                <div class="relative z-10 mx-4 -mt-6 flex flex-col gap-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-md md:mx-0 md:-mt-5 md:p-5">
+                <div class="relative z-10 mx-4 -mt-6 flex flex-col gap-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-raised md:mx-0 md:-mt-5 md:p-5">
                     <div class="flex flex-col gap-2.5">
                         <div class="flex items-start gap-3">
                             <div class="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xs">
@@ -88,49 +88,33 @@
                         @endif
                     </ul>
 
-                    <div class="grid grid-cols-3 gap-2">
-                        <div class="flex flex-col items-center justify-between gap-1 rounded-xl border border-blue-800/40 bg-linear-to-br from-brand-900 via-blue-900 to-indigo-950 px-2 py-2.5 text-center text-white shadow-sm">
-                            <span class="flex size-6 items-center justify-center rounded-lg bg-white/15 text-blue-100" aria-hidden="true">
-                                <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                            </span>
-                            <span class="text-base font-extrabold leading-5 text-white tabular-nums sm:text-lg">{{ $waitingCount }} <span class="text-[11px] font-bold text-blue-100">org</span></span>
-                            <span class="text-[10px] font-semibold tracking-wide text-blue-100/90">Menunggu</span>
-                        </div>
-                        <div class="flex flex-col items-center justify-between gap-1 rounded-xl border border-blue-700/40 bg-linear-to-br from-blue-900 via-brand-800 to-slate-900 px-1.5 py-2.5 text-center text-white shadow-sm">
-                            <span class="flex size-6 items-center justify-center rounded-lg bg-white/15 text-blue-100" aria-hidden="true">
-                                <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            </span>
-                            <span class="text-sm font-extrabold leading-5 text-white tabular-nums sm:text-[15px]">{{ $waitRange !== null ? $waitRange['label'] : '—' }}</span>
-                            <span class="text-[10px] font-semibold tracking-wide text-blue-100/90">Estimasi</span>
-                        </div>
-                        <div class="flex flex-col items-center justify-between gap-1 rounded-xl border border-indigo-700/40 bg-linear-to-br from-indigo-950 via-brand-900 to-blue-800 px-2 py-2.5 text-center text-white shadow-sm">
-                            <span class="flex size-6 items-center justify-center rounded-lg bg-white/15 text-blue-100" aria-hidden="true">
-                                <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
-                            </span>
-                            <span class="text-base font-extrabold leading-5 text-white tabular-nums sm:text-lg">{{ $availableServiceCount }}</span>
-                            <span class="text-[10px] font-semibold tracking-wide text-blue-100/90">Layanan</span>
-                        </div>
-                    </div>
+                    <dl class="grid grid-cols-3 divide-x divide-brand-100 rounded-xl bg-brand-50/70 py-3 text-center">
+                        @foreach ([
+                            ['label' => 'Menunggu', 'value' => $waitingCount.' orang'],
+                            ['label' => 'Perkiraan tunggu', 'value' => $waitRange !== null ? $waitRange['label'] : '—'],
+                            ['label' => 'Layanan tersedia', 'value' => $availableServiceCount],
+                        ] as $fact)
+                            <div class="flex min-w-0 flex-col-reverse gap-0.5 px-2">
+                                <dt class="text-xs leading-4 text-gray-600">{{ $fact['label'] }}</dt>
+                                <dd class="text-base font-bold leading-6 text-gray-900 tabular-nums">{{ $fact['value'] }}</dd>
+                            </div>
+                        @endforeach
+                    </dl>
 
                     @if (isset($siblingBranches) && $siblingBranches->isNotEmpty())
                         <div class="border-t border-gray-100 pt-3">
                             <div class="mb-2 flex items-center justify-between gap-2">
-                                <p class="text-xs font-extrabold tracking-wide text-gray-900 uppercase">Cabang Lainnya</p>
-                                <span class="text-[11px] font-semibold text-gray-500">{{ $siblingBranches->count() }} cabang</span>
+                                <p class="text-sm font-bold text-gray-900">Cabang lainnya</p>
+                                <span class="text-xs font-semibold text-gray-500">{{ $siblingBranches->count() }} cabang</span>
                             </div>
-                            <div class="flex flex-col gap-1.5">
+                            <div class="-mx-2 flex flex-col">
                                 @foreach ($siblingBranches as $branch)
-                                    <a href="{{ route('customer.queue', ['slug' => $branch->slug]) }}" class="group flex items-center justify-between gap-2 rounded-xl border border-gray-200 bg-gray-50/80 px-3 py-2 text-xs transition hover:border-brand-300 hover:bg-brand-50/50">
+                                    <a href="{{ route('customer.queue', ['slug' => $branch->slug]) }}" class="group flex min-h-11 items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-sm transition hover:bg-gray-50">
                                         <div class="min-w-0">
                                             <p class="truncate font-bold text-gray-900 group-hover:text-brand-700">{{ $branch->name }}</p>
-                                            <p class="truncate text-[11px] text-gray-500">{{ $branch->cityLabel() ?: ($branch->address ?? 'Cabang resmi') }}</p>
+                                            <p class="truncate text-xs text-gray-500">{{ $branch->cityLabel() ?: ($branch->address ?? 'Cabang resmi') }}</p>
                                         </div>
-                                        <span @class([
-                                            'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold',
-                                            'bg-emerald-100 text-emerald-800' => $branch->isOpen(),
-                                            'bg-amber-100 text-amber-800' => $branch->isPaused(),
-                                            'bg-gray-200 text-gray-700' => $branch->isClosed(),
-                                        ])>{{ $branch->isOpen() ? 'Buka' : ($branch->isPaused() ? 'Jeda' : 'Tutup') }}</span>
+                                        <x-status-badge :status="$branch->isOpen() ? 'buka' : ($branch->isPaused() ? 'jeda' : 'tutup')" size="sm" class="shrink-0" />
                                     </a>
                                 @endforeach
                             </div>
@@ -166,6 +150,32 @@
                     <div class="rounded-xl bg-red-50 p-3 text-xs font-semibold leading-4 text-danger-700" role="alert">{{ $errors->first('queue_error') }}</div>
                 @endif
 
+                @auth
+                    <div class="flex items-start justify-between gap-3 rounded-xl border border-brand-200 bg-brand-50 p-3.5 text-xs leading-4">
+                        <div class="flex items-start gap-3">
+                            <x-customer.icon name="ticket" class="mt-0.5 size-4 shrink-0 text-brand-700" />
+                            <div class="flex flex-col gap-0.5">
+                                <p class="font-bold text-brand-700">{{ $activeTicketCount ?? 0 }} dari {{ $maxActiveTickets ?? 3 }} antrean aktif terpakai</p>
+                                <p class="text-gray-700">Setelah memilih layanan, Anda mendapat QR tiket untuk memantau giliran dari ponsel.</p>
+                            </div>
+                        </div>
+                    </div>
+                @else
+                    <div class="flex flex-col gap-3 rounded-xl border border-brand-200 bg-brand-50 p-3.5 text-xs leading-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div class="flex items-start gap-3">
+                            <x-customer.icon name="user" class="mt-0.5 size-4 shrink-0 text-brand-700" />
+                            <div class="flex flex-col gap-0.5">
+                                <p class="font-bold text-brand-700">Masuk untuk mengambil antrean</p>
+                                <p class="text-gray-700">Daftar atau masuk akun pelanggan untuk mengambil hingga 3 antrean aktif dan menyimpan QR tiket Anda.</p>
+                            </div>
+                        </div>
+                        <div class="flex shrink-0 items-center gap-2">
+                            <a href="{{ route('login') }}" class="inline-flex h-9 items-center rounded-lg bg-brand-700 px-3 text-xs font-bold text-white transition hover:bg-blue-900">Masuk</a>
+                            <a href="{{ route('register', ['type' => 'customer']) }}" class="inline-flex h-9 items-center rounded-lg border border-brand-200 bg-white px-3 text-xs font-bold text-brand-700 transition hover:bg-brand-100">Daftar</a>
+                        </div>
+                    </div>
+                @endauth
+
                 {{-- Daftar layanan --}}
                 <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                     <div class="flex flex-col gap-0.5">
@@ -180,7 +190,7 @@
                                 type="search"
                                 x-model.debounce.150ms="query"
                                 placeholder="Cari layanan di kedai ini"
-                                class="w-full min-w-0 border-0 bg-transparent p-0 text-sm leading-5 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-0"
+                                class="w-full min-w-0 border-0 bg-transparent p-0 text-sm leading-5 text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-0"
                             />
                         </label>
                     @endif
@@ -212,7 +222,7 @@
                                 x-transition.opacity.duration.200ms
                                 @class([
                                     'group flex items-stretch justify-between gap-3 rounded-2xl border bg-white p-3.5 transition-[border-color,box-shadow,transform] duration-200',
-                                    'border-gray-200 shadow-xs hover:border-brand-400 hover:shadow-md active:scale-[0.99]' => $isAvailable,
+                                    'border-gray-200 shadow-card hover:border-brand-300 hover:shadow-raised active:scale-[0.99]' => $isAvailable,
                                     'border-gray-200 bg-gray-50' => ! $isAvailable,
                                 ])
                             >
@@ -233,7 +243,7 @@
                                         </span>
                                         @if ($service->daily_quota !== null)
                                             <span @class([
-                                                'rounded-md px-2 py-0.5 text-[11px] font-bold',
+                                                'rounded-md px-2 py-0.5 text-xs font-bold',
                                                 'bg-red-50 text-danger-700' => $service->is_quota_full,
                                                 'bg-amber-100 text-amber-900' => $isQuotaLow,
                                                 'bg-emerald-100 text-emerald-800' => ! $service->is_quota_full && ! $isQuotaLow,
@@ -250,7 +260,7 @@
                                             Ambil Antrean
                                         </span>
                                     @else
-                                        <span class="inline-flex w-full items-center justify-center rounded-full border border-gray-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-gray-500">{{ $unavailableLabel }}</span>
+                                        <span class="inline-flex w-full items-center justify-center rounded-full border border-gray-200 bg-white px-2.5 py-1 text-xs font-semibold text-gray-500">{{ $unavailableLabel }}</span>
                                     @endif
                                 </div>
                             </{{ $isAvailable ? 'a' : 'div' }}>
@@ -273,7 +283,7 @@
 
                 {{-- Ulasan pelanggan gaya Shopee: ringkasan rating, distribusi 5★–1★, filter chip, urutkan & paginasi --}}
                 @if ($reviewCount > 0)
-                    <section id="ulasan" class="flex flex-col gap-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-xs md:p-5" aria-labelledby="reviews-title">
+                    <section id="ulasan" class="flex flex-col gap-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-card md:p-5" aria-labelledby="reviews-title">
                         <div class="flex flex-wrap items-center justify-between gap-2">
                             <div>
                                 <h2 id="reviews-title" class="text-base font-extrabold leading-6 text-gray-900">Ulasan Pelanggan</h2>
@@ -296,10 +306,10 @@
                         </div>
 
                         {{-- Summary Box ala Shopee --}}
-                        <div class="grid grid-cols-1 gap-4 rounded-2xl border border-amber-200/80 bg-amber-50/40 p-4 sm:grid-cols-12 sm:items-center">
-                            <div class="flex items-center gap-3 sm:col-span-4 sm:flex-col sm:items-start sm:gap-1 sm:border-r sm:border-amber-200/70 sm:pr-4">
+                        <div class="grid grid-cols-1 gap-4 border-b border-gray-100 pb-4 sm:grid-cols-12 sm:items-center">
+                            <div class="flex items-center gap-3 sm:col-span-4 sm:flex-col sm:items-start sm:gap-1 sm:border-r sm:border-gray-100 sm:pr-4">
                                 <div class="flex items-baseline gap-1">
-                                    <span class="text-3xl font-black leading-none text-amber-600 tabular-nums">{{ number_format($rating, 1) }}</span>
+                                    <span class="text-3xl font-extrabold leading-none text-gray-900 tabular-nums">{{ number_format($rating, 1) }}</span>
                                     <span class="text-xs font-bold text-gray-500">/ 5</span>
                                 </div>
                                 <div class="flex flex-col gap-0.5">
@@ -315,11 +325,11 @@
                             <div class="flex flex-col gap-1.5 sm:col-span-8">
                                 @foreach ($ratingBreakdown as $starValue => $stat)
                                     <div class="flex items-center gap-2 text-xs">
-                                        <span class="w-8 shrink-0 font-bold text-gray-700 tabular-nums">{{ $starValue }} ★</span>
+                                        <span class="inline-flex w-8 shrink-0 items-center gap-0.5 font-bold text-gray-700 tabular-nums">{{ $starValue }} <x-customer.icon name="star" class="size-3 text-amber-500" /><span class="sr-only">bintang</span></span>
                                         <div class="h-2 flex-1 overflow-hidden rounded-full bg-amber-100">
                                             <div class="h-full rounded-full bg-amber-500 transition-all duration-300" style="width: {{ $stat['percent'] }}%"></div>
                                         </div>
-                                        <span class="w-10 shrink-0 text-right text-[11px] font-semibold text-gray-500 tabular-nums">{{ $stat['count'] }}</span>
+                                        <span class="w-10 shrink-0 text-right text-xs font-semibold text-gray-500 tabular-nums">{{ $stat['count'] }}</span>
                                     </div>
                                 @endforeach
                             </div>
@@ -352,7 +362,7 @@
                                         'border-gray-200 bg-white text-gray-700 hover:border-amber-300' => $selectedStar !== $star,
                                     ])
                                 >
-                                    {{ $star }} ★ <span class="text-[11px] font-semibold text-gray-500">({{ $starCount }})</span>
+                                    {{ $star }} <x-customer.icon name="star" class="size-3.5 text-amber-500" /><span class="sr-only">bintang</span> <span class="text-xs font-semibold text-gray-600">({{ $starCount }})</span>
                                 </a>
                             @endfor
                             <a
@@ -379,15 +389,15 @@
                                                     @endfor
                                                 </span>
                                                 @if ($review->service)
-                                                    <span class="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-700">{{ $review->service->name }}</span>
+                                                    <span class="rounded-full bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-700">{{ $review->service->name }}</span>
                                                 @endif
                                             </div>
-                                            <span class="text-[11px] leading-4 text-gray-400">{{ $review->created_at->translatedFormat('d M Y') }}</span>
+                                            <span class="text-xs leading-4 text-gray-500">{{ $review->created_at->translatedFormat('d M Y') }}</span>
                                         </div>
                                         @if ($review->comment)
-                                            <p class="text-sm leading-5 text-gray-800">{{ $review->comment }}</p>
+                                            <p class="text-sm leading-5 text-pretty text-gray-800">{{ $review->comment }}</p>
                                         @else
-                                            <p class="text-xs italic text-gray-400">Pelanggan memberikan rating tanpa komentar tertulis.</p>
+                                            <p class="text-xs italic text-gray-500">Pelanggan memberikan rating tanpa komentar tertulis.</p>
                                         @endif
                                     </li>
                                 @endforeach
@@ -406,31 +416,6 @@
                     </section>
                 @endif
 
-                @auth
-                    <div class="flex items-start justify-between gap-3 rounded-xl border border-brand-200 bg-brand-50 p-3.5 text-xs leading-4">
-                        <div class="flex items-start gap-3">
-                            <x-customer.icon name="sparkles" class="mt-0.5 size-4 shrink-0 text-brand-700" />
-                            <div class="flex flex-col gap-0.5">
-                                <p class="font-bold text-brand-700">Kuota antrean Anda: {{ $activeTicketCount ?? 0 }} / {{ $maxActiveTickets ?? 3 }} aktif</p>
-                                <p class="text-gray-700">Setelah konfirmasi, Anda mendapat QR tiket untuk memantau giliran dari HP.</p>
-                            </div>
-                        </div>
-                    </div>
-                @else
-                    <div class="flex flex-col gap-3 rounded-xl border border-brand-200 bg-brand-50 p-3.5 text-xs leading-4 sm:flex-row sm:items-center sm:justify-between">
-                        <div class="flex items-start gap-3">
-                            <x-customer.icon name="user" class="mt-0.5 size-4 shrink-0 text-brand-700" />
-                            <div class="flex flex-col gap-0.5">
-                                <p class="font-bold text-brand-700">Masuk untuk mengambil antrean</p>
-                                <p class="text-gray-700">Daftar atau masuk akun pelanggan untuk mengambil hingga 3 antrean aktif dan menyimpan QR tiket Anda.</p>
-                            </div>
-                        </div>
-                        <div class="flex shrink-0 items-center gap-2">
-                            <a href="{{ route('login') }}" class="inline-flex h-9 items-center rounded-lg bg-brand-700 px-3 text-xs font-bold text-white transition hover:bg-blue-900">Masuk</a>
-                            <a href="{{ route('register', ['type' => 'customer']) }}" class="inline-flex h-9 items-center rounded-lg border border-brand-200 bg-white px-3 text-xs font-bold text-brand-700 transition hover:bg-brand-100">Daftar</a>
-                        </div>
-                    </div>
-                @endauth
             </div>
         </div>
     </div>

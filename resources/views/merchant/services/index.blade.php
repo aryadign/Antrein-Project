@@ -9,7 +9,7 @@
         {{-- Page Header --}}
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div class="min-w-0">
-                <h1 class="text-h2 font-bold text-neutral-950">Layanan Usaha</h1>
+                <h1 class="text-[1.375rem] leading-[1.875rem] font-bold sm:text-[1.75rem] sm:leading-9 text-neutral-950">Layanan Usaha</h1>
                 <p class="mt-1 text-body text-neutral-600">Daftar layanan yang dapat dipilih pelanggan saat mengambil tiket antrean.</p>
             </div>
             <button
@@ -50,7 +50,7 @@
         </div>
 
         {{-- Search & Filter --}}
-        <form method="GET" action="{{ route('merchant.services.index') }}" class="flex flex-col gap-2 rounded-xl border border-neutral-200 bg-white p-3 shadow-xs sm:flex-row sm:items-center sm:gap-3">
+        <form method="GET" action="{{ route('merchant.services.index') }}" class="flex flex-col gap-2 rounded-xl border border-neutral-200 bg-white p-3 shadow-card sm:flex-row sm:items-center sm:gap-3">
             <label for="service-search" class="sr-only">Cari layanan</label>
             <input
                 id="service-search"
@@ -58,11 +58,11 @@
                 name="search"
                 value="{{ $search }}"
                 placeholder="Cari nama atau deskripsi layanan..."
-                class="h-11 w-full min-w-0 flex-1 rounded-lg border-neutral-300 px-3 text-sm focus:border-brand-500 focus:ring-brand-500"
+                class="border placeholder:text-neutral-500 h-11 w-full min-w-0 flex-1 rounded-lg border-neutral-300 px-3 text-sm focus:border-brand-500 focus:ring-brand-500"
             >
             <div class="grid grid-cols-[minmax(0,1fr)_auto] gap-2 sm:flex">
                 <label for="service-status" class="sr-only">Status layanan</label>
-                <select id="service-status" name="status" onchange="this.form.submit()" class="h-11 min-w-0 rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500 sm:w-44">
+                <select id="service-status" name="status" onchange="this.form.submit()" class="border h-11 min-w-0 rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500 sm:w-44">
                     <option value="">Semua Status</option>
                     <option value="active" @selected($status === 'active')>Aktif Saja</option>
                     <option value="inactive" @selected($status === 'inactive')>Nonaktif Saja</option>
@@ -83,9 +83,9 @@
             />
         @else
             {{-- Mobile: card list --}}
-            <ul class="space-y-3 md:hidden" aria-label="Daftar layanan">
+            <ul class="space-y-3 xl:hidden" aria-label="Daftar layanan">
                 @foreach ($services as $svc)
-                    <li class="rounded-xl border border-neutral-200 bg-white p-4 shadow-xs {{ $svc->is_active ? '' : 'opacity-90' }}">
+                    <li class="rounded-xl border border-neutral-200 bg-white p-4 shadow-card {{ $svc->is_active ? '' : 'opacity-90' }}">
                         <div class="flex items-start gap-3">
                             <x-customer.service-thumb :service="$svc" :category="$business->category" class="size-14" />
                             <div class="min-w-0 flex-1">
@@ -101,15 +101,15 @@
 
                         <dl class="mt-3 grid grid-cols-3 gap-2 text-center">
                             <div class="rounded-lg bg-neutral-50 px-2 py-1.5">
-                                <dt class="text-[11px] text-neutral-500">Durasi</dt>
+                                <dt class="text-xs text-neutral-500">Durasi</dt>
                                 <dd class="text-sm font-bold text-neutral-900 tabular-nums">{{ $svc->duration_minutes }} mnt</dd>
                             </div>
                             <div class="rounded-lg bg-neutral-50 px-2 py-1.5">
-                                <dt class="text-[11px] text-neutral-500">Harga</dt>
+                                <dt class="text-xs text-neutral-500">Harga</dt>
                                 <dd class="truncate text-sm font-bold tabular-nums {{ $svc->price > 0 ? 'text-neutral-900' : 'text-emerald-700' }}">{{ $priceLabelFor($svc) }}</dd>
                             </div>
                             <div class="rounded-lg bg-neutral-50 px-2 py-1.5">
-                                <dt class="text-[11px] text-neutral-500">Kuota</dt>
+                                <dt class="text-xs text-neutral-500">Kuota</dt>
                                 <dd class="truncate text-sm font-bold text-neutral-900 tabular-nums">{{ $svc->daily_quota ? $svc->daily_quota.'/hari' : 'Bebas' }}</dd>
                             </div>
                         </dl>
@@ -138,7 +138,7 @@
             </ul>
 
             {{-- Tablet & desktop: table --}}
-            <div class="hidden md:block">
+            <div class="hidden xl:block">
                 <x-table>
                     <x-slot:header>
                         <tr>
@@ -159,7 +159,7 @@
                                     <div class="min-w-0">
                                         <div class="font-bold text-neutral-900">{{ $svc->name }}</div>
                                         @if ($svc->description)
-                                            <p class="mt-0.5 max-w-xs truncate text-xs text-neutral-500 lg:max-w-sm">{{ $svc->description }}</p>
+                                            <p class="mt-0.5 max-w-48 truncate text-xs text-neutral-500 2xl:max-w-sm">{{ $svc->description }}</p>
                                         @endif
                                     </div>
                                 </div>
@@ -175,9 +175,9 @@
                             </x-table.td>
                             <x-table.td class="text-center whitespace-nowrap">
                                 @if ($svc->daily_quota)
-                                    <span class="rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-semibold text-neutral-800 tabular-nums">{{ $svc->daily_quota }} tiket/hari</span>
+                                    <span class="rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-semibold text-neutral-800 tabular-nums">{{ $svc->daily_quota }}/hari</span>
                                 @else
-                                    <span class="text-xs text-neutral-400">Tidak dibatasi</span>
+                                    <span class="text-xs text-neutral-500">Tidak dibatasi</span>
                                 @endif
                             </x-table.td>
                             <x-table.td class="text-center whitespace-nowrap">
@@ -245,7 +245,7 @@
                 <div>
                     <x-form-label for="add_svc_image" value="Foto Layanan (Opsional)" />
                     <input id="add_svc_image" name="image" type="file" accept="image/jpeg,image/png,image/webp" class="block w-full text-sm text-neutral-700 file:mr-3 file:rounded-lg file:border-0 file:bg-neutral-100 file:px-3 file:py-2.5 file:text-sm file:font-semibold file:text-neutral-700 hover:file:bg-neutral-200" />
-                    <p class="text-caption text-neutral-500 mt-1">JPG, PNG, atau WEBP, maks. 2 MB. Foto membantu pelanggan memilih layanan.</p>
+                    <p class="text-caption text-neutral-600 mt-1">JPG, PNG, atau WEBP, maks. 2 MB. Foto membantu pelanggan memilih layanan.</p>
                     <x-input-error for="image" />
                 </div>
 
@@ -264,7 +264,7 @@
                 <div>
                     <x-form-label for="add_svc_quota" value="Kuota Harian Maksimal (Opsional)" />
                     <x-input id="add_svc_quota" name="daily_quota" type="number" min="1" placeholder="Kosongkan jika kuota tidak dibatasi" />
-                    <p class="text-caption text-neutral-500 mt-1">Jika diatur, antrean untuk layanan ini akan ditutup otomatis ketika kuota harian tercapai.</p>
+                    <p class="text-caption text-neutral-600 mt-1">Jika diatur, antrean untuk layanan ini akan ditutup otomatis ketika kuota harian tercapai.</p>
                 </div>
 
                 <div class="flex items-center gap-2 pt-2">
@@ -314,7 +314,7 @@
                         <x-checkbox id="edit_svc_remove_image" name="remove_image" value="1" label="Hapus foto ini" />
                     </div>
                     <input id="edit_svc_image" name="image" type="file" accept="image/jpeg,image/png,image/webp" class="block w-full text-sm text-neutral-700 file:mr-3 file:rounded-lg file:border-0 file:bg-neutral-100 file:px-3 file:py-2.5 file:text-sm file:font-semibold file:text-neutral-700 hover:file:bg-neutral-200" />
-                    <p class="text-caption text-neutral-500 mt-1">JPG, PNG, atau WEBP, maks. 2 MB. Foto membantu pelanggan memilih layanan.</p>
+                    <p class="text-caption text-neutral-600 mt-1">JPG, PNG, atau WEBP, maks. 2 MB. Foto membantu pelanggan memilih layanan.</p>
                     <x-input-error for="image" />
                 </div>
 

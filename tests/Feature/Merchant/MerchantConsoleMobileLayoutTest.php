@@ -84,7 +84,7 @@ class MerchantConsoleMobileLayoutTest extends TestCase
         $response->assertOk()
             ->assertSee('data-testid="queue-thumb-dock"', false)
             ->assertSee('Panggil Berikutnya')
-            ->assertSee('Walk-in');
+            ->assertSee('Datang langsung');
     }
 
     /**

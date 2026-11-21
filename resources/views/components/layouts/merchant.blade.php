@@ -50,14 +50,15 @@
             x-transition:leave="transition ease-in-out duration-300 transform"
             x-transition:leave-start="translate-x-0"
             x-transition:leave-end="-translate-x-full"
-            class="fixed inset-y-0 left-0 z-50 w-[min(18rem,85vw)] bg-white text-neutral-800 flex flex-col border-r border-neutral-200 lg:hidden shadow-xl"
+            class="fixed inset-y-0 left-0 z-50 w-[min(18rem,85vw)] bg-white text-neutral-800 flex flex-col border-r border-neutral-200 lg:hidden shadow-overlay"
             style="display: none;"
             role="dialog"
+            aria-modal="true"
             aria-label="Menu navigasi UMKM"
         >
             <div class="h-16 px-4 flex items-center justify-between border-b border-neutral-200">
                 <x-brand-logo size="sm" badge="UMKM" />
-                <button type="button" @click="sidebarOpen = false" class="flex size-11 items-center justify-center rounded-lg text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800" aria-label="Tutup menu">
+                <button type="button" @click="sidebarOpen = false" class="flex size-11 items-center justify-center rounded-lg text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500" aria-label="Tutup menu">
                     <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
@@ -65,31 +66,31 @@
             <div class="flex items-center gap-3 border-b border-neutral-200 px-4 py-3">
                 <x-merchant.business-avatar :name="$businessName" :logo-url="$businessLogoUrl" :initials="$businessInitials" class="size-10" />
                 <div class="min-w-0 flex-1">
-                    <p class="truncate text-sm font-bold text-neutral-900">{{ $businessName }}</p>
+                    <p class="truncate text-sm font-bold text-neutral-900" title="{{ $businessName }}">{{ $businessName }}</p>
                     <x-status-badge :status="$businessStatus" size="sm" class="mt-0.5" />
                 </div>
             </div>
 
-            <nav class="flex-1 px-3 py-3 space-y-1 overflow-y-auto">
+            <nav class="flex-1 px-3 py-3 space-y-1 overflow-y-auto" aria-label="Navigasi UMKM">
                 @include('layouts.partials.merchant-nav')
             </nav>
         </div>
 
         {{-- Desktop Static White Sidebar --}}
-        <aside class="hidden print:hidden! lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-white text-neutral-800 z-30 border-r border-neutral-200">
+        <aside class="hidden print:hidden! lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-white text-neutral-800 z-30 border-r border-neutral-200/80 shadow-card">
             <div class="h-16 px-6 flex items-center border-b border-neutral-200">
                 <x-brand-logo size="sm" badge="UMKM" />
             </div>
 
-            <div class="mx-3 mt-3 flex items-center gap-3 rounded-xl border border-neutral-200 bg-neutral-50/70 p-3">
+            <div class="mx-3 mt-3 flex items-center gap-3 rounded-lg bg-neutral-50 p-3">
                 <x-merchant.business-avatar :name="$businessName" :logo-url="$businessLogoUrl" :initials="$businessInitials" class="size-10" />
                 <div class="min-w-0 flex-1">
                     <p class="truncate text-sm font-bold text-neutral-900" title="{{ $businessName }}">{{ $businessName }}</p>
-                    <p class="truncate text-[11px] text-neutral-500">{{ $currentUser?->isOwner() ? 'Pemilik Usaha' : 'Staf Operator' }}</p>
+                    <p class="truncate text-xs text-neutral-500">{{ $currentUser?->isOwner() ? 'Pemilik Usaha' : 'Staf Operator' }}</p>
                 </div>
             </div>
 
-            <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+            <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto" aria-label="Navigasi UMKM">
                 @include('layouts.partials.merchant-nav')
             </nav>
         </aside>
@@ -97,9 +98,9 @@
         {{-- Main Area --}}
         <div class="lg:pl-64 print:pl-0 flex-1 flex flex-col min-w-0">
             {{-- Topbar --}}
-            <header class="print:hidden h-16 bg-white border-b border-neutral-200 sticky top-0 z-20 flex items-center justify-between gap-2 px-2 sm:px-6 lg:px-8">
+            <header class="print:hidden h-16 bg-white border-b border-neutral-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] sticky top-0 z-20 flex items-center justify-between gap-2 px-2 sm:px-6 lg:px-8">
                 <div class="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-3">
-                    <button type="button" @click="sidebarOpen = true" class="lg:hidden flex size-11 shrink-0 items-center justify-center rounded-lg text-neutral-600 hover:bg-neutral-100 focus:outline-none focus:ring-2 focus:ring-brand-500" aria-label="Buka menu">
+                    <button type="button" @click="sidebarOpen = true" class="lg:hidden flex size-11 shrink-0 items-center justify-center rounded-lg text-neutral-600 hover:bg-neutral-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500" aria-label="Buka menu" :aria-expanded="sidebarOpen.toString()">
                         <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
                     </button>
 
@@ -115,7 +116,7 @@
                                     <button
                                         @click="openBranch = ! openBranch"
                                         type="button"
-                                        class="inline-flex h-8 items-center gap-1 rounded-md bg-brand-50 px-2 text-[11px] font-bold text-brand-700 transition hover:bg-brand-100"
+                                        class="inline-flex h-9 items-center gap-1 rounded-lg bg-brand-50 px-2.5 text-xs font-semibold text-brand-700 ring-1 ring-inset ring-brand-100 transition-colors hover:bg-brand-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                                         :aria-expanded="openBranch.toString()"
                                         aria-label="Ganti Cabang"
                                     >
@@ -125,9 +126,9 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                                         </svg>
                                     </button>
-                                    <div x-show="openBranch" @click.away="openBranch = false" x-cloak class="fixed inset-x-3 top-16 z-50 rounded-xl border border-neutral-200 bg-white py-1 shadow-xl sm:absolute sm:inset-x-auto sm:left-0 sm:top-auto sm:mt-2 sm:w-64">
-                                        <div class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-neutral-400 border-b border-neutral-100">
-                                            Pilih Cabang Aktif
+                                    <div x-show="openBranch" @click.away="openBranch = false" x-cloak class="fixed inset-x-3 top-16 z-50 rounded-xl border border-neutral-200/80 bg-white py-1 shadow-overlay sm:absolute sm:inset-x-auto sm:left-0 sm:top-auto sm:mt-2 sm:w-64">
+                                        <div class="px-3 py-2 text-xs font-semibold text-neutral-500 border-b border-neutral-100">
+                                            Pilih cabang aktif
                                         </div>
                                         <div class="max-h-64 overflow-y-auto py-1">
                                             @if ($currentUser?->canManageOrganization())
@@ -178,20 +179,20 @@
                     {{-- Merchant Owner Dropdown --}}
                     <x-dropdown align="right" width="56">
                         <x-slot name="trigger">
-                            <button type="button" class="flex min-h-11 items-center gap-2 rounded-lg p-1 sm:p-1.5 hover:bg-neutral-100 transition focus:outline-none focus:ring-2 focus:ring-brand-500" aria-label="Menu akun">
+                            <button type="button" class="flex min-h-11 items-center gap-2 rounded-lg p-1 sm:p-1.5 hover:bg-neutral-100 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500" aria-label="Menu akun">
                                 <div class="w-8 h-8 rounded-full bg-neutral-800 text-white flex items-center justify-center font-semibold text-caption">
                                     {{ $userInitials }}
                                 </div>
-                                <span class="hidden md:inline max-w-[10rem] truncate text-label font-medium text-neutral-700">{{ $currentUser?->name ?? 'Pemilik Usaha' }}</span>
+                                <span class="hidden md:inline max-w-[10rem] truncate text-label font-medium text-neutral-700" title="{{ $currentUser?->name ?? 'Pemilik Usaha' }}">{{ $currentUser?->name ?? 'Pemilik Usaha' }}</span>
                                 <svg class="hidden sm:block w-4 h-4 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                             </button>
                         </x-slot>
 
                         <x-slot name="content">
                             <div class="px-4 py-2.5 border-b border-neutral-100">
-                                <p class="truncate text-caption font-medium text-neutral-900">{{ $currentUser?->name ?? 'Pengguna' }}</p>
-                                <p class="text-[11px] text-neutral-500 truncate">{{ $currentUser?->email ?? 'user@antrein.id' }}</p>
-                                <span class="inline-block mt-1 text-[10px] font-semibold px-2 py-0.5 rounded-full {{ $currentUser?->isOwner() ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700' }}">
+                                <p class="truncate text-sm font-medium text-neutral-900">{{ $currentUser?->name ?? 'Pengguna' }}</p>
+                                <p class="text-xs text-neutral-500 truncate">{{ $currentUser?->email ?? 'user@antrein.id' }}</p>
+                                <span class="inline-block mt-1.5 text-xs font-medium px-2 py-0.5 rounded-full {{ $currentUser?->isOwner() ? 'bg-brand-50 text-brand-700' : 'bg-neutral-100 text-neutral-700' }}">
                                     {{ $currentUser?->isOwner() ? 'Pemilik Usaha' : 'Staf Operator' }}
                                 </span>
                             </div>

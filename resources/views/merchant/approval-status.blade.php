@@ -14,7 +14,7 @@
             <div class="mx-auto flex h-16 max-w-4xl items-center justify-between px-4 sm:px-6">
                 <a href="/" class="flex items-center gap-2 focus:outline-none">
                     <span class="text-2xl font-extrabold tracking-tight text-neutral-950">AntreIn<span class="text-brand-700">.</span></span>
-                    <span class="rounded border border-brand-200 bg-brand-50 px-2 py-0.5 text-[10px] font-semibold tracking-wider text-brand-700 uppercase">UMKM</span>
+                    <span class="rounded border border-brand-200 bg-brand-50 px-2 py-0.5 text-xs font-semibold tracking-wider text-brand-700 uppercase">UMKM</span>
                 </a>
 
                 <form method="POST" action="{{ route('logout') }}">
@@ -28,7 +28,7 @@
 
         <main class="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
             @if (session('status'))
-                <div class="mb-6 flex items-center gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-800 shadow-xs" role="status">
+                <div class="mb-6 flex items-center gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-800 shadow-card" role="status">
                     <svg class="size-5 shrink-0 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
@@ -40,14 +40,14 @@
                 @if ($business->isRejected())
                     <div class="border-b border-rose-200 bg-rose-50/80 px-6 py-6 sm:px-8">
                         <div class="flex flex-col gap-4 sm:flex-row sm:items-start">
-                            <span class="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-rose-600 text-white shadow-xs">
+                            <span class="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-rose-600 text-white shadow-card">
                                 <svg class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                                 </svg>
                             </span>
                             <div class="min-w-0 flex-1">
                                 <x-status-badge status="rejected" size="sm" />
-                                <h1 class="mt-2 text-h2 font-bold text-rose-950">Pendaftaran UMKM Ditolak Admin</h1>
+                                <h1 class="mt-2 text-[1.375rem] leading-[1.875rem] font-bold sm:text-[1.75rem] sm:leading-9 text-rose-950">Pendaftaran UMKM Ditolak Admin</h1>
                                 <p class="mt-1 text-sm text-rose-900">
                                     Maaf, pengajuan pendaftaran usaha Anda belum dapat disetujui. Silakan perbaiki data sesuai catatan di bawah lalu ajukan ulang.
                                 </p>
@@ -57,14 +57,14 @@
                 @else
                     <div class="border-b border-blue-200 bg-linear-to-r from-brand-50 to-blue-50/70 px-6 py-6 sm:px-8">
                         <div class="flex flex-col gap-4 sm:flex-row sm:items-start">
-                            <span class="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-brand-700 text-white shadow-xs">
+                            <span class="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-brand-700 text-white shadow-card">
                                 <svg class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
                             </span>
                             <div class="min-w-0 flex-1">
                                 <x-status-badge status="pending" size="sm" />
-                                <h1 class="mt-2 text-h2 font-bold text-neutral-950">Pendaftaran UMKM Sedang Diproses Admin</h1>
+                                <h1 class="mt-2 text-[1.375rem] leading-[1.875rem] font-bold sm:text-[1.75rem] sm:leading-9 text-neutral-950">Pendaftaran UMKM Sedang Diproses Admin</h1>
                                 <p class="mt-1 text-sm leading-relaxed text-neutral-700">
                                     Data usaha Anda telah kami terima dan sedang dalam tahap verifikasi tim administrator AntreIn. Anda akan dihubungi melalui nomor kontak/email terdaftar ketika pengajuan disetujui (Accept) atau ditolak (Reject).
                                 </p>
@@ -88,7 +88,7 @@
                             <p class="text-xs font-semibold tracking-wider text-brand-700 uppercase">{{ $business->category?->name ?? 'Usaha UMKM' }}</p>
                             <h2 class="mt-0.5 truncate text-lg font-bold text-neutral-950">{{ $business->name }}</h2>
                             <p class="mt-0.5 text-xs text-neutral-600">{{ $business->address }}</p>
-                            <p class="mt-1 text-xs text-neutral-500 tabular-nums">Kontak: {{ $business->phone }} &bull; {{ $business->services->count() }} Layanan &bull; {{ $openDaysCount }} Hari Buka</p>
+                            <p class="mt-1 text-xs text-neutral-500 tabular-nums">Kontak: {{ $business->phone }}  {{ $business->services->count() }} Layanan  {{ $openDaysCount }} Hari Buka</p>
                         </div>
                     </div>
 
@@ -108,7 +108,7 @@
                             </li>
                             <li class="rounded-lg border border-neutral-200 bg-neutral-50 p-3">
                                 <span class="text-xs font-bold text-neutral-700">3. Usaha Aktif</span>
-                                <p class="mt-0.5 text-xs text-neutral-600">Dashboard UMKM terbuka & toko tampil untuk pelanggan.</p>
+                                <p class="mt-0.5 text-xs text-neutral-600">Dasbor UMKM terbuka & toko tampil untuk pelanggan.</p>
                             </li>
                         </ol>
                     </div>

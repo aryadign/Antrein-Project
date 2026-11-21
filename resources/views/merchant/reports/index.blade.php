@@ -5,7 +5,7 @@
         '7_days' => '7 Hari',
         '30_days' => '30 Hari',
     ];
-    $dateInputClasses = 'h-11 w-full rounded-lg border-neutral-300 px-3 text-sm focus:border-brand-500 focus:ring-brand-500 sm:w-44';
+    $dateInputClasses = 'border h-11 w-full rounded-lg border-neutral-300 px-3 text-sm focus:border-brand-500 focus:ring-brand-500 sm:w-44';
 @endphp
 
 <x-layouts.merchant
@@ -23,14 +23,14 @@
 
         {{-- Date Range Validation Alert --}}
         @if ($errors->has('date_range'))
-            <div class="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-medium text-rose-800 shadow-xs" role="alert">
+            <div class="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-medium text-rose-800 shadow-card" role="alert">
                 <svg class="w-5 h-5 shrink-0 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                 <span>{{ $errors->first('date_range') }}</span>
             </div>
         @endif
 
         {{-- Filter & Period Selector Bar (M9-01, M9-10) --}}
-        <div class="rounded-xl border border-neutral-200 bg-white p-3 shadow-xs sm:p-5">
+        <div class="rounded-xl border border-neutral-200 bg-white p-3 shadow-card sm:p-5">
             <form method="GET" action="{{ route('merchant.reports') }}" class="space-y-4">
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                     {{-- Quick Period Pills --}}
@@ -43,7 +43,7 @@
                                     name="period"
                                     value="{{ $periodValue }}"
                                     @if ($report['period'] === $periodValue) aria-current="true" @endif
-                                    class="inline-flex min-h-10 items-center justify-center rounded-lg px-2 text-xs font-semibold transition sm:px-3.5 {{ $report['period'] === $periodValue ? 'bg-white text-neutral-900 shadow-xs' : 'text-neutral-600 hover:text-neutral-900' }}"
+                                    class="inline-flex min-h-10 items-center justify-center rounded-lg px-2 text-xs font-semibold transition sm:px-3.5 {{ $report['period'] === $periodValue ? 'bg-white text-neutral-900 shadow-card' : 'text-neutral-600 hover:text-neutral-900' }}"
                                 >
                                     {{ $periodText }}@if ($periodValue !== 'today')<span class="hidden sm:inline">&nbsp;Terakhir</span>@endif
                                 </button>
@@ -52,7 +52,7 @@
                                 type="button"
                                 @click="showCustom = ! showCustom"
                                 :aria-expanded="showCustom.toString()"
-                                class="inline-flex min-h-10 items-center justify-center rounded-lg px-2 text-xs font-semibold transition sm:px-3.5 {{ $isCustomPeriod ? 'bg-brand-700 text-white shadow-xs' : 'text-neutral-600 hover:text-neutral-900' }}"
+                                class="inline-flex min-h-10 items-center justify-center rounded-lg px-2 text-xs font-semibold transition sm:px-3.5 {{ $isCustomPeriod ? 'bg-brand-700 text-white shadow-card' : 'text-neutral-600 hover:text-neutral-900' }}"
                             >
                                 Kustom
                             </button>
@@ -61,7 +61,7 @@
 
                     {{-- Active Scope Metadata & Export Buttons (M9-10, M11: P1-06 & P1-07) --}}
                     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between lg:justify-end">
-                        <div class="flex flex-wrap items-center gap-2 text-caption text-neutral-500">
+                        <div class="flex flex-wrap items-center gap-2 text-caption text-neutral-600">
                             <span class="inline-flex items-center gap-1 rounded-lg border border-neutral-200 bg-neutral-50 px-2.5 py-1">
                                 <svg class="w-3.5 h-3.5 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                                 <strong class="text-neutral-800 tabular-nums">{{ $report['periodLabel'] }}</strong>
@@ -76,7 +76,7 @@
                         <div class="grid grid-cols-2 gap-2 sm:flex">
                             <a
                                 href="{{ route('merchant.reports.export.csv', request()->query()) }}"
-                                class="inline-flex h-11 items-center justify-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3 text-xs font-semibold text-neutral-700 shadow-xs transition hover:bg-neutral-50 focus:outline-hidden focus:ring-2 focus:ring-brand-500"
+                                class="inline-flex h-11 items-center justify-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3 text-xs font-semibold text-neutral-700 shadow-card transition hover:bg-neutral-50 focus:outline-hidden focus:ring-2 focus:ring-brand-500"
                                 title="Unduh laporan antrean format spreadsheet CSV"
                             >
                                 <svg class="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
@@ -84,7 +84,7 @@
                             </a>
                             <a
                                 href="{{ route('merchant.reports.export.pdf', request()->query()) }}"
-                                class="inline-flex h-11 items-center justify-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50/60 px-3 text-xs font-semibold text-rose-800 shadow-xs transition hover:bg-rose-50 focus:outline-hidden focus:ring-2 focus:ring-rose-500"
+                                class="inline-flex h-11 items-center justify-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50/60 px-3 text-xs font-semibold text-rose-800 shadow-card transition hover:bg-rose-50 focus:outline-hidden focus:ring-2 focus:ring-rose-500"
                                 title="Unduh laporan performa antrean format dokumen PDF"
                                 target="_blank"
                                 rel="noopener"
@@ -115,7 +115,7 @@
                     </div>
 
                     <div class="col-span-2 grid grid-cols-2 gap-2 sm:flex">
-                        <button type="submit" class="inline-flex h-11 items-center justify-center rounded-lg bg-neutral-900 px-4 text-xs font-bold text-white shadow-xs transition hover:bg-neutral-800">
+                        <button type="submit" class="inline-flex h-11 items-center justify-center rounded-lg bg-neutral-900 px-4 text-xs font-bold text-white shadow-card transition hover:bg-neutral-800">
                             Terapkan Rentang
                         </button>
                         <a href="{{ route('merchant.reports') }}" class="inline-flex h-11 items-center justify-center rounded-lg border border-neutral-300 px-3 text-xs font-medium text-neutral-600 transition hover:bg-neutral-50">
@@ -126,106 +126,30 @@
             </form>
         </div>
 
-        {{-- Key Metrics Cards Strip (M9-02, M9-03, M9-04, M9-05, M9-11) --}}
+        {{-- Key metrics: calm tiles, one emphasis (completed customers) --}}
+        @php
+            $reportKpis = [
+                ['label' => 'Total tiket', 'value' => number_format($report['totalTickets']), 'hint' => 'Dibuat pada periode ini', 'tone' => 'neutral', 'icon' => 'ticket', 'emphasis' => false],
+                ['label' => 'Selesai dilayani', 'value' => number_format($report['completedCount']), 'hint' => $report['totalTickets'] > 0 ? round($report['completedCount'] / $report['totalTickets'] * 100).'% dari total tiket' : 'Belum ada tiket', 'tone' => 'success', 'icon' => 'check', 'emphasis' => true],
+                ['label' => 'Dilewati', 'value' => number_format($report['skippedCount']), 'hint' => 'Tidak hadir saat dipanggil', 'tone' => 'warning', 'icon' => 'alert', 'emphasis' => false],
+                ['label' => 'Dibatalkan', 'value' => number_format($report['cancelledCount']), 'hint' => 'Oleh pelanggan atau loket', 'tone' => 'muted', 'icon' => 'pause', 'emphasis' => false],
+                ['label' => 'Rata-rata menunggu', 'value' => $report['avgWaitingMinutes'] !== null ? $report['avgWaitingMinutes'].' mnt' : 'Belum ada data', 'hint' => $report['avgWaitingMinutes'] !== null ? 'Dari '.$report['waitingSamples'].' tiket, dibuat sampai mulai dilayani' : 'Belum ada tiket dilayani', 'tone' => 'brand', 'icon' => 'clock', 'emphasis' => false],
+                ['label' => 'Rata-rata pelayanan', 'value' => $report['avgServiceMinutes'] !== null ? $report['avgServiceMinutes'].' mnt' : 'Belum ada data', 'hint' => $report['avgServiceMinutes'] !== null ? 'Dari '.$report['serviceSamples'].' tiket selesai' : 'Belum ada tiket selesai', 'tone' => 'brand', 'icon' => 'activity', 'emphasis' => false],
+            ];
+        @endphp
         <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
-            {{-- Total Tickets (M9-02) --}}
-            <div class="bg-white rounded-xl border border-neutral-200 min-w-0 p-3.5 shadow-xs sm:p-4">
-                <span class="text-caption font-semibold text-neutral-500 block truncate" title="Total seluruh tiket yang dibuat dalam periode terpilih">
-                    Total Tiket Dibuat
-                </span>
-                <span class="text-2xl font-extrabold text-neutral-950 tabular-nums block mt-1">
-                    {{ number_format($report['totalTickets']) }}
-                </span>
-                <span class="text-[11px] text-neutral-400 mt-0.5 block truncate">
-                    Semua kanal & status
-                </span>
-            </div>
-
-            {{-- Completed (M9-03) --}}
-            <div class="bg-emerald-50/40 rounded-xl border border-emerald-200 min-w-0 p-3.5 shadow-xs sm:p-4">
-                <span class="text-caption font-semibold text-emerald-800 block truncate">Selesai Dilayani</span>
-                <span class="text-2xl font-extrabold text-emerald-950 tabular-nums block mt-1">
-                    {{ number_format($report['completedCount']) }}
-                </span>
-                <span class="text-[11px] text-emerald-700 mt-0.5 block truncate">
-                    Pelayanan tuntas
-                </span>
-            </div>
-
-            {{-- Skipped (M9-03) --}}
-            <div class="bg-orange-50/40 rounded-xl border border-orange-200 min-w-0 p-3.5 shadow-xs sm:p-4">
-                <span class="text-caption font-semibold text-orange-800 block truncate">Dilewati</span>
-                <span class="text-2xl font-extrabold text-orange-950 tabular-nums block mt-1">
-                    {{ number_format($report['skippedCount']) }}
-                </span>
-                <span class="text-[11px] text-orange-700 mt-0.5 block truncate">
-                    Pelanggan tidak hadir
-                </span>
-            </div>
-
-            {{-- Cancelled (M9-03) --}}
-            <div class="bg-neutral-100/60 rounded-xl border border-neutral-300 min-w-0 p-3.5 shadow-xs sm:p-4">
-                <span class="text-caption font-semibold text-neutral-600 block truncate">Dibatalkan</span>
-                <span class="text-2xl font-extrabold text-neutral-800 tabular-nums block mt-1">
-                    {{ number_format($report['cancelledCount']) }}
-                </span>
-                <span class="text-[11px] text-neutral-500 mt-0.5 block truncate">
-                    Batal oleh pihak terkait
-                </span>
-            </div>
-
-            {{-- Average Waiting Time (M9-04, M9-11) --}}
-            <div class="bg-blue-50/40 rounded-xl border border-blue-200 min-w-0 p-3.5 shadow-xs sm:p-4">
-                <span class="text-caption font-semibold text-blue-800 block truncate" title="Dihitung dari tiket dibuat hingga mulai dilayani">
-                    Rata-rata Menunggu
-                </span>
-                @if ($report['avgWaitingMinutes'] !== null)
-                    <span class="text-2xl font-extrabold text-blue-950 tabular-nums block mt-1">
-                        {{ $report['avgWaitingMinutes'] }} <span class="text-sm font-bold text-blue-700">mnt</span>
-                    </span>
-                    <span class="text-[11px] text-blue-700 mt-0.5 block truncate">
-                        Dari {{ $report['waitingSamples'] }} sampel tiket
-                    </span>
-                @else
-                    <span class="text-sm font-bold text-neutral-500 block mt-2">
-                        Belum cukup data
-                    </span>
-                    <span class="text-[11px] text-neutral-400 mt-0.5 block truncate">
-                        Belum ada tiket dilayani
-                    </span>
-                @endif
-            </div>
-
-            {{-- Average Service Duration (M9-05, M9-11) --}}
-            <div class="bg-indigo-50/40 rounded-xl border border-indigo-200 min-w-0 p-3.5 shadow-xs sm:p-4">
-                <span class="text-caption font-semibold text-indigo-800 block truncate" title="Dihitung dari mulai dilayani hingga selesai pada tiket selesai">
-                    Rata-rata Pelayanan
-                </span>
-                @if ($report['avgServiceMinutes'] !== null)
-                    <span class="text-2xl font-extrabold text-indigo-950 tabular-nums block mt-1">
-                        {{ $report['avgServiceMinutes'] }} <span class="text-sm font-bold text-indigo-700">mnt</span>
-                    </span>
-                    <span class="text-[11px] text-indigo-700 mt-0.5 block truncate">
-                        Dari {{ $report['serviceSamples'] }} tiket selesai
-                    </span>
-                @else
-                    <span class="text-sm font-bold text-neutral-500 block mt-2">
-                        Belum cukup data
-                    </span>
-                    <span class="text-[11px] text-neutral-400 mt-0.5 block truncate">
-                        Belum ada tiket selesai
-                    </span>
-                @endif
-            </div>
+            @foreach ($reportKpis as $kpi)
+                <x-stat-tile :label="$kpi['label']" :value="$kpi['value']" :hint="$kpi['hint']" :tone="$kpi['tone']" :icon="$kpi['icon']" :emphasis="$kpi['emphasis']" />
+            @endforeach
         </div>
 
         {{-- Gross Revenue Summary Card (Completed Tickets × Configured Service Price) --}}
-        <div class="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 shadow-xs sm:p-5">
+        <div class="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 shadow-card sm:p-5">
             <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div class="min-w-0">
                     <div class="flex flex-wrap items-center gap-2">
                         <span class="text-xs font-bold uppercase tracking-wider text-emerald-800">Estimasi Pemasukan Kotor</span>
-                        <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">Tiket Selesai &times; Harga Layanan</span>
+                        <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-800">Tiket Selesai &times; Harga Layanan</span>
                     </div>
                     <p class="mt-1.5 text-2xl font-extrabold text-emerald-950 tabular-nums sm:text-3xl">
                         Rp {{ number_format($report['grossRevenue'], 0, ',', '.') }}
@@ -233,7 +157,7 @@
                     <p class="mt-1 text-xs text-emerald-800/90">
                         Dihitung dari <strong class="tabular-nums">{{ number_format($report['completedCount']) }}</strong> tiket selesai dikalikan harga produk/jasa yang ditentukan UMKM.
                         @if ($report['completedCount'] > 0)
-                            <span class="hidden sm:inline">&bull; Rata-rata <strong class="tabular-nums">Rp {{ number_format(round($report['grossRevenue'] / $report['completedCount']), 0, ',', '.') }}</strong> / tiket selesai.</span>
+                            <span class="hidden sm:inline"> Rata-rata <strong class="tabular-nums">Rp {{ number_format(round($report['grossRevenue'] / $report['completedCount']), 0, ',', '.') }}</strong> / tiket selesai.</span>
                         @endif
                     </p>
                 </div>
@@ -241,7 +165,7 @@
                 <div class="shrink-0">
                     <a
                         href="{{ route('merchant.services.index') }}"
-                        class="inline-flex h-10 items-center justify-center rounded-lg border border-emerald-300 bg-white px-3.5 text-xs font-bold text-emerald-800 shadow-xs transition hover:bg-emerald-50"
+                        class="inline-flex h-10 items-center justify-center rounded-lg border border-emerald-300 bg-white px-3.5 text-xs font-bold text-emerald-800 shadow-card transition hover:bg-emerald-50"
                     >
                         Atur Harga Layanan &rarr;
                     </a>
@@ -250,7 +174,7 @@
         </div>
 
         {{-- Peak-Hour Insight Strip (M9-09 & OQ-15) --}}
-        <div class="rounded-xl p-4 border shadow-xs {{ $report['peakHour']['threshold_met'] ? 'bg-amber-50/70 border-amber-200 text-amber-900' : 'bg-neutral-50 border-neutral-200 text-neutral-700' }}">
+        <div class="rounded-xl p-4 border shadow-card {{ $report['peakHour']['threshold_met'] ? 'bg-amber-50/70 border-amber-200 text-amber-900' : 'bg-neutral-50 border-neutral-200 text-neutral-700' }}">
             <div class="flex items-start gap-3">
                 <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 {{ $report['peakHour']['threshold_met'] ? 'bg-amber-100 text-amber-700' : 'bg-neutral-200 text-neutral-500' }}">
                     <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -258,9 +182,9 @@
                 <div class="min-w-0 flex-1">
                     @if ($report['peakHour']['threshold_met'])
                         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
-                            <h4 class="font-bold text-sm text-amber-950">
+                            <h3 class="font-bold text-sm text-amber-950">
                                 Jam Ramai Teridentifikasi: {{ $report['peakHour']['peak_range'] }}
-                            </h4>
+                            </h3>
                             <span class="inline-flex w-fit items-center px-2 py-0.5 rounded text-xs font-bold bg-amber-200/80 text-amber-900 tabular-nums">
                                 {{ number_format($report['peakHour']['max_count']) }} Tiket dalam 1 Jam
                             </span>
@@ -270,10 +194,10 @@
                         </p>
                     @else
                         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                            <h4 class="font-bold text-sm text-neutral-800">
-                                Analisis Jam Ramai (Peak Hour)
-                            </h4>
-                            <span class="text-caption text-neutral-500 font-medium">
+                            <h3 class="font-bold text-sm text-neutral-800">
+                                Analisis Jam Ramai 
+                            </h3>
+                            <span class="text-caption text-neutral-600 font-medium">
                                 Ambang Minimum: {{ $report['peakHour']['threshold'] }} Tiket/Jam (OQ-15)
                             </span>
                         </div>
@@ -292,11 +216,11 @@
         {{-- Visual Analytics Grid (M9-06, M9-07, M9-11) --}}
         <div class="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:gap-6">
             {{-- Line Chart: Daily Queue Volume Trend (M9-06) --}}
-            <div class="min-w-0 lg:col-span-2 bg-white rounded-xl border border-neutral-200 p-4 shadow-xs sm:p-5">
+            <div class="min-w-0 lg:col-span-2 bg-white rounded-xl border border-neutral-200 p-4 shadow-card sm:p-5">
                 <div class="flex items-center justify-between mb-4">
                     <div>
-                        <h3 class="text-h3 font-bold text-neutral-900">Tren Volume Antrean Harian</h3>
-                        <p class="text-caption text-neutral-500 mt-0.5">Jumlah tiket yang diterbitkan setiap hari pada periode terpilih.</p>
+                        <h2 class="text-h3 font-bold text-neutral-900">Tren Volume Antrean Harian</h2>
+                        <p class="text-caption text-neutral-600 mt-0.5">Jumlah tiket yang diterbitkan setiap hari pada periode terpilih.</p>
                     </div>
                 </div>
 
@@ -308,16 +232,16 @@
                     <div class="h-64 flex flex-col items-center justify-center text-center p-6 bg-neutral-50/50 rounded-xl border border-neutral-100">
                         <svg class="w-10 h-10 text-neutral-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
                         <p class="font-semibold text-neutral-700 text-sm">Belum Ada Data Antrean</p>
-                        <p class="text-caption text-neutral-400 mt-0.5 max-w-xs">Tidak ada tiket antrean yang dibuat pada periode ini. Coba pilih periode tanggal lain.</p>
+                        <p class="text-caption text-neutral-600 mt-0.5 max-w-xs">Tidak ada tiket antrean yang dibuat pada periode ini. Coba pilih periode tanggal lain.</p>
                     </div>
                 @endif
             </div>
 
             {{-- Donut Chart: Status Distribution (M9-07) --}}
-            <div class="min-w-0 bg-white rounded-xl border border-neutral-200 p-4 shadow-xs sm:p-5">
+            <div class="min-w-0 bg-white rounded-xl border border-neutral-200 p-4 shadow-card sm:p-5">
                 <div class="mb-4">
-                    <h3 class="text-h3 font-bold text-neutral-900">Distribusi Status Antrean</h3>
-                    <p class="text-caption text-neutral-500 mt-0.5">Komposisi penyelesaian tiket pada periode.</p>
+                    <h2 class="text-h3 font-bold text-neutral-900">Distribusi Status Antrean</h2>
+                    <p class="text-caption text-neutral-600 mt-0.5">Komposisi penyelesaian tiket pada periode.</p>
                 </div>
 
                 @if ($report['hasData'])
@@ -328,18 +252,18 @@
                     <div class="h-64 flex flex-col items-center justify-center text-center p-6 bg-neutral-50/50 rounded-xl border border-neutral-100">
                         <svg class="w-10 h-10 text-neutral-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/></svg>
                         <p class="font-semibold text-neutral-700 text-sm">Tidak Ada Tiket</p>
-                        <p class="text-caption text-neutral-400 mt-0.5">Grafik distribusi akan muncul setelah terdapat tiket diterbitkan.</p>
+                        <p class="text-caption text-neutral-600 mt-0.5">Grafik distribusi akan muncul setelah terdapat tiket diterbitkan.</p>
                     </div>
                 @endif
             </div>
         </div>
 
         {{-- Per-Service Breakdown Table (M9-08) --}}
-        <div class="bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-xs">
+        <div class="bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-card">
             <div class="p-4 sm:p-5 border-b border-neutral-200 flex flex-wrap items-center justify-between gap-2">
                 <div>
-                    <h3 class="text-h3 font-bold text-neutral-900">Performa Antrean Berdasarkan Layanan</h3>
-                    <p class="text-caption text-neutral-500 mt-0.5">Rincian volume, harga layanan, estimasi pemasukan kotor, dan efisiensi waktu pelayanan untuk setiap jenis layanan gerai.</p>
+                    <h2 class="text-h3 font-bold text-neutral-900">Performa Antrean Berdasarkan Layanan</h2>
+                    <p class="text-caption text-neutral-600 mt-0.5">Rincian volume, harga layanan, estimasi pemasukan kotor, dan efisiensi waktu pelayanan untuk setiap jenis layanan gerai.</p>
                 </div>
                 <a href="{{ route('merchant.services.index') }}" class="text-xs font-semibold text-brand-700 hover:underline whitespace-nowrap">
                     Kelola Harga Layanan &rarr;
@@ -385,7 +309,7 @@
                                     @if ($svc['unit_price'] > 0)
                                         Rp {{ number_format($svc['unit_price'], 0, ',', '.') }}
                                     @else
-                                        <span class="text-xs text-neutral-400 font-normal">Rp 0 (Gratis)</span>
+                                        <span class="text-xs text-neutral-500 font-normal">Rp 0 (Gratis)</span>
                                     @endif
                                 </td>
 
@@ -413,13 +337,13 @@
                                     @if ($svc['avg_service_minutes'] !== null)
                                         {{ $svc['avg_service_minutes'] }} <span class="text-xs font-normal text-neutral-500">mnt</span>
                                     @else
-                                        <span class="text-xs text-neutral-400 font-normal">Belum cukup data</span>
+                                        <span class="text-xs text-neutral-500 font-normal">Belum cukup data</span>
                                     @endif
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9" class="py-8 text-center text-caption text-neutral-400">
+                                <td colspan="9" class="py-8 text-center text-caption text-neutral-600">
                                     Belum ada layanan terdaftar pada unit usaha ini.
                                 </td>
                             </tr>
@@ -451,19 +375,19 @@
                     <div class="p-4 space-y-2.5">
                         <div class="flex items-start justify-between gap-2">
                             <div class="min-w-0">
-                                <h4 class="font-bold text-neutral-900 text-sm">{{ $svc['service_name'] }}</h4>
-                                <span class="text-caption text-neutral-500">
+                                <h3 class="font-bold text-neutral-900 text-sm">{{ $svc['service_name'] }}</h3>
+                                <span class="text-caption text-neutral-600">
                                     Harga: <strong class="text-neutral-800 tabular-nums">Rp {{ number_format($svc['unit_price'], 0, ',', '.') }}</strong>
-                                    &bull; Rata-rata: <strong>{{ $svc['avg_service_minutes'] !== null ? $svc['avg_service_minutes'] . ' mnt' : 'Belum cukup data' }}</strong>
+                                     Rata-rata: <strong>{{ $svc['avg_service_minutes'] !== null ? $svc['avg_service_minutes'] . ' mnt' : 'Belum cukup data' }}</strong>
                                 </span>
                             </div>
 
                             @if ($svc['is_active'])
-                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
                                     Aktif
                                 </span>
                             @else
-                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-neutral-100 text-neutral-600 border border-neutral-200">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-neutral-100 text-neutral-600 border border-neutral-200">
                                     Nonaktif
                                 </span>
                             @endif
@@ -471,19 +395,19 @@
 
                         <div class="grid grid-cols-4 gap-2 text-center text-xs tabular-nums bg-neutral-50/75 p-2 rounded-lg border border-neutral-200/60">
                             <div>
-                                <span class="text-neutral-400 block text-[10px]">Total</span>
+                                <span class="text-neutral-500 block text-xs">Total</span>
                                 <span class="font-bold text-neutral-900">{{ $svc['total_tickets'] }}</span>
                             </div>
                             <div>
-                                <span class="text-emerald-600 block text-[10px]">Selesai</span>
+                                <span class="text-emerald-600 block text-xs">Selesai</span>
                                 <span class="font-bold text-emerald-800">{{ $svc['completed_tickets'] }}</span>
                             </div>
                             <div>
-                                <span class="text-orange-600 block text-[10px]">Lewati</span>
+                                <span class="text-orange-600 block text-xs">Lewati</span>
                                 <span class="font-bold text-orange-800">{{ $svc['skipped_tickets'] }}</span>
                             </div>
                             <div>
-                                <span class="text-neutral-400 block text-[10px]">Batal</span>
+                                <span class="text-neutral-500 block text-xs">Batal</span>
                                 <span class="font-bold text-neutral-700">{{ $svc['cancelled_tickets'] }}</span>
                             </div>
                         </div>
@@ -494,7 +418,7 @@
                         </div>
                     </div>
                 @empty
-                    <div class="py-8 text-center text-caption text-neutral-400">
+                    <div class="py-8 text-center text-caption text-neutral-600">
                         Belum ada layanan terdaftar.
                     </div>
                 @endforelse

@@ -4,8 +4,8 @@
     'icon' => null,
 ])
 
-<div {{ $attributes->merge(['class' => 'flex flex-col items-center justify-center p-8 text-center bg-white rounded-xl border border-dashed border-neutral-300']) }}>
-    <div class="w-12 h-12 rounded-full bg-neutral-100 text-neutral-400 flex items-center justify-center mb-3">
+<div {{ $attributes->merge(['class' => 'flex flex-col items-center justify-center px-6 py-10 text-center bg-neutral-50/60 rounded-xl border border-dashed border-neutral-300']) }}>
+    <div class="size-12 rounded-full bg-white text-neutral-500 shadow-card ring-1 ring-neutral-200 flex items-center justify-center mb-3" aria-hidden="true">
         @if ($icon)
             {{ $icon }}
         @else
@@ -18,7 +18,7 @@
     <h3 class="text-h3 text-neutral-900 font-semibold">{{ $title }}</h3>
 
     @if ($description)
-        <p class="mt-1 text-body text-neutral-500 max-w-sm">{{ $description }}</p>
+        <p class="mt-1 text-body text-neutral-600 max-w-sm text-pretty">{{ $description }}</p>
     @endif
 
     @if ($slot->isNotEmpty())

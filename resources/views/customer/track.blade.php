@@ -1,14 +1,11 @@
 {{-- Figma: Konsumen, Antrean Berhasil (1:1315) & Detail Tiket (1:1438) --}}
 @php
     $isFreshTicket = (bool) session('ticket_created');
-    $statusPills = [
-        'menunggu' => ['Menunggu', 'bg-amber-300 text-slate-900'],
-        'dipanggil' => ['Sedang Dipanggil', 'bg-white text-brand-700'],
-        'sedang_dilayani' => ['Sedang Dilayani', 'bg-emerald-200 text-emerald-950'],
-        'selesai' => ['Selesai', 'bg-emerald-200 text-emerald-950'],
-        'dilewati' => ['Dilewati', 'bg-gray-200 text-gray-800'],
-        'tidak_hadir' => ['Tidak Hadir', 'bg-rose-200 text-rose-950'],
-        'dibatalkan' => ['Dibatalkan', 'bg-red-200 text-red-900'],
+    $ticketStatuses = array_keys(\App\Models\QueueTicket::statusPresentation());
+    $nextStepMessages = [
+        'menunggu' => 'Tetap di sekitar kedai. Halaman ini diperbarui otomatis saat giliran Anda mendekat.',
+        'dipanggil' => 'Segera menuju loket. Nomor Anda menunggu maksimal 15 menit.',
+        'sedang_dilayani' => 'Anda sedang dilayani. Terima kasih sudah menunggu.',
     ];
     $journey = [
         ['key' => 'terdaftar', 'label' => 'Terdaftar', 'done' => 'true', 'current' => 'false'],
@@ -24,6 +21,13 @@
     ['label' => $hoursLabel] = $business->customerHoursBadge();
     $bookingSlotWindow = $ticket->bookingSlotWindowLabel();
     $scheduleEstimate = $scheduleEstimate ?? [];
+    $ticketFacts = array_values(array_filter([
+        $bookingSlotWindow ? ['icon' => 'clock', 'label' => 'Slot jam booking', 'value' => $bookingSlotWindow, 'model' => 'bookingSlot'] : null,
+        ['icon' => 'shopping-bag', 'label' => 'Cara pemesanan', 'value' => $ticket->source === \App\Models\QueueTicket::SOURCE_ONLINE ? 'Dari ponsel' : 'Datang langsung'],
+        $maskedPhone ? ['icon' => 'phone', 'label' => 'WhatsApp', 'value' => $maskedPhone, 'model' => 'customerPhone'] : null,
+        $ticket->service->duration_minutes ? ['icon' => 'clock', 'label' => 'Estimasi Durasi', 'value' => '±'.$ticket->service->duration_minutes.' menit'] : null,
+        $ticket->service->price ? ['icon' => 'file-text', 'label' => 'Harga layanan', 'value' => 'Rp '.number_format($ticket->service->price, 0, ',', '.')] : null,
+    ]));
 @endphp
 
 <x-layouts.customer :title="'Tiket '.$ticket->ticket_number.' — '.$business->name" :business="$business" activeNav="antrean">
@@ -82,15 +86,15 @@
                         </div>
 
                         {{-- Two-Tone Pass Summary --}}
-                        <div class="overflow-hidden rounded-2xl border border-brand-200 bg-white shadow-md">
-                            <div class="flex items-center justify-between gap-3 bg-linear-to-r from-brand-800 to-brand-600 px-4 py-3 text-white">
-                                <p class="truncate text-sm font-bold leading-5 text-white">{{ $business->name }}</p>
-                                <span class="shrink-0 rounded-full bg-amber-300 px-2.5 py-1 text-[11px] font-extrabold text-slate-900">Menunggu</span>
+                        <div class="overflow-hidden rounded-2xl border border-brand-200 bg-white shadow-raised">
+                            <div class="flex items-center justify-between gap-3 border-b border-brand-100 bg-brand-50/70 px-4 py-3">
+                                <p class="truncate text-sm font-bold leading-5 text-gray-900">{{ $business->name }}</p>
+                                <x-status-badge :status="$ticket" size="sm" class="shrink-0" />
                             </div>
                             <div class="p-4">
                                 <div class="flex items-center justify-between gap-3">
                                     <div>
-                                        <p class="text-[10px] font-bold tracking-wider text-gray-500 uppercase">Nomor Anda</p>
+                                        <p class="text-xs font-medium text-gray-600">Nomor Anda</p>
                                         <p class="text-4xl font-extrabold leading-none text-brand-700 tabular-nums" x-text="ticketNumber">{{ $ticket->ticket_number }}</p>
                                     </div>
                                     <div class="text-right">
@@ -113,24 +117,25 @@
                         </div>
 
                         {{-- QR Code Tiket (menggantikan tombol link tiket) --}}
-                        <div class="flex flex-col items-center gap-3 rounded-2xl border border-gray-200 bg-white p-4 text-center shadow-xs">
-                            <p class="text-sm font-extrabold text-gray-900">QR Code Tiket</p>
-                            <div class="rounded-xl border border-gray-200 bg-white p-2.5 shadow-xs" data-qr-ticket>
+                        <div class="flex flex-col items-center gap-3 rounded-2xl border border-gray-200 bg-white p-4 text-center shadow-card">
+                            <p class="text-sm font-bold text-gray-900">QR Code Tiket</p>
+                            <div class="rounded-xl border border-gray-200 bg-white p-2.5" data-qr-ticket>
                                 {!! $qrSvg !!}
                             </div>
                             <p class="text-xs leading-4 text-gray-600">Simpan atau pindai QR Code ini untuk membuka kembali status tiket <span class="font-bold text-gray-900">{{ $ticket->ticket_number }}</span>.</p>
-                            <button type="button" @click="downloadQr($el)" class="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-brand-200 bg-brand-50 px-4 text-xs font-bold text-brand-700 transition hover:bg-brand-100">
+                            <x-button variant="outline" @click="downloadQr($el)">
+                                <x-customer.icon name="qr-code" class="size-4" />
                                 Unduh QR Tiket
-                            </button>
+                            </x-button>
                         </div>
 
                         <div class="flex flex-col gap-2.5">
-                            <button type="button" @click="showSuccess = false; window.scrollTo({ top: 0 })" class="flex h-12 w-full items-center justify-center rounded-xl bg-brand-700 text-sm font-bold text-white shadow-sm transition hover:bg-blue-900 active:scale-[0.99]">
+                            <x-button size="lg" @click="showSuccess = false; window.scrollTo({ top: 0 })" class="w-full">
                                 Lihat Tiket Saya
-                            </button>
-                            <a href="{{ route('customer.dashboard') }}" class="flex h-12 w-full items-center justify-center rounded-xl border border-gray-300 bg-white text-sm font-bold text-gray-800 transition hover:bg-gray-50 active:scale-[0.99]">
+                            </x-button>
+                            <x-button variant="outline" size="lg" :href="route('customer.dashboard')" class="w-full">
                                 Kembali ke Beranda
-                            </a>
+                            </x-button>
                         </div>
                     </div>
                 </div>
@@ -139,173 +144,161 @@
             {{-- Detail Tiket (Screen 4 & 1D) --}}
             <div x-show="!showSuccess" @if ($isFreshTicket) x-cloak @endif x-transition.opacity.duration.200ms>
                 {{-- Header --}}
-                <div class="border-b border-gray-200 bg-white px-5 pt-6 pb-4 md:border-0 md:bg-transparent md:px-0 md:pt-2 md:pb-6">
+                <div class="border-b border-gray-200 bg-white px-5 pt-5 pb-4 md:border-0 md:bg-transparent md:px-0 md:pt-2 md:pb-6">
                     <div class="flex items-center gap-3">
-                        <a href="{{ route('customer.my-tickets') }}" class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-800 transition hover:bg-gray-200" aria-label="Kembali ke Antrean Saya">
-                            <x-customer.icon name="arrow-left" class="size-4.5" />
+                        <a href="{{ route('customer.my-tickets') }}" class="flex size-11 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-800 shadow-card transition hover:bg-gray-50" aria-label="Kembali ke Antrean Saya">
+                            <x-customer.icon name="arrow-left" class="size-5" />
                         </a>
                         <div class="min-w-0 flex-1">
-                            <h1 class="text-xl font-extrabold leading-7 text-gray-900 md:text-3xl md:leading-10">Detail Tiket</h1>
-                            <p class="truncate text-xs leading-4 text-gray-600 md:text-sm md:leading-5">{{ $business->name }} ({{ $hoursLabel }})</p>
+                            <h1 class="text-xl font-bold leading-7 text-gray-900 md:text-3xl md:leading-10">Detail Tiket</h1>
+                            <p class="truncate text-sm leading-5 text-gray-600">{{ $business->name }}</p>
                         </div>
                         <span
-                            class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 ring-inset"
-                            :class="isPollingActive ? 'bg-green-50 text-green-800 ring-green-600/20' : 'bg-gray-100 text-gray-600 ring-gray-500/15'"
+                            class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold"
+                            :class="isPollingActive ? 'bg-emerald-50 text-emerald-800' : 'bg-gray-100 text-gray-700'"
+                            role="status"
                         >
-                            <x-customer.icon name="refresh" class="size-3.5" />
-                            <span x-text="isPollingActive ? 'Diperbarui otomatis' : 'Pembaruan selesai'">Diperbarui otomatis</span>
+                            <span class="relative flex size-2" aria-hidden="true">
+                                <span x-show="isPollingActive" class="absolute inline-flex size-full animate-ping rounded-full bg-emerald-500 opacity-60 motion-reduce:hidden"></span>
+                                <span class="relative inline-flex size-2 rounded-full" :class="isPollingActive ? 'bg-emerald-600' : 'bg-gray-400'"></span>
+                            </span>
+                            <span x-text="isPollingActive ? 'Terhubung' : 'Selesai dipantau'">Terhubung</span>
                         </span>
                     </div>
                 </div>
 
-                {{-- Urgent Dipanggil Hero Banner (Screen 1D) --}}
-                <div x-show="status === 'dipanggil'" @if ($ticket->status !== 'dipanggil') x-cloak @endif class="mx-5 mt-4 overflow-hidden rounded-2xl bg-linear-to-br from-brand-800 via-brand-700 to-brand-600 p-4 text-white shadow-lg md:mx-0 md:p-5" role="alert">
-                    <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-300 px-3 py-1 text-[11px] font-extrabold tracking-wide text-slate-900 uppercase">
-                        <x-customer.icon name="volume" class="size-3.5" />
-                        GILIRAN ANDA DIPANGGIL
-                    </span>
-                    <p class="mt-2.5 text-lg font-extrabold leading-6 text-white">NOMOR ANDA SEDANG DIPANGGIL!</p>
-                    <p class="mt-0.5 text-xs leading-4 text-brand-100">Silakan segera menuju <span class="font-bold text-white" x-text="counterName || 'meja pelayanan'"></span> di {{ $business->name }} maksimal dalam 15 menit.</p>
+                {{-- Panggilan: banner paling menonjol saat nomor dipanggil (Screen 1D) --}}
+                <div x-show="status === 'dipanggil'" @if ($ticket->status !== 'dipanggil') x-cloak @endif class="mx-5 mt-4 rounded-2xl bg-brand-700 p-4 text-white shadow-raised md:mx-0 md:p-5" role="alert">
+                    <p class="flex items-center gap-2 text-lg font-bold leading-6 text-white">
+                        <x-customer.icon name="volume" class="size-5" />
+                        Nomor Anda sedang dipanggil
+                    </p>
+                    <p class="mt-1 text-sm leading-5 text-brand-100">Segera menuju <span class="font-bold text-white" x-text="counterName || 'meja pelayanan'">{{ $ticket->counter?->name ?? 'meja pelayanan' }}</span> di {{ $business->name }} dalam 15 menit.</p>
 
-                    <div class="mt-3.5 flex items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 text-gray-900 shadow-md">
+                    <div class="mt-3.5 flex items-center justify-between gap-3 rounded-xl bg-white px-4 py-3 text-gray-900">
                         <div>
-                            <p class="text-[10px] font-bold tracking-wider text-gray-500 uppercase">Nomor Anda</p>
-                            <p class="text-3xl font-black leading-none text-brand-700 tabular-nums" x-text="ticketNumber">{{ $ticket->ticket_number }}</p>
+                            <p class="text-xs font-medium text-gray-600">Nomor Anda</p>
+                            <p class="text-3xl font-extrabold leading-none text-brand-700 tabular-nums" x-text="ticketNumber">{{ $ticket->ticket_number }}</p>
                         </div>
-                        <div class="rounded-xl border border-brand-200 bg-brand-50 px-3.5 py-2 text-center text-brand-700">
-                            <p class="text-[10px] font-bold uppercase">Menuju ke</p>
-                            <p class="text-sm font-extrabold" x-text="counterName || 'Loket Pelayanan'">{{ $ticket->counter?->name ?? 'Loket Pelayanan' }}</p>
+                        <div class="text-right">
+                            <p class="text-xs font-medium text-gray-600">Menuju ke</p>
+                            <p class="text-base font-bold text-gray-900" x-text="counterName || 'Loket pelayanan'">{{ $ticket->counter?->name ?? 'Loket pelayanan' }}</p>
                         </div>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 gap-4 px-5 pt-4 pb-5 md:px-0 lg:grid-cols-2 lg:items-start lg:gap-8">
-                    {{-- Kolom kiri: Kartu Tiket Utama, Progress Bar, QR Tiket, Aksi Batal --}}
-                    <div class="flex min-w-0 flex-col gap-4">
+                <div class="grid grid-cols-1 gap-4 px-5 pt-4 pb-5 md:px-0 lg:grid-cols-12 lg:items-start lg:gap-8">
+                    {{-- Kolom utama: kartu tiket, status, ulasan, notifikasi --}}
+                    <div class="flex min-w-0 flex-col gap-4 lg:col-span-7">
                         @if (session('status') && ! $isFreshTicket)
-                            <div class="rounded-xl border border-green-200 bg-green-50 p-3.5 text-xs font-bold leading-4 text-success-700" role="status">{{ session('status') }}</div>
+                            <div class="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3.5 text-sm font-semibold leading-5 text-emerald-800" role="status">
+                                <x-customer.icon name="check-circle" class="size-4" />
+                                {{ session('status') }}
+                            </div>
                         @endif
 
                         @if ($errors->has('queue_error'))
-                            <div class="rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs font-bold leading-4 text-danger-700" role="alert">{{ $errors->first('queue_error') }}</div>
+                            <div class="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-3.5 text-sm font-semibold leading-5 text-danger-700" role="alert">
+                                <x-customer.icon name="alert-triangle" class="size-4" />
+                                {{ $errors->first('queue_error') }}
+                            </div>
                         @endif
 
-                        {{-- Kartu Tiket Two-Tone (Screen 4) — Strictly Private --}}
-                        <div class="overflow-hidden rounded-2xl border border-brand-200 bg-white shadow-md">
-                            <div class="flex items-center justify-between gap-3 bg-linear-to-r from-brand-800 to-brand-600 px-4 py-3 text-white">
+                        {{-- Kartu tiket utama: satu-satunya objek yang diangkat di layar ini --}}
+                        <section class="overflow-hidden rounded-2xl border border-brand-200 bg-white shadow-raised" aria-labelledby="ticket-card-title">
+                            <header class="flex items-start justify-between gap-3 border-b border-brand-100 bg-brand-50/70 px-4 py-3 md:px-5">
                                 <div class="min-w-0">
-                                    <p class="truncate text-sm font-extrabold leading-5 text-white" x-text="serviceName">{{ $ticket->service->name }}</p>
-                                    <p class="truncate text-[11px] text-brand-100">{{ $business->name }}</p>
+                                    <h2 id="ticket-card-title" class="text-sm font-bold leading-5 text-gray-900" x-text="serviceName">{{ $ticket->service->name }}</h2>
+                                    <p class="truncate text-xs leading-4 text-gray-600">{{ $business->name }} · {{ $hoursLabel }}</p>
                                 </div>
-                                @foreach ($statusPills as $key => [$label, $pillClass])
-                                    <span x-show="status === '{{ $key }}'" @if ($ticket->status !== $key) x-cloak @endif class="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-extrabold {{ $pillClass }}">{{ $label }}</span>
-                                @endforeach
-                            </div>
-
-                            <div class="p-4 md:p-5">
-                                <div class="grid grid-cols-[1fr_1px_1fr] items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 p-3.5">
-                                    <div>
-                                        <p class="text-[10px] font-bold tracking-wider text-gray-500 uppercase">Nomor Anda</p>
-                                        <p class="mt-0.5 text-3xl font-black leading-none text-brand-700 tabular-nums sm:text-4xl" x-text="ticketNumber">{{ $ticket->ticket_number }}</p>
-                                    </div>
-                                    <div class="h-10 bg-gray-300" aria-hidden="true"></div>
-                                    <div class="pl-1">
-                                        <p class="text-[10px] font-bold tracking-wider text-gray-500 uppercase">Estimasi Dilayani</p>
-                                        <p class="mt-0.5 text-xl font-extrabold leading-none text-gray-900 tabular-nums sm:text-2xl" x-text="estimatedServeTime ? 'Pukul ' + estimatedServeTime : 'Menyesuaikan'">{{ ! empty($scheduleEstimate['estimated_serve_time_label']) ? 'Pukul '.$scheduleEstimate['estimated_serve_time_label'] : 'Menyesuaikan' }}</p>
-                                        <p x-show="bookingSlot" @if (! $bookingSlotWindow) x-cloak @endif class="mt-1 text-[11px] font-bold text-brand-700 tabular-nums" x-text="'Slot ' + bookingSlot">{{ $bookingSlotWindow ? 'Slot '.$bookingSlotWindow : '' }}</p>
-                                    </div>
-                                </div>
-
-                                <div x-show="status === 'menunggu'" @if ($ticket->status !== 'menunggu') x-cloak @endif class="mt-3 flex items-center justify-between gap-2 text-xs">
-                                    <span class="font-bold text-gray-900" x-text="aheadCount > 0 ? aheadCount + ' orang di depan Anda (Urutan #' + queuePosition + ')' : 'Giliran Anda berikutnya'">{{ $aheadCount > 0 ? $aheadCount.' orang di depan Anda (Urutan #'.$position.')' : 'Giliran Anda berikutnya' }}</span>
-                                    <span class="font-extrabold text-brand-700 tabular-nums" x-text="estimatedWaitRange ? estimatedWaitRange : (estimatedWaitMinutes !== null ? '± ' + estimatedWaitMinutes + ' menit' : 'Menunggu antrean')">{{ $estimate['range_label'] ?? ($estimate['minutes'] !== null ? '± '.$estimate['minutes'].' menit' : 'Menunggu antrean') }}</span>
-                                </div>
-
-                                <div x-show="status === 'menunggu' && hasDelayShift && shiftNotice" @if ($ticket->status !== 'menunggu' || empty($scheduleEstimate['has_delay_shift']) || empty($scheduleEstimate['shift_notice'])) x-cloak @endif class="mt-2.5 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium leading-4 text-amber-900" x-text="shiftNotice">{{ $scheduleEstimate['shift_notice'] ?? '' }}</div>
-
-                                <div class="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 pt-3 text-xs text-gray-600">
-                                    <span>Atas nama <span class="font-bold text-gray-900" x-text="customerName">{{ $ticket->customer_name }}</span></span>
-                                    <span class="inline-flex items-center gap-1 text-gray-500">
-                                        <x-customer.icon name="clock" class="size-3.5" />
-                                        {{ $registeredAt->translatedFormat('d M Y') }}, {{ $registeredAt->format('H.i') }}
+                                @foreach ($ticketStatuses as $statusKey)
+                                    <span x-show="status === '{{ $statusKey }}'" @if ($ticket->status !== $statusKey) x-cloak @endif class="shrink-0">
+                                        <x-status-badge :status="$statusKey" size="sm" />
                                     </span>
-                                </div>
-
-                                <template x-if="counterName && (status === 'dipanggil' || status === 'sedang_dilayani')">
-                                    <p class="mt-2.5 w-fit rounded-full bg-brand-50 px-3 py-1 text-xs font-bold text-brand-700 ring-1 ring-brand-200" x-text="'Menuju ' + counterName"></p>
-                                </template>
-                            </div>
-                        </div>
-
-                        {{-- Segmented Progress Card (Screen 4 & 1D) --}}
-                        <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-xs md:p-5">
-                            <div class="flex items-center justify-between gap-2">
-                                <h2 class="text-sm font-extrabold leading-5 text-gray-900 md:text-base">Perjalanan antrean Anda</h2>
-                                <span class="rounded-full bg-brand-50 px-2.5 py-0.5 text-[11px] font-extrabold text-brand-700" x-text="'Tahap ' + currentStage() + ' / 4'">Tahap 2 / 4</span>
-                            </div>
-                            <div class="mt-3 grid grid-cols-4 gap-1.5">
-                                @foreach ($journey as $step)
-                                    <div class="h-1.5 rounded-full transition-colors duration-300" :class="({{ $step['done'] }}) ? 'bg-brand-700' : (({{ $step['current'] }}) ? 'bg-brand-500' : 'bg-gray-200')"></div>
                                 @endforeach
-                            </div>
-                            <div class="mt-2 grid grid-cols-4 gap-1.5 text-[10px] font-semibold sm:text-xs">
-                                @foreach ($journey as $step)
-                                    <span class="truncate" :class="({{ $step['done'] }} || {{ $step['current'] }}) ? 'font-extrabold text-brand-700' : 'text-gray-500'">{{ $step['label'] }}</span>
-                                @endforeach
-                            </div>
-                        </div>
+                            </header>
 
-                        {{-- QR Code Tiket --}}
-                        <div class="flex flex-col items-center gap-3 rounded-2xl border border-brand-200 bg-white p-4 text-center shadow-xs md:p-5">
-                            <div class="flex w-full items-center justify-between gap-2 text-left">
+                            <div class="flex flex-col gap-4 p-4 md:p-5">
                                 <div>
-                                    <h2 class="text-sm font-extrabold text-gray-900">QR Code Tiket</h2>
-                                    <p class="text-xs text-gray-600">Simpan atau pindai QR ini untuk membuka kembali detail tiket.</p>
+                                    <p class="text-xs font-medium leading-4 text-gray-600">Nomor antrean</p>
+                                    <p class="mt-1 text-5xl font-extrabold leading-none tracking-tight whitespace-nowrap text-brand-700 tabular-nums" x-text="ticketNumber">{{ $ticket->ticket_number }}</p>
                                 </div>
-                                <span class="shrink-0 rounded-full bg-brand-50 px-2.5 py-1 text-[11px] font-extrabold text-brand-700 tabular-nums" x-text="ticketNumber">{{ $ticket->ticket_number }}</span>
-                            </div>
-                            <div class="rounded-2xl border border-gray-200 bg-white p-3 shadow-xs" data-qr-ticket>
-                                {!! $qrSvg !!}
-                            </div>
-                            <button type="button" @click="downloadQr($el)" class="inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-xl border border-brand-200 bg-brand-50 px-4 text-xs font-bold text-brand-700 transition hover:bg-brand-100">
-                                Unduh QR Tiket
-                            </button>
-                        </div>
 
-                        {{-- Tombol Batalkan Antrean (Screen 4 & 1C, hanya saat Menunggu) --}}
-                        @if ($ticket->status === \App\Models\QueueTicket::STATUS_MENUNGGU)
-                            <div x-show="status === 'menunggu'">
-                                <button
-                                    type="button"
-                                    @click="cancelModalOpen = true"
-                                    class="flex h-12 w-full items-center justify-center rounded-xl border-[1.5px] border-red-300 bg-red-50 text-sm font-extrabold text-danger-700 transition hover:bg-red-100 active:scale-[0.99]"
-                                >
-                                    Batalkan Antrean
-                                </button>
-                            </div>
-                        @endif
-                    </div>
+                                <dl x-show="status === 'menunggu'" @if ($ticket->status !== 'menunggu') x-cloak @endif class="grid grid-cols-2 border-y border-gray-100 py-3">
+                                    <div class="flex min-w-0 flex-col gap-0.5 pr-3">
+                                        <dt class="text-xs font-medium leading-4 text-gray-600">Perkiraan dilayani</dt>
+                                        <dd class="text-lg font-bold leading-6 text-gray-900 tabular-nums" x-text="estimatedServeTime ? estimatedServeTime : 'Menyesuaikan'">{{ $scheduleEstimate['estimated_serve_time_label'] ?? 'Menyesuaikan' }}</dd>
+                                        <dd x-show="bookingSlot" @if (! $bookingSlotWindow) x-cloak @endif class="text-xs leading-4 text-gray-600 tabular-nums" x-text="'Slot ' + bookingSlot">{{ $bookingSlotWindow ? 'Slot '.$bookingSlotWindow : '' }}</dd>
+                                    </div>
+                                    <div class="flex min-w-0 flex-col gap-0.5 border-l border-gray-100 pl-3">
+                                        <dt class="text-xs font-medium leading-4 text-gray-600">Di depan Anda</dt>
+                                        <dd class="text-lg font-bold leading-6 text-gray-900 tabular-nums" x-text="aheadCount > 0 ? aheadCount + ' orang' : 'Tidak ada'">{{ $aheadCount > 0 ? $aheadCount.' orang' : 'Tidak ada' }}</dd>
+                                        <dd class="text-xs leading-4 text-gray-600 tabular-nums" x-text="'Tunggu ' + (estimatedWaitRange ? estimatedWaitRange : (estimatedWaitMinutes !== null ? '± ' + estimatedWaitMinutes + ' menit' : 'belum tersedia'))">Tunggu {{ $estimate['range_label'] ?? ($estimate['minutes'] !== null ? '± '.$estimate['minutes'].' menit' : 'belum tersedia') }}</dd>
+                                    </div>
+                                </dl>
 
-                    {{-- Kolom kanan: Status detail, Ulasan, Informasi Tiket, Notifikasi --}}
-                    <div class="flex min-w-0 flex-col gap-4">
-                        {{-- Pesan status --}}
-                        <div x-show="status === 'menunggu'" @if ($ticket->status !== 'menunggu') x-cloak @endif class="flex flex-col gap-1.5 rounded-xl border border-brand-200 bg-brand-50 p-3.5 text-xs leading-4">
-                            <p class="font-bold text-brand-700">Tunggu hingga nomor Anda dipanggil</p>
-                            <p class="text-gray-700" x-show="estimatedServeTime" @if (empty($scheduleEstimate['estimated_serve_time_label'])) style="display: none;" @endif>
-                                Perkiraan giliran Anda dilayani sekitar <span class="font-bold text-brand-700" x-text="'pukul ' + estimatedServeTime">{{ ! empty($scheduleEstimate['estimated_serve_time_label']) ? 'pukul '.$scheduleEstimate['estimated_serve_time_label'] : '' }}</span> berdasarkan slot booking, antrean di depan, dan loket aktif.
-                            </p>
-                            <p class="text-gray-700" x-show="estimatedWaitMinutes !== null" @if ($estimate['minutes'] === null) style="display: none;" @endif>
-                                Perkiraan waktu tunggu <span class="font-bold" x-text="estimatedWaitRange ? estimatedWaitRange : (estimatedWaitMinutes !== null ? '± ' + estimatedWaitMinutes + ' menit' : '')">@if ($estimate['minutes'] !== null) {{ $estimate['range_label'] ?? '± '.$estimate['minutes'].' menit' }} @endif</span>, dihitung dari jumlah antrean, riwayat pelayanan, dan loket aktif (estimasi ini bukan janji waktu pelayanan).
-                            </p>
-                            <p class="text-gray-600" x-show="estimatedWaitMinutes === null" x-text="estimateFallbackMessage()" @if ($estimate['minutes'] !== null) style="display: none;" @endif>
-                                @if ($estimate['minutes'] === null)
-                                    {{ $estimate['reason'] === 'no_active_counters'
-                                        ? 'Estimasi waktu tunggu tidak tersedia karena belum ada loket yang aktif.'
-                                        : 'Estimasi waktu tunggu belum tersedia karena riwayat pelayanan historis belum cukup.' }}
-                                @endif
-                            </p>
-                            <p class="text-gray-500">Diperbarui pukul <span x-text="lastUpdated"></span></p>
-                        </div>
+                                <p x-show="status === 'menunggu' && hasDelayShift && shiftNotice" @if ($ticket->status !== 'menunggu' || empty($scheduleEstimate['has_delay_shift']) || empty($scheduleEstimate['shift_notice'])) x-cloak @endif class="flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs leading-4 text-amber-900">
+                                    <x-customer.icon name="alert-triangle" class="mt-px size-3.5 text-amber-700" />
+                                    <span x-text="shiftNotice">{{ $scheduleEstimate['shift_notice'] ?? '' }}</span>
+                                </p>
+
+                                {{-- Langkah berikutnya: satu kalimat aksi sesuai status --}}
+                                <p x-show="!isTerminalStatus()" @if ($ticket->isTerminal()) x-cloak @endif class="flex items-start gap-2 text-sm leading-5 text-gray-800">
+                                    <x-customer.icon name="bell" class="mt-0.5 size-4 text-brand-700" />
+                                    <span x-text="nextStepMessage()">{{ $nextStepMessages[$ticket->status] ?? '' }}</span>
+                                </p>
+
+                                {{-- Perjalanan antrean --}}
+                                <div class="flex flex-col gap-2" role="group" aria-label="Perjalanan antrean Anda">
+                                    <div class="flex items-center justify-between gap-2 text-xs leading-4">
+                                        <span class="font-medium text-gray-600">Perjalanan antrean Anda</span>
+                                        <span class="font-semibold text-gray-900 tabular-nums" x-text="'Tahap ' + currentStage() + ' dari 4'">Tahap 2 dari 4</span>
+                                    </div>
+                                    <div class="grid grid-cols-4 gap-1.5">
+                                        @foreach ($journey as $step)
+                                            <div class="h-1.5 rounded-full transition-colors duration-300" :class="({{ $step['done'] }}) ? 'bg-brand-700' : (({{ $step['current'] }}) ? 'bg-brand-400' : 'bg-gray-200')"></div>
+                                        @endforeach
+                                    </div>
+                                    <div class="grid grid-cols-4 gap-1.5 text-xs leading-4">
+                                        @foreach ($journey as $step)
+                                            <span class="truncate" :class="({{ $step['done'] }} || {{ $step['current'] }}) ? 'font-semibold text-brand-700' : 'text-gray-600'">{{ $step['label'] }}</span>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            </div>
+
+                            <footer class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-gray-100 bg-gray-50/60 px-4 py-2.5 text-xs leading-4 text-gray-600 md:px-5">
+                                <span>Atas nama <span class="font-semibold text-gray-900" x-text="customerName">{{ $ticket->customer_name }}</span></span>
+                                <span class="inline-flex items-center gap-1">
+                                    <x-customer.icon name="clock" class="size-3.5 text-gray-500" />
+                                    Diambil {{ $registeredAt->translatedFormat('d M Y') }}, {{ $registeredAt->format('H.i') }}
+                                </span>
+                            </footer>
+                        </section>
+
+                        {{-- Cara estimasi dihitung: detail sekunder disembunyikan sampai dibutuhkan --}}
+                        <details x-show="status === 'menunggu'" @if ($ticket->status !== 'menunggu') x-cloak @endif class="group rounded-xl border border-gray-200 bg-white shadow-card">
+                            <summary class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 px-4 py-2.5 text-sm font-semibold text-gray-900 [&::-webkit-details-marker]:hidden">
+                                Bagaimana perkiraan dihitung?
+                                <x-customer.icon name="chevron-down" class="size-4 text-gray-500 transition-transform duration-200 group-open:rotate-180" />
+                            </summary>
+                            <div class="flex flex-col gap-1.5 border-t border-gray-100 px-4 py-3 text-sm leading-5">
+                                <p class="text-gray-700" x-show="estimatedServeTime" @if (empty($scheduleEstimate['estimated_serve_time_label'])) style="display: none;" @endif>
+                                    Perkiraan giliran Anda dilayani sekitar <span class="font-semibold text-gray-900" x-text="'pukul ' + estimatedServeTime">{{ ! empty($scheduleEstimate['estimated_serve_time_label']) ? 'pukul '.$scheduleEstimate['estimated_serve_time_label'] : '' }}</span> berdasarkan slot booking, antrean di depan, dan loket aktif.
+                                </p>
+                                <p class="text-gray-700" x-show="estimatedWaitMinutes !== null" @if ($estimate['minutes'] === null) style="display: none;" @endif>
+                                    Perkiraan waktu tunggu <span class="font-semibold text-gray-900" x-text="estimatedWaitRange ? estimatedWaitRange : (estimatedWaitMinutes !== null ? '± ' + estimatedWaitMinutes + ' menit' : '')">@if ($estimate['minutes'] !== null) {{ $estimate['range_label'] ?? '± '.$estimate['minutes'].' menit' }} @endif</span>, dihitung dari jumlah antrean, riwayat pelayanan, dan loket aktif (estimasi ini bukan janji waktu pelayanan).
+                                </p>
+                                <p class="text-gray-700" x-show="estimatedWaitMinutes === null" x-text="estimateFallbackMessage()" @if ($estimate['minutes'] !== null) style="display: none;" @endif>
+                                    @if ($estimate['minutes'] === null)
+                                        {{ $estimate['reason'] === 'no_active_counters'
+                                            ? 'Estimasi waktu tunggu tidak tersedia karena belum ada loket yang aktif.'
+                                            : 'Estimasi waktu tunggu belum tersedia karena riwayat pelayanan historis belum cukup.' }}
+                                    @endif
+                                </p>
+                                <p class="text-xs text-gray-600">Diperbarui pukul <span x-text="lastUpdated"></span></p>
+                            </div>
+                        </details>
 
                         <div x-show="status === 'sedang_dilayani'" @if ($ticket->status !== 'sedang_dilayani') x-cloak @endif class="flex flex-col gap-1 rounded-xl border border-green-200 bg-green-50 p-3.5 text-xs leading-4">
                             <p class="font-bold text-green-800">Pelayanan Sedang Berlangsung</p>
@@ -335,7 +328,7 @@
                             </div>
 
                             @if ($review)
-                                <div class="flex flex-col gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/40 p-4 shadow-xs">
+                                <div class="flex flex-col gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/40 p-4 shadow-card">
                                     <div class="flex items-center justify-between gap-2">
                                         <div class="flex items-center gap-1.5 text-sm font-bold text-gray-900">
                                             <span>Penilaian Anda:</span>
@@ -345,7 +338,7 @@
                                                 @endfor
                                             </span>
                                         </div>
-                                        <span class="text-[11px] text-gray-500">{{ $review->created_at->translatedFormat('d M Y, H.i') }}</span>
+                                        <span class="text-xs text-gray-500">{{ $review->created_at->translatedFormat('d M Y, H.i') }}</span>
                                     </div>
                                     <span class="w-fit rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-900 ring-1 ring-inset ring-amber-500/25">{{ $ratingLabels[$review->rating] ?? '' }}</span>
                                     @if ($review->comment)
@@ -378,7 +371,7 @@
                                         },
                                     }"
                                     @submit="if (rating < 1 || isSubmitting) { $event.preventDefault(); return; } isSubmitting = true;"
-                                    class="flex flex-col gap-4 rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4 shadow-xs md:p-5"
+                                    class="flex flex-col gap-4 rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4 shadow-card md:p-5"
                                 >
                                     @csrf
                                     <div class="flex items-start justify-between gap-2">
@@ -386,7 +379,7 @@
                                             <h2 class="text-base font-extrabold leading-6 text-emerald-950">Bagaimana pelayanan hari ini?</h2>
                                             <p class="text-xs leading-4 text-emerald-800">Ulasan Anda membantu {{ $business->name }} melayani lebih baik.</p>
                                         </div>
-                                        <span x-show="(hoverRating || rating) > 0" x-cloak class="shrink-0 rounded-full bg-white px-2.5 py-0.5 text-[11px] font-bold text-emerald-800 ring-1 ring-emerald-200" x-text="(hoverRating || rating) + ' / 5 Bintang'"></span>
+                                        <span x-show="(hoverRating || rating) > 0" x-cloak class="shrink-0 rounded-full bg-white px-2.5 py-0.5 text-xs font-bold text-emerald-800 ring-1 ring-emerald-200" x-text="(hoverRating || rating) + ' / 5 Bintang'"></span>
                                     </div>
 
                                     <div class="flex flex-col gap-2">
@@ -435,11 +428,11 @@
                                         <div class="flex items-center justify-between">
                                             <label for="review-comment" class="flex items-center gap-1.5 text-xs font-bold leading-4 text-emerald-950">
                                                 Ulasan tertulis
-                                                <span class="rounded-md bg-white px-2 py-0.5 text-[10px] font-bold text-gray-600">Opsional</span>
+                                                <span class="rounded-md bg-white px-2 py-0.5 text-xs font-bold text-gray-600">Opsional</span>
                                             </label>
-                                            <span class="text-[11px] text-emerald-800/80 tabular-nums" x-text="comment.length + '/1000'"></span>
+                                            <span class="text-xs text-emerald-800/80 tabular-nums" x-text="comment.length + '/1000'"></span>
                                         </div>
-                                        <textarea id="review-comment" name="comment" x-model="comment" maxlength="1000" rows="3" placeholder="Ceritakan pengalaman Anda, misalnya: pesanan cepat disiapkan dan panggilan sesuai estimasi." class="resize-none rounded-xl border border-emerald-200 bg-white p-3 text-sm leading-5 text-gray-900 placeholder:text-gray-400 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-100"></textarea>
+                                        <textarea id="review-comment" name="comment" x-model="comment" maxlength="1000" rows="3" placeholder="Ceritakan pengalaman Anda, misalnya: pesanan cepat disiapkan dan panggilan sesuai estimasi." class="resize-none rounded-xl border border-emerald-200 bg-white p-3 text-sm leading-5 text-gray-900 placeholder:text-gray-500 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-100"></textarea>
                                         @error('comment')
                                             <p class="text-xs leading-4 text-danger-700">{{ $message }}</p>
                                         @enderror
@@ -455,26 +448,6 @@
                             @endif
                         </div>
 
-                        {{-- Informasi tiket --}}
-                        <div class="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-xs md:p-5">
-                            @foreach (array_filter([
-                                $bookingSlotWindow ? ['icon' => 'clock', 'label' => 'Slot jam booking', 'value' => $bookingSlotWindow, 'model' => 'bookingSlot'] : null,
-                                ! empty($scheduleEstimate['estimated_serve_time_label']) ? ['icon' => 'clock', 'label' => 'Estimasi dilayani', 'value' => 'Pukul '.$scheduleEstimate['estimated_serve_time_label'], 'model' => "estimatedServeTime ? 'Pukul ' + estimatedServeTime : 'Menyesuaikan'"] : null,
-                                ['icon' => 'shopping-bag', 'label' => 'Cara pemesanan', 'value' => $ticket->source === 'online' ? 'Online (ambil sendiri)' : 'Walk-in langsung'],
-                                $maskedPhone ? ['icon' => 'phone', 'label' => 'WhatsApp', 'value' => $maskedPhone, 'model' => 'customerPhone'] : null,
-                                $ticket->service->duration_minutes ? ['icon' => 'clock', 'label' => 'Estimasi Durasi', 'value' => '±'.$ticket->service->duration_minutes.' menit'] : null,
-                                $ticket->service->price ? ['icon' => 'file-text', 'label' => 'Harga layanan', 'value' => 'Rp '.number_format($ticket->service->price, 0, ',', '.')] : null,
-                            ]) as $row)
-                                <div class="flex items-center justify-between gap-3 border-b border-gray-100 pb-2.5 last:border-0 last:pb-0">
-                                    <div class="flex items-center gap-2.5">
-                                        <img src="{{ asset('images/figma/'.$row['icon'].'.svg') }}" alt="" width="18" height="18" class="size-4.5 shrink-0 opacity-80" />
-                                        <p class="text-xs font-medium leading-4 text-gray-600">{{ $row['label'] }}</p>
-                                    </div>
-                                    <p class="truncate text-right text-xs font-bold leading-4 text-gray-900 sm:text-sm" @isset($row['model']) x-text="{{ $row['model'] }}" @endisset>{{ $row['value'] }}</p>
-                                </div>
-                            @endforeach
-                        </div>
-
                         {{-- Notifikasi peramban (hanya bila kunci VAPID tersedia) --}}
                         @if (! empty(config('webpush.vapid.public_key')))
                             <div
@@ -486,14 +459,14 @@
                                     unsubscribeUrl: '{{ route('customer.push.unsubscribe') }}'
                                 })"
                                 x-init="checkSubscription()"
-                                class="flex flex-col gap-2 rounded-2xl border border-gray-200 bg-white p-4 shadow-xs"
+                                class="flex flex-col gap-2 rounded-2xl border border-gray-200 bg-white p-4 shadow-card"
                             >
                                 <div class="flex items-center justify-between gap-2">
                                     <div class="flex items-center gap-2">
                                         <img src="{{ asset('images/figma/notification.svg') }}" alt="" class="size-5 rounded bg-brand-700 p-0.5" />
                                         <p class="text-sm font-bold leading-5 text-gray-900">Notifikasi giliran</p>
                                     </div>
-                                    <span x-show="isSubscribed" x-cloak class="rounded-full bg-green-50 px-2.5 py-0.5 text-[11px] font-bold text-success-700">Aktif</span>
+                                    <span x-show="isSubscribed" x-cloak class="rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-bold text-success-700">Aktif</span>
                                 </div>
                                 <p class="text-xs leading-4 text-gray-600">Dapat peringatan saat nomor Anda dipanggil, meski layar ponsel sedang mati.</p>
                                 <p x-show="permission === 'denied'" x-cloak class="text-xs font-medium leading-4 text-danger-700">Izin notifikasi diblokir. Buka pengaturan situs di peramban untuk mengaktifkannya.</p>
@@ -504,14 +477,60 @@
                                     <button type="button" x-show="isSubscribed" x-cloak @click="unsubscribe()" :disabled="isLoading" class="flex h-10 items-center rounded-xl bg-gray-100 px-4 text-xs font-bold text-gray-700 transition hover:bg-gray-200 disabled:opacity-50">
                                         <span x-text="isLoading ? 'Menghapus…' : 'Nonaktifkan Notifikasi'"></span>
                                     </button>
-                                    <span x-show="message" class="text-[11px] font-semibold" :class="isError ? 'text-danger-700' : 'text-success-700'" x-text="message"></span>
+                                    <span x-show="message" class="text-xs font-semibold" :class="isError ? 'text-danger-700' : 'text-success-700'" x-text="message"></span>
                                 </div>
                             </div>
                         @endif
 
-                        <a href="{{ route('customer.queue', ['slug' => $business->slug]) }}" class="flex h-12 w-full items-center justify-center rounded-xl border border-gray-300 bg-white text-sm font-bold text-brand-700 transition hover:bg-gray-50">
+                    </div>
+
+                    {{-- Kolom pendukung: QR, informasi tiket, aksi sekunder --}}
+                    <div class="flex min-w-0 flex-col gap-4 lg:col-span-5">
+                        {{-- QR Code Tiket --}}
+                        <div class="flex flex-col items-center gap-3 rounded-2xl border border-gray-200 bg-white p-4 text-center shadow-card md:p-5">
+                            <div class="flex w-full flex-col gap-0.5 text-left">
+                                <h2 class="text-sm font-bold leading-5 text-gray-900">QR Code Tiket</h2>
+                                <p class="text-xs leading-4 text-gray-600">Pindai untuk membuka kembali tiket <span class="font-semibold text-gray-900" x-text="ticketNumber">{{ $ticket->ticket_number }}</span> di perangkat lain.</p>
+                            </div>
+                            <div class="rounded-xl border border-gray-200 bg-white p-3" data-qr-ticket>
+                                {!! $qrSvg !!}
+                            </div>
+                            <x-button variant="outline" @click="downloadQr($el)" class="w-full">
+                                <x-customer.icon name="qr-code" class="size-4" />
+                                Unduh QR Tiket
+                            </x-button>
+                        </div>
+
+                        {{-- Informasi tiket --}}
+                        <dl class="flex flex-col rounded-2xl border border-gray-200 bg-white px-4 py-1 shadow-card md:px-5">
+                            @foreach ($ticketFacts as $row)
+                                <div class="flex items-center justify-between gap-3 border-b border-gray-100 py-3 last:border-0">
+                                    <dt class="flex items-center gap-2.5 text-sm leading-5 text-gray-600">
+                                        <img src="{{ asset('images/figma/'.$row['icon'].'.svg') }}" alt="" width="18" height="18" class="size-4.5 shrink-0 opacity-80" />
+                                        {{ $row['label'] }}
+                                    </dt>
+                                    <dd class="truncate text-right text-sm font-semibold leading-5 text-gray-900 tabular-nums" @isset($row['model']) x-text="{{ $row['model'] }}" @endisset>{{ $row['value'] }}</dd>
+                                </div>
+                            @endforeach
+                        </dl>
+
+                        <x-button variant="outline" :href="route('customer.queue', ['slug' => $business->slug])" class="w-full">
                             Lihat layanan {{ $business->name }}
-                        </a>
+                        </x-button>
+
+                        {{-- Batalkan Antrean: aksi destruktif diletakkan terakhir dan selalu dikonfirmasi --}}
+                        @if ($ticket->status === \App\Models\QueueTicket::STATUS_MENUNGGU)
+                            <div x-show="status === 'menunggu'" class="flex flex-col gap-1.5 border-t border-gray-200 pt-4">
+                                <button
+                                    type="button"
+                                    @click="cancelModalOpen = true"
+                                    class="flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-red-200 bg-white text-sm font-semibold text-danger-700 transition duration-150 ease-out hover:border-red-300 hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger-700"
+                                >
+                                    Batalkan Antrean
+                                </button>
+                                <p class="text-center text-xs leading-4 text-gray-600">Nomor yang dibatalkan tidak bisa dipulihkan.</p>
+                            </div>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -534,25 +553,25 @@
                     x-transition:enter-start="translate-y-6 opacity-0"
                     x-transition:enter-end="translate-y-0 opacity-100"
                     @click.outside="cancelModalOpen = false"
-                    class="w-full max-w-[430px] rounded-t-3xl bg-white p-5 shadow-2xl sm:rounded-3xl"
+                    class="w-full max-w-[430px] rounded-t-2xl bg-white p-5 shadow-overlay sm:rounded-2xl"
                 >
                     <div class="mx-auto mb-3 h-1 w-10 rounded-full bg-gray-300 sm:hidden" aria-hidden="true"></div>
 
-                    <div class="mb-3 flex size-11 items-center justify-center rounded-2xl bg-red-100 text-danger-700">
+                    <div class="mb-3 flex size-11 items-center justify-center rounded-full bg-red-50 text-danger-700">
                         <x-customer.icon name="alert-triangle" class="size-5.5" />
                     </div>
 
-                    <h2 id="cancel-sheet-title" class="text-lg font-extrabold leading-6 text-gray-900">
+                    <h2 id="cancel-sheet-title" class="text-lg font-bold leading-6 text-gray-900">
                         Batalkan Antrean <span x-text="ticketNumber">{{ $ticket->ticket_number }}</span>?
                     </h2>
-                    <p class="mt-1 text-xs leading-5 text-gray-600">
+                    <p class="mt-1 text-sm leading-5 text-gray-600">
                         Nomor <span class="font-bold text-gray-900" x-text="ticketNumber">{{ $ticket->ticket_number }}</span> di {{ $business->name }} akan dilepas. Anda harus mengambil nomor baru dari akhir antrean jika ingin mengantre kembali.
                     </p>
 
                     <form method="POST" action="{{ route('customer.queue.cancel', ['token' => $ticket->access_token]) }}" @submit="isCancelling = true" class="mt-4 flex flex-col gap-3">
                         @csrf
-                        <div class="rounded-2xl border border-gray-200 bg-gray-50 p-3">
-                            <p class="mb-2 text-xs font-bold text-gray-800">Alasan pembatalan (opsional)</p>
+                        <div class="flex flex-col gap-2 border-t border-gray-100 pt-3">
+                            <p class="text-sm font-semibold text-gray-900">Alasan pembatalan <span class="font-normal text-gray-600">(opsional)</span></p>
                             <div class="flex flex-wrap gap-1.5">
                                 @foreach ($cancelReasons as $reasonOption)
                                     <button
@@ -560,7 +579,7 @@
                                         @click="cancelReason = (cancelReason === @js($reasonOption) ? '' : @js($reasonOption))"
                                         :aria-pressed="cancelReason === @js($reasonOption)"
                                         :class="cancelReason === @js($reasonOption) ? 'border-brand-700 bg-brand-50 text-brand-700 font-bold' : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'"
-                                        class="rounded-full border px-3 py-1.5 text-xs font-semibold transition"
+                                        class="inline-flex min-h-9 items-center rounded-full border px-3 text-sm font-medium transition"
                                     >{{ $reasonOption }}</button>
                                 @endforeach
                             </div>
@@ -570,7 +589,7 @@
                                 x-model="cancelReason"
                                 maxlength="255"
                                 placeholder="Atau tulis alasan lain…"
-                                class="mt-2.5 h-10 w-full rounded-xl border border-gray-300 bg-white px-3 text-xs text-gray-900 placeholder:text-gray-400 focus:border-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-100"
+                                class="mt-1 h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 placeholder:text-gray-500 focus:border-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-100"
                             />
                         </div>
 
@@ -578,14 +597,14 @@
                             <button
                                 type="button"
                                 @click="cancelModalOpen = false"
-                                class="flex h-11 w-full items-center justify-center rounded-xl bg-brand-700 text-xs font-extrabold text-white shadow-xs transition hover:bg-blue-900"
+                                class="flex h-11 w-full items-center justify-center rounded-lg bg-brand-700 text-sm font-semibold text-white shadow-card transition hover:bg-brand-800"
                             >
-                                Tetap Antre (Lanjutkan Tunggu)
+                                Tetap antre
                             </button>
                             <button
                                 type="submit"
                                 :disabled="isCancelling"
-                                class="flex h-11 w-full items-center justify-center rounded-xl border-[1.5px] border-red-300 bg-red-50 text-xs font-extrabold text-danger-700 transition hover:bg-red-100 disabled:opacity-60"
+                                class="flex h-11 w-full items-center justify-center rounded-lg border border-red-300 bg-white text-sm font-semibold text-danger-700 transition hover:bg-red-50 disabled:opacity-60"
                             >
                                 <span x-text="isCancelling ? 'Membatalkan…' : 'Ya, Batalkan Nomor ' + ticketNumber">Ya, Batalkan Nomor {{ $ticket->ticket_number }}</span>
                             </button>
@@ -633,6 +652,13 @@
                 isFetching: false,
                 echoChannel: null,
                 isRealtimeConnected: false,
+
+                nextStepMessage() {
+                    if (this.status === 'dipanggil') {
+                        return 'Segera menuju ' + (this.counterName || 'loket') + '. Nomor Anda menunggu maksimal 15 menit.';
+                    }
+                    return @js($nextStepMessages)[this.status] ?? '';
+                },
 
                 currentStage() {
                     if (this.status === 'selesai') return 4;

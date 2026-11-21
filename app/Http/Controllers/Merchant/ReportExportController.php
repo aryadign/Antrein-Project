@@ -282,15 +282,6 @@ class ReportExportController extends Controller
      */
     private static function formatTicketStatus(string $status): string
     {
-        return match ($status) {
-            QueueTicket::STATUS_MENUNGGU => 'Menunggu',
-            QueueTicket::STATUS_DIPANGGIL => 'Dipanggil',
-            QueueTicket::STATUS_SEDANG_DILAYANI => 'Sedang Dilayani',
-            QueueTicket::STATUS_SELESAI => 'Selesai',
-            QueueTicket::STATUS_DILEWATI => 'Dilewati',
-            QueueTicket::STATUS_TIDAK_HADIR => 'Tidak hadir',
-            QueueTicket::STATUS_DIBATALKAN => 'Dibatalkan',
-            default => ucfirst($status),
-        };
+        return QueueTicket::labelForStatus($status);
     }
 }

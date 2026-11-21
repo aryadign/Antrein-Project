@@ -18,7 +18,7 @@
         <div class="absolute top-2.5 right-2.5 flex items-center gap-1.5">
             <x-customer.rating :business="$business" variant="overlay" />
             @if ($waitRange !== null)
-                <span class="rounded-full bg-white/95 px-2.5 py-0.5 text-[11px] font-extrabold text-gray-900 shadow-sm tabular-nums">{{ $waitRange['label'] }}</span>
+                <span class="rounded-full bg-white/95 px-2.5 py-0.5 text-xs font-extrabold text-gray-900 shadow-sm tabular-nums">{{ $waitRange['label'] }}</span>
             @endif
         </div>
     </x-customer.store-cover>

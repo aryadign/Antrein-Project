@@ -3,7 +3,7 @@
         {{-- Page Header --}}
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-                <h1 class="text-h2 font-bold text-neutral-950">Pengaturan Usaha</h1>
+                <h1 class="text-[1.375rem] leading-[1.875rem] font-bold sm:text-[1.75rem] sm:leading-9 text-neutral-950">Pengaturan Usaha</h1>
                 <p class="text-body text-neutral-600 mt-1">Kelola informasi publik, jadwal operasional mingguan, dan status penerimaan antrean.</p>
             </div>
             <x-status-badge :status="$business->is_suspended ? 'suspended' : $business->status" size="lg" class="w-fit" />
@@ -11,12 +11,12 @@
 
         {{-- Suspended Notice (If applicable) --}}
         @if ($business->is_suspended)
-            <div class="rounded-xl bg-rose-50 border border-rose-300 p-5 text-rose-900 flex items-start gap-3 shadow-xs">
+            <div class="rounded-xl bg-rose-50 border border-rose-300 p-5 text-rose-900 flex items-start gap-3 shadow-card">
                 <svg class="w-6 h-6 text-rose-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
                 <div>
                     <h3 class="font-bold text-sm text-rose-950">Akun Usaha Sedang Dalam Masa Penangguhan (Suspended)</h3>
                     <p class="text-xs text-rose-800 mt-1">
-                        Platform administrator telah menangguhkan akun usaha ini. Penerimaan tiket online maupun walk-in baru diblokir sepenuhnya. Anda tetap dapat menyelesaikan atau membatalkan tiket yang sedang aktif. Silakan hubungi tim dukungan jika membutuhkan klarifikasi lebih lanjut.
+                        Platform administrator telah menangguhkan akun usaha ini. Penerimaan tiket online maupun datang langsung baru diblokir sepenuhnya. Anda tetap dapat menyelesaikan atau membatalkan tiket yang sedang aktif. Silakan hubungi tim dukungan jika membutuhkan klarifikasi lebih lanjut.
                     </p>
                 </div>
             </div>
@@ -52,13 +52,13 @@
             ];
         @endphp
         <nav class="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0" aria-label="Bagian pengaturan">
-            <div class="flex w-max gap-2 rounded-xl border border-neutral-200 bg-white p-1.5 shadow-xs sm:w-auto sm:flex-wrap">
+            <div class="flex w-max gap-2 rounded-xl border border-neutral-200 bg-white p-1.5 shadow-card sm:w-auto sm:flex-wrap">
                 @foreach ($settingsTabs as $settingsTab)
                     <a
                         href="{{ $settingsTab['href'] }}"
                         @class([
                             'inline-flex min-h-11 shrink-0 items-center whitespace-nowrap rounded-lg px-4 text-sm font-semibold transition-colors',
-                            'bg-brand-700 text-white shadow-xs' => $activeTab === $settingsTab['key'],
+                            'bg-brand-700 text-white shadow-card' => $activeTab === $settingsTab['key'],
                             'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900' => $activeTab !== $settingsTab['key'],
                         ])
                         @if ($activeTab === $settingsTab['key']) aria-current="page" @endif
@@ -91,18 +91,18 @@
                     >
                         <x-form-label value="Logo Usaha" />
                         <div class="mt-2 flex flex-col gap-4 rounded-xl border border-dashed border-neutral-300 bg-neutral-50/60 p-4 sm:flex-row sm:items-center">
-                            <div class="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-xs">
+                            <div class="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-card">
                                 <img x-show="preview" :src="preview" @if ($business->getLogoUrl()) src="{{ $business->getLogoUrl() }}" @else style="display: none;" @endif alt="Logo Usaha" class="size-full object-cover">
                                 <span x-show="! preview" class="text-xl font-bold text-brand-700" @if ($business->getLogoUrl()) style="display: none;" @endif>{{ collect(preg_split('/\s+/', trim($business->name)))->filter()->take(2)->map(fn ($word) => Str::upper(Str::substr($word, 0, 1)))->implode('') }}</span>
                             </div>
 
                             <div class="flex min-w-0 flex-1 flex-col gap-1">
-                                <p class="text-caption text-neutral-500">Maksimal 2 MB. Format JPG, PNG, atau WebP. Gambar persegi disarankan.</p>
+                                <p class="text-caption text-neutral-600">Maksimal 2 MB. Format JPG, PNG, atau WebP. Gambar persegi disarankan.</p>
                                 <p x-show="fileName" x-text="fileName" class="truncate text-caption font-medium text-brand-700" style="display: none;"></p>
                             </div>
 
                             <div class="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
-                                <label for="logo" class="inline-flex h-11 cursor-pointer items-center justify-center rounded-lg border border-neutral-300 bg-white px-4 text-sm font-semibold text-neutral-800 shadow-xs transition hover:bg-neutral-50 focus-within:ring-2 focus-within:ring-brand-500 {{ $business->logo_path ? '' : 'col-span-2' }}">
+                                <label for="logo" class="inline-flex h-11 cursor-pointer items-center justify-center rounded-lg border border-neutral-300 bg-white px-4 text-sm font-semibold text-neutral-800 shadow-card transition hover:bg-neutral-50 focus-within:ring-2 focus-within:ring-brand-500 {{ $business->logo_path ? '' : 'col-span-2' }}">
                                     <span x-text="preview ? 'Ganti Logo' : 'Pilih Logo'">{{ $business->logo_path ? 'Ganti Logo' : 'Pilih Logo' }}</span>
                                     <input type="file" name="logo" id="logo" accept="image/jpeg,image/png,image/webp" class="sr-only" @change="pick($event)" />
                                 </label>
@@ -154,7 +154,7 @@
                     {{-- Slug URL Section --}}
                     <div>
                         <x-form-label for="slug" value="Slug Publik Usaha (URL Publik)" :required="true" />
-                        <div class="mt-1 flex rounded-md shadow-xs">
+                        <div class="mt-1 flex rounded-md shadow-card">
                             <span class="inline-flex shrink-0 items-center rounded-l-md border border-r-0 border-neutral-300 bg-neutral-50 px-3 font-mono text-sm text-neutral-500">
                                 <span class="sm:hidden">/q/</span>
                                 <span class="hidden sm:inline">{{ url('/q') }}/</span>
@@ -168,7 +168,7 @@
                                 class="block h-11 w-full min-w-0 flex-1 rounded-none rounded-r-md border border-neutral-300 px-3 font-mono text-sm focus:border-brand-700 focus:ring-brand-700"
                             />
                         </div>
-                        <p class="text-caption text-neutral-500 mt-1">
+                        <p class="text-caption text-neutral-600 mt-1">
                             Peringatan: Mengubah slug akan mengubah alamat antrean toko Anda. QR code cetak lama perlu diperbarui jika slug diubah.
                         </p>
                         <x-input-error :messages="$errors->get('slug')" class="mt-1" />
@@ -288,7 +288,7 @@
                                         aria-label="Jam buka {{ $dayName }}"
                                         class="h-11 w-full min-w-0 rounded-lg border border-neutral-300 px-3 text-sm tabular-nums focus:border-brand-700 focus:ring-1 focus:ring-brand-700 disabled:cursor-not-allowed disabled:bg-neutral-100"
                                     />
-                                    <span class="text-sm text-neutral-400">s/d</span>
+                                    <span class="text-sm text-neutral-500">s/d</span>
                                     <input
                                         type="time"
                                         name="hours[{{ $loop->index }}][close_time]"
@@ -339,7 +339,7 @@
 
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         {{-- STATUS BUKA --}}
-                        <label class="relative flex flex-col p-4 sm:p-5 border-2 rounded-xl cursor-pointer transition-all has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand-500 {{ $business->status === 'buka' ? 'border-emerald-600 bg-emerald-50/50 shadow-xs' : 'border-neutral-200 bg-white hover:border-neutral-300' }}">
+                        <label class="relative flex flex-col p-4 sm:p-5 border-2 rounded-xl cursor-pointer transition-all has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand-500 {{ $business->status === 'buka' ? 'border-emerald-600 bg-emerald-50/50 shadow-card' : 'border-neutral-200 bg-white hover:border-neutral-300' }}">
                             <div class="flex items-center justify-between mb-3">
                                 <span class="inline-flex items-center gap-2 text-sm font-bold text-emerald-800">
                                     <span class="flex size-8 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></span>
@@ -355,12 +355,12 @@
                                 />
                             </div>
                             <p class="text-xs text-neutral-600 leading-relaxed">
-                                Antrean dibuka secara penuh. Pelanggan dapat mendaftar antrean online dan tiket walk-in dapat diterbitkan.
+                                Antrean dibuka secara penuh. Pelanggan dapat mendaftar antrean online dan tiket datang langsung dapat diterbitkan.
                             </p>
                         </label>
 
                         {{-- STATUS JEDA SEMENTARA --}}
-                        <label class="relative flex flex-col p-4 sm:p-5 border-2 rounded-xl cursor-pointer transition-all has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand-500 {{ $business->status === 'jeda' ? 'border-amber-600 bg-amber-50/50 shadow-xs' : 'border-neutral-200 bg-white hover:border-neutral-300' }}">
+                        <label class="relative flex flex-col p-4 sm:p-5 border-2 rounded-xl cursor-pointer transition-all has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand-500 {{ $business->status === 'jeda' ? 'border-amber-600 bg-amber-50/50 shadow-card' : 'border-neutral-200 bg-white hover:border-neutral-300' }}">
                             <div class="flex items-center justify-between mb-3">
                                 <span class="inline-flex items-center gap-2 text-sm font-bold text-amber-800">
                                     <span class="flex size-8 items-center justify-center rounded-lg bg-amber-100 text-amber-700"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></span>
@@ -381,7 +381,7 @@
                         </label>
 
                         {{-- STATUS TUTUP --}}
-                        <label class="relative flex flex-col p-4 sm:p-5 border-2 rounded-xl cursor-pointer transition-all has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand-500 {{ $business->status === 'tutup' ? 'border-rose-600 bg-rose-50/50 shadow-xs' : 'border-neutral-200 bg-white hover:border-neutral-300' }}">
+                        <label class="relative flex flex-col p-4 sm:p-5 border-2 rounded-xl cursor-pointer transition-all has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand-500 {{ $business->status === 'tutup' ? 'border-rose-600 bg-rose-50/50 shadow-card' : 'border-neutral-200 bg-white hover:border-neutral-300' }}">
                             <div class="flex items-center justify-between mb-3">
                                 <span class="inline-flex items-center gap-2 text-sm font-bold text-rose-800">
                                     <span class="flex size-8 items-center justify-center rounded-lg bg-rose-100 text-rose-700"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0v4"/></svg></span>
@@ -417,7 +417,7 @@
                 <x-slot name="header">
                     <div>
                         <h2 class="text-h3 font-bold text-neutral-900">Pengaturan Akun Pengguna</h2>
-                        <p class="text-caption text-neutral-500 mt-1">Perbarui nama pengguna, alamat email login, dan kata sandi pemilik usaha.</p>
+                        <p class="text-caption text-neutral-600 mt-1">Perbarui nama pengguna, alamat email login, dan kata sandi pemilik usaha.</p>
                     </div>
                 </x-slot>
 
@@ -441,7 +441,7 @@
 
                     <div class="border-t border-neutral-200 pt-6">
                         <h3 class="text-h3 font-bold text-neutral-900">Ubah Password</h3>
-                        <p class="text-caption text-neutral-500 mt-1">Kosongkan jika Anda tidak bermaksud mengubah kata sandi saat ini.</p>
+                        <p class="text-caption text-neutral-600 mt-1">Kosongkan jika Anda tidak bermaksud mengubah kata sandi saat ini.</p>
 
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mt-4">
                             <div>
@@ -466,7 +466,7 @@
 
                     <div class="border-t border-neutral-200 pt-6">
                         <h3 class="text-h3 font-bold text-neutral-900">Preferensi Notifikasi Antrean (FR-SET-05)</h3>
-                        <p class="text-caption text-neutral-500 mt-1">Kanal pengiriman status antrean kepada pengguna dan pelanggan.</p>
+                        <p class="text-caption text-neutral-600 mt-1">Kanal pengiriman status antrean kepada pengguna dan pelanggan.</p>
 
                         <div class="space-y-3 mt-4">
                             <div class="flex flex-col gap-2 rounded-xl border border-neutral-200 bg-neutral-50 p-3.5 sm:flex-row sm:items-center sm:justify-between">
@@ -535,8 +535,8 @@
                                 >
                                 <div class="flex-1">
                                     <div class="text-sm font-bold text-neutral-900 flex items-center gap-2">
-                                        <span>Notifikasi Email untuk Tiket Online Baru</span>
-                                        <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-200">Email</span>
+                                        <span>Notifikasi email untuk tiket baru dari ponsel</span>
+                                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-200">Email</span>
                                     </div>
                                     <p class="text-xs text-neutral-600 mt-1">
                                         Kirimkan ringkasan instan ke alamat email akun Anda (<strong>{{ $user->email }}</strong>) setiap kali ada pelanggan yang mengambil tiket online.
@@ -556,7 +556,7 @@
                                 <div class="flex-1">
                                     <div class="text-sm font-bold text-neutral-900 flex items-center gap-2">
                                         <span>Web Push Notification (Browser / Desktop)</span>
-                                        <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">Browser Push</span>
+                                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">Browser Push</span>
                                     </div>
                                     <p class="text-xs text-neutral-600 mt-1">
                                         Izinkan pengiriman pemberitahuan web push ke peramban aktif staf ketika tiket online baru diterbitkan oleh pelanggan.
@@ -582,7 +582,7 @@
                             <div>
                                 <h3 class="text-h3 font-bold text-neutral-900">Aktivasi Notifikasi di Peramban Ini</h3>
                                 <p class="text-body text-neutral-600 mt-1">
-                                    Daftarkan peramban/perangkat ini agar dapat menerima bunyi dan popup notifikasi tiket secara real-time meskipun jendela AntreIn sedang tertutup atau diminimalkan.
+                                    Daftarkan peramban/perangkat ini agar dapat menerima bunyi dan popup notifikasi tiket secara langsung meskipun jendela AntreIn sedang tertutup atau diminimalkan.
                                 </p>
                             </div>
                             <div>
@@ -620,7 +620,7 @@
                                 x-show="!isSubscribed"
                                 @click="subscribe()"
                                 :disabled="isLoading"
-                                class="inline-flex h-11 w-full items-center justify-center gap-2 px-5 rounded-xl sm:w-auto bg-brand-700 hover:bg-brand-800 text-white font-semibold text-sm transition shadow-xs disabled:opacity-50"
+                                class="inline-flex h-11 w-full items-center justify-center gap-2 px-5 rounded-xl sm:w-auto bg-brand-700 hover:bg-brand-800 text-white font-semibold text-sm transition shadow-card disabled:opacity-50"
                             >
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
                                 <span x-text="isLoading ? 'Memproses...' : 'Aktifkan Notifikasi di Peramban Ini'"></span>

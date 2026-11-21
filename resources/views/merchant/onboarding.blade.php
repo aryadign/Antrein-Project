@@ -15,12 +15,12 @@
                 <a href="/" class="inline-flex items-center gap-1.5 focus:outline-none">
                     <span class="text-3xl font-extrabold tracking-tight text-neutral-950">AntreIn<span class="text-brand-700">.</span></span>
                 </a>
-                <h1 class="mt-3 text-h2 font-bold text-neutral-950">Konfigurasi Awal Usaha</h1>
+                <h1 class="mt-3 text-[1.375rem] leading-[1.875rem] font-bold sm:text-[1.75rem] sm:leading-9 text-neutral-950">Konfigurasi Awal Usaha</h1>
                 <p class="mt-1 text-body text-neutral-600">Selesaikan 4 langkah mudah untuk mulai menerima antrean digital.</p>
             </div>
 
             {{-- Stepper --}}
-            <nav class="mb-6 rounded-xl border border-neutral-200 bg-white p-3 shadow-xs sm:mb-8 sm:p-4" aria-label="Tahap onboarding">
+            <nav class="mb-6 rounded-xl border border-neutral-200 bg-white p-3 shadow-card sm:mb-8 sm:p-4" aria-label="Tahap onboarding">
                 <ol class="grid grid-cols-4 gap-2">
                     @foreach ($stepLabels as $number => $label)
                         @php
@@ -51,7 +51,7 @@
                                 </span>
                                 <span class="flex flex-col">
                                     <span class="hidden text-xs font-semibold tracking-wider uppercase md:block {{ $isCurrent ? 'text-brand-700' : 'text-neutral-500' }}">Langkah {{ $number }}</span>
-                                    <span class="text-[11px] leading-4 font-medium md:text-caption {{ $isCurrent ? 'text-neutral-900' : 'text-neutral-600' }}">{{ $label }}</span>
+                                    <span class="text-xs leading-4 font-medium md:text-caption {{ $isCurrent ? 'text-neutral-900' : 'text-neutral-600' }}">{{ $label }}</span>
                                 </span>
                             </{{ $isReachable && ! $isCurrent ? 'a' : 'span' }}>
                         </li>
@@ -99,7 +99,7 @@
                     {{-- LANGKAH 1: PROFIL USAHA --}}
                     <div class="mb-6">
                         <h2 class="text-h3 font-bold text-neutral-900">1. Data Profil Usaha</h2>
-                        <p class="text-caption text-neutral-500">Informasi ini akan ditampilkan kepada pelanggan saat mengakses antrean online.</p>
+                        <p class="text-caption text-neutral-600">Informasi ini akan ditampilkan kepada pelanggan saat mengakses antrean online.</p>
                     </div>
 
                     <form method="POST" action="{{ route('merchant.onboarding.step1') }}" enctype="multipart/form-data" class="space-y-5">
@@ -119,18 +119,18 @@
                             }"
                             class="flex flex-col gap-4 rounded-xl border border-dashed border-neutral-300 bg-neutral-50/60 p-4 sm:flex-row sm:items-center"
                         >
-                            <div class="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-xs">
+                            <div class="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-card">
                                 <img x-show="preview" :src="preview" alt="Pratinjau logo usaha" class="size-full object-cover" @if (! $business?->getLogoUrl()) style="display: none;" @endif @if ($business?->getLogoUrl()) src="{{ $business->getLogoUrl() }}" @endif />
                                 <span x-show="! preview" class="text-xl font-bold text-brand-700" @if ($business?->getLogoUrl()) style="display: none;" @endif>{{ $businessInitials ?: 'Logo' }}</span>
                             </div>
                             <div class="flex min-w-0 flex-1 flex-col gap-1">
-                                <p class="text-sm font-semibold text-neutral-900">Logo Usaha <span class="ml-1 rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-bold text-neutral-500">Opsional</span></p>
-                                <p class="text-caption text-neutral-500">JPG, PNG, atau WEBP, maksimal 2 MB. Tampil di kartu toko dan tiket pelanggan.</p>
+                                <p class="text-sm font-semibold text-neutral-900">Logo Usaha <span class="ml-1 rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-bold text-neutral-500">Opsional</span></p>
+                                <p class="text-caption text-neutral-600">JPG, PNG, atau WEBP, maksimal 2 MB. Tampil di kartu toko dan tiket pelanggan.</p>
                                 <p x-show="fileName" x-text="fileName" class="truncate text-caption font-medium text-brand-700" style="display: none;"></p>
                             </div>
-                            <label for="logo" class="inline-flex h-11 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-neutral-300 bg-white px-4 text-sm font-semibold text-neutral-800 shadow-xs transition hover:bg-neutral-50 focus-within:ring-2 focus-within:ring-brand-500">
+                            <label for="logo" class="inline-flex h-11 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-neutral-300 bg-white px-4 text-sm font-semibold text-neutral-800 shadow-card transition hover:bg-neutral-50 focus-within:ring-2 focus-within:ring-brand-500">
                                 <span x-text="preview ? 'Ganti Logo' : 'Pilih Logo'">{{ $business?->getLogoUrl() ? 'Ganti Logo' : 'Pilih Logo' }}</span>
-                                <input id="logo" name="logo" type="file" accept="image/jpeg,image/png,image/webp" class="sr-only" @change="pick($event)" />
+                                <input id="logo" name="logo" type="file" accept="image/jpeg,image/png,image/webp" class="placeholder:text-neutral-500 sr-only" @change="pick($event)" />
                             </label>
                         </div>
                         <x-input-error :messages="$errors->get('logo')" class="-mt-3" />
@@ -223,7 +223,7 @@
 
                     <div class="mb-5 flex flex-col gap-1">
                         <h2 class="text-h3 font-bold text-neutral-900">2. Atur Jam Operasional Mingguan</h2>
-                        <p class="text-caption text-neutral-500">Tentukan hari dan jam buka. Pelanggan melihat jam ini di kartu toko.</p>
+                        <p class="text-caption text-neutral-600">Tentukan hari dan jam buka. Pelanggan melihat jam ini di kartu toko.</p>
                     </div>
 
                     <form
@@ -272,7 +272,7 @@
                             </button>
                             <span x-show="copied" x-transition.opacity class="text-caption font-semibold text-emerald-700" style="display: none;">Jam diperbarui</span>
                         </div>
-                        <p class="-mt-2 text-caption text-neutral-500">Hari kerja: Senin sampai Jumat. Jam standar: Senin sampai Sabtu 09.00–21.00, Minggu tutup.</p>
+                        <p class="-mt-2 text-caption text-neutral-600">Hari kerja: Senin sampai Jumat. Jam standar: Senin sampai Sabtu 09.00–21.00, Minggu tutup.</p>
 
                         <div class="divide-y divide-neutral-200 overflow-hidden rounded-xl border border-neutral-200">
                             @foreach ($dayRows as $row)
@@ -292,7 +292,7 @@
                                             aria-label="Jam buka {{ $row['name'] }}"
                                             class="h-11 w-full min-w-0 rounded-lg border border-neutral-300 px-3 text-sm focus:border-brand-700 focus:ring-1 focus:ring-brand-700 disabled:cursor-not-allowed disabled:bg-neutral-100"
                                         />
-                                        <span class="text-sm text-neutral-400">s/d</span>
+                                        <span class="text-sm text-neutral-500">s/d</span>
                                         <input
                                             type="time"
                                             name="hours[{{ $i }}][close_time]"
@@ -336,7 +336,7 @@
                     {{-- LANGKAH 3: LAYANAN PERDANA --}}
                     <div class="mb-5 flex flex-col gap-1">
                         <h2 class="text-h3 font-bold text-neutral-900">3. {{ $services->isEmpty() ? 'Tambah Layanan Perdana' : 'Layanan Anda' }}</h2>
-                        <p class="text-caption text-neutral-500">Pelanggan memilih layanan ini saat mengambil tiket antrean.</p>
+                        <p class="text-caption text-neutral-600">Pelanggan memilih layanan ini saat mengambil tiket antrean.</p>
                     </div>
 
                     @if ($services->isNotEmpty())
@@ -351,7 +351,7 @@
                                         <x-customer.service-thumb :service="$svc" :category="$business->category" class="size-12" />
                                         <div class="flex min-w-0 flex-1 flex-col">
                                             <span class="truncate text-sm font-semibold text-neutral-900">{{ $svc->name }}</span>
-                                            <span class="text-caption text-neutral-500">{{ $svc->duration_minutes }} menit</span>
+                                            <span class="text-caption text-neutral-600">{{ $svc->duration_minutes }} menit</span>
                                         </div>
                                         <span class="shrink-0 text-sm font-semibold text-neutral-900">Rp {{ number_format($svc->price, 0, ',', '.') }}</span>
                                     </li>
@@ -387,13 +387,13 @@
                                 <x-customer.icon name="ticket" class="size-8 text-neutral-300" x-show="! preview" />
                             </div>
                             <div class="flex min-w-0 flex-1 flex-col gap-1">
-                                <p class="text-sm font-semibold text-neutral-900">Foto Layanan <span class="ml-1 rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-bold text-neutral-500">Opsional</span></p>
-                                <p class="text-caption text-neutral-500">JPG, PNG, atau WEBP, maksimal 2 MB. Tanpa foto, kami tampilkan ilustrasi sesuai kategori.</p>
+                                <p class="text-sm font-semibold text-neutral-900">Foto Layanan <span class="ml-1 rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-bold text-neutral-500">Opsional</span></p>
+                                <p class="text-caption text-neutral-600">JPG, PNG, atau WEBP, maksimal 2 MB. Tanpa foto, kami tampilkan ilustrasi sesuai kategori.</p>
                                 <p x-show="fileName" x-text="fileName" class="truncate text-caption font-medium text-brand-700" style="display: none;"></p>
                             </div>
-                            <label for="svc_image" class="inline-flex h-11 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-neutral-300 bg-white px-4 text-sm font-semibold text-neutral-800 shadow-xs transition hover:bg-neutral-50 focus-within:ring-2 focus-within:ring-brand-500">
+                            <label for="svc_image" class="inline-flex h-11 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-neutral-300 bg-white px-4 text-sm font-semibold text-neutral-800 shadow-card transition hover:bg-neutral-50 focus-within:ring-2 focus-within:ring-brand-500">
                                 <span x-text="preview ? 'Ganti Foto' : 'Pilih Foto'">Pilih Foto</span>
-                                <input id="svc_image" name="image" type="file" accept="image/jpeg,image/png,image/webp" class="sr-only" @change="pick($event)" />
+                                <input id="svc_image" name="image" type="file" accept="image/jpeg,image/png,image/webp" class="placeholder:text-neutral-500 sr-only" @change="pick($event)" />
                             </label>
                         </div>
                         <x-input-error :messages="$errors->get('image')" class="-mt-2" />
@@ -450,8 +450,8 @@
                             <div class="w-full max-w-[240px] rounded-2xl bg-white p-4 shadow-md ring-1 ring-neutral-200 [&_svg]:h-auto [&_svg]:w-full">
                                 {!! $qrSvg !!}
                             </div>
-                            <p class="text-center text-caption text-neutral-500">Setelah disetujui Admin, tempel QR Code ini di meja kasir agar pelanggan dapat memindai dengan kamera HP.</p>
-                            <a href="{{ route('merchant.onboarding.download-qr') }}" class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-neutral-300 bg-white px-4 text-sm font-semibold text-neutral-800 shadow-xs transition hover:bg-neutral-50">
+                            <p class="text-center text-caption text-neutral-600">Setelah disetujui Admin, tempel QR Code ini di meja kasir agar pelanggan dapat memindai dengan kamera HP.</p>
+                            <a href="{{ route('merchant.onboarding.download-qr') }}" class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-neutral-300 bg-white px-4 text-sm font-semibold text-neutral-800 shadow-card transition hover:bg-neutral-50">
                                 <svg class="size-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                                 Unduh QR Code (SVG)
                             </a>
@@ -469,7 +469,7 @@
                                 </div>
                                 <div class="flex min-w-0 flex-col">
                                     <p class="truncate text-base font-bold text-neutral-900">{{ $business->name }}</p>
-                                    <p class="truncate text-caption text-neutral-500">{{ $business->address }}</p>
+                                    <p class="truncate text-caption text-neutral-600">{{ $business->address }}</p>
                                 </div>
                             </div>
 

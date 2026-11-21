@@ -2,12 +2,15 @@
 
 namespace App\Providers;
 
+use App\Broadcasting\ResilientPusherBroadcaster;
 use App\Events\CounterStatusChanged;
 use App\Events\QueueTicketCounterAssigned;
 use App\Events\QueueTicketCreated;
 use App\Events\QueueTicketStatusChanged;
 use App\Listeners\BroadcastToPublicDisplayListener;
 use App\Listeners\SendQueueNotificationListener;
+use Illuminate\Broadcasting\BroadcastManager;
+use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use RuntimeException;
@@ -27,6 +30,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // A down WebSocket server must not turn an already-committed queue action into a 500.
+        Broadcast::extend('reverb', fn ($app, array $config): ResilientPusherBroadcaster => new ResilientPusherBroadcaster(
+            $app->make(BroadcastManager::class)->pusher($config),
+            $config['jsonp'] ?? false,
+        ));
+
         Event::listen(QueueTicketCreated::class, [SendQueueNotificationListener::class, 'handleTicketCreated']);
         Event::listen(QueueTicketStatusChanged::class, [SendQueueNotificationListener::class, 'handleTicketStatusChanged']);
 

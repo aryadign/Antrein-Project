@@ -3,30 +3,24 @@
         $completedTickets = $finishedTickets->where('status', \App\Models\QueueTicket::STATUS_SELESAI);
         $cancelledTickets = $finishedTickets->where('status', '!=', \App\Models\QueueTicket::STATUS_SELESAI);
         $tabs = ['aktif' => 'Aktif', 'selesai' => 'Selesai', 'dibatalkan' => 'Dibatalkan'];
+        $tabOptions = [
+            'aktif' => ['label' => 'Aktif', 'count' => $activeTickets->count()],
+            'selesai' => ['label' => 'Selesai', 'count' => $completedTickets->count()],
+            'dibatalkan' => ['label' => 'Dibatalkan', 'count' => $cancelledTickets->count()],
+        ];
     @endphp
 
     <div x-data="{ tab: 'aktif' }" class="flex min-h-[calc(100vh-105px)] md:min-h-0 flex-col">
         {{-- Judul layar --}}
         <div class="flex flex-col gap-1 px-5 pt-8 pb-5 md:px-0 md:pt-2 md:pb-8">
             <h1 class="text-2xl font-bold leading-8 text-gray-900 md:text-3xl md:leading-10">Antrean Saya</h1>
-            <p class="text-xs leading-4 text-gray-700">Pantau giliran dan tiket milik Anda.</p>
+            <p class="text-sm leading-5 text-pretty text-gray-600">Pantau giliran dan tiket milik Anda.</p>
         </div>
 
         <div class="flex flex-1 flex-col justify-between gap-6 px-5 pb-5 md:px-0">
             <div class="flex flex-col gap-4">
                 {{-- Filter status --}}
-                <div class="flex gap-2" role="tablist" aria-label="Filter status tiket">
-                    @foreach ($tabs as $key => $label)
-                        <button
-                            type="button"
-                            role="tab"
-                            @click="tab = @js($key)"
-                            :aria-selected="tab === @js($key)"
-                            :class="tab === @js($key) ? 'bg-brand-700 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-                            class="flex h-[34px] items-center rounded-[18px] px-3.5 text-xs font-medium transition-colors duration-200"
-                        >{{ $label }}</button>
-                    @endforeach
-                </div>
+                <x-customer.filter-tabs :options="$tabOptions" model="tab" label="Filter status tiket" />
 
                 {{-- Aktif --}}
                 <div x-show="tab === 'aktif'" x-transition.opacity.duration.200ms class="flex flex-col gap-4">
@@ -43,12 +37,7 @@
 
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
                     @forelse ($activeTickets as $ticket)
-                        <div class="flex flex-col gap-4">
-                        <x-customer.ticket-card :ticket="$ticket" size="lg" />
-                        <a href="{{ route('customer.queue.track', $ticket->access_token) }}" class="flex h-12 items-center justify-center rounded-xl bg-brand-700 text-sm font-semibold text-white transition hover:bg-blue-900 active:scale-[0.99]">
-                            Lihat Detail Tiket
-                        </a>
-                        </div>
+                        <x-customer.ticket-card :ticket="$ticket" />
                     @empty
                         <div class="flex flex-col items-center gap-[18px] rounded-2xl md:col-span-2 border border-gray-200 px-5 py-7 text-center">
                             <div class="flex size-[72px] items-center justify-center rounded-full bg-brand-100">

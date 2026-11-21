@@ -97,13 +97,13 @@
         {{-- Judul layar --}}
         <div class="border-b border-gray-200 bg-white px-5 pt-6 pb-4 md:border-0 md:bg-transparent md:px-0 md:pt-2 md:pb-6">
             <h1 class="text-2xl font-extrabold tracking-tight leading-8 text-gray-900 md:text-3xl md:leading-10">Cari Toko &amp; Antrean</h1>
-            <p class="mt-1 text-sm leading-5 text-gray-600">Pilih toko berdasarkan daerah atau kategori, lalu ambil nomor antrean dari HP Anda.</p>
+            <p class="mt-1 text-sm leading-5 text-gray-600">Pilih toko berdasarkan daerah atau kategori, lalu ambil nomor antrean dari ponsel Anda.</p>
         </div>
 
         <div class="grid grid-cols-1 gap-5 px-5 pt-4 pb-5 md:px-0 md:pt-0 lg:grid-cols-12 lg:items-start lg:gap-8">
             {{-- Panel kiri: pencarian, daerah, kategori, urutan --}}
-            <aside class="flex min-w-0 flex-col gap-4 lg:sticky lg:top-24 lg:col-span-4 lg:rounded-2xl lg:border lg:border-gray-200 lg:bg-white lg:p-5 lg:shadow-xs">
-                <label class="flex h-11 items-center gap-3 rounded-xl border-[1.5px] border-gray-300 bg-gray-50/90 px-3.5 shadow-xs transition focus-within:border-brand-700 focus-within:bg-white focus-within:ring-2 focus-within:ring-brand-100">
+            <aside class="flex min-w-0 flex-col gap-4 lg:sticky lg:top-24 lg:col-span-4 lg:rounded-2xl lg:border lg:border-gray-200 lg:bg-white lg:p-5 lg:shadow-card">
+                <label class="flex h-12 items-center gap-3 rounded-xl border border-gray-300 bg-white px-3.5 shadow-card transition focus-within:border-brand-700 focus-within:bg-white focus-within:ring-2 focus-within:ring-brand-100">
                     <x-customer.icon name="search" class="size-4.5 text-gray-500" />
                     <span class="sr-only">Cari toko atau antrean</span>
                     <input
@@ -119,25 +119,25 @@
                 {{-- Daerah / Wilayah --}}
                 <div class="flex flex-col gap-2">
                     <div class="flex items-center justify-between gap-2">
-                        <p class="flex items-center gap-1.5 text-xs font-extrabold tracking-wide text-gray-500 uppercase">
-                            <x-customer.icon name="map-pin" class="size-3.5 text-brand-700" />
-                            Daerah / Wilayah
+                        <p class="flex items-center gap-1.5 text-sm font-semibold text-gray-900">
+                            <x-customer.icon name="map-pin" class="size-4 text-brand-700" />
+                            Daerah
                         </p>
-                        <a x-show="area !== 'semua'" x-cloak href="{{ route('customer.search') }}" class="text-[11px] font-bold text-brand-700 hover:underline">Reset</a>
+                        <a x-show="area !== 'semua'" x-cloak href="{{ route('customer.search') }}" class="inline-flex min-h-9 items-center text-sm font-semibold text-brand-700 hover:underline">Hapus filter</a>
                     </div>
-                    <div class="flex flex-wrap gap-1.5" role="group" aria-label="Filter daerah">
+                    <div class="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none] lg:mx-0 lg:flex-wrap lg:overflow-visible lg:px-0" role="group" aria-label="Filter daerah">
                         <a
                             href="{{ route('customer.search', array_filter(['kategori' => $selectedCategory !== 'semua' ? $selectedCategory : null, 'urut' => $selectedSort !== 'rekomendasi' ? $selectedSort : null])) }}"
                             @click.prevent="selectArea('semua')"
-                            :class="area === 'semua' ? 'border-brand-700 bg-brand-700 text-white' : 'border-gray-200 bg-white text-gray-700 hover:border-brand-300'"
-                            class="inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-bold transition"
+                            :class="area === 'semua' ? 'border-brand-700 bg-brand-700 text-white shadow-card' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'"
+                            class="inline-flex h-9 shrink-0 items-center rounded-full border px-3.5 text-sm font-medium whitespace-nowrap transition duration-150 ease-out"
                         >Semua Daerah</a>
                         @foreach ($areas as $areaOption)
                             <a
                                 href="{{ route('customer.search', array_filter(['daerah' => $areaOption, 'kategori' => $selectedCategory !== 'semua' ? $selectedCategory : null])) }}"
                                 @if ($selectedArea === 'semua') @click.prevent="selectArea(@js($areaOption))" @endif
-                                :class="area === @js($areaOption) ? 'border-brand-700 bg-brand-700 text-white' : 'border-gray-200 bg-white text-gray-700 hover:border-brand-300'"
-                                class="inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-bold transition"
+                                :class="area === @js($areaOption) ? 'border-brand-700 bg-brand-700 text-white shadow-card' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'"
+                                class="inline-flex h-9 shrink-0 items-center rounded-full border px-3.5 text-sm font-medium whitespace-nowrap transition duration-150 ease-out"
                             >{{ $areaOption }}</a>
                         @endforeach
                     </div>
@@ -145,17 +145,17 @@
 
                 {{-- Kategori: full grid tanpa horizontal cut-off / truncation --}}
                 <div class="flex flex-col gap-2">
-                    <p class="text-xs font-extrabold tracking-wide text-gray-500 uppercase">Kategori</p>
-                    <div class="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-2" role="group" aria-label="Kategori layanan">
+                    <p class="text-sm font-semibold text-gray-900">Kategori</p>
+                    <div class="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none] lg:mx-0 lg:grid lg:grid-cols-2 lg:overflow-visible lg:px-0" role="group" aria-label="Kategori layanan">
                         @foreach ($categoryChips as $chip)
                             <button
                                 type="button"
                                 @click="selectCategory(@js($chip['slug']))"
                                 :aria-pressed="category === @js($chip['slug'])"
                                 :class="category === @js($chip['slug'])
-                                    ? 'border-brand-700 bg-brand-700 text-white shadow-sm'
-                                    : 'border-gray-200 bg-white text-gray-900 hover:border-brand-300 hover:bg-brand-50/50'"
-                                class="flex min-h-[68px] min-w-0 w-full flex-col items-center justify-center gap-1.5 rounded-xl border-[1.5px] px-2 py-2.5 text-center transition duration-200 active:scale-[0.97]"
+                                    ? 'border-brand-700 bg-brand-700 text-white shadow-card'
+                                    : 'border-gray-200 bg-white text-gray-900 hover:border-gray-300 hover:bg-gray-50'"
+                                class="flex h-10 shrink-0 items-center gap-2 rounded-full border px-3.5 transition duration-150 ease-out active:scale-[0.97] lg:h-11 lg:w-full lg:rounded-lg"
                             >
                                 <span
                                     class="size-5 shrink-0 transition-colors duration-200"
@@ -163,41 +163,32 @@
                                     style="mask: url('{{ asset($chip['icon']) }}') center / contain no-repeat; -webkit-mask: url('{{ asset($chip['icon']) }}') center / contain no-repeat;"
                                     aria-hidden="true"
                                 ></span>
-                                <span class="w-full wrap-break-word text-[11px] font-bold leading-tight sm:text-xs">{{ $chip['label'] }}</span>
+                                <span class="text-sm font-medium whitespace-nowrap">{{ $chip['label'] }}</span>
                             </button>
                         @endforeach
                     </div>
                 </div>
 
-                {{-- Urutkan: box/pill highlight jelas (UCD affordance) --}}
-                <div class="flex flex-col gap-2">
-                    <p class="flex items-center gap-1.5 text-xs font-extrabold tracking-wide text-gray-500 uppercase">
-                        <x-customer.icon name="arrow-up-down" class="size-3.5 text-brand-700" />
+                {{-- Urutkan --}}
+                <div class="flex items-center justify-between gap-3">
+                    <label for="store-sort" class="flex items-center gap-1.5 text-sm font-semibold text-gray-900">
+                        <x-customer.icon name="arrow-up-down" class="size-4 text-brand-700" />
                         Urutkan
-                    </p>
-                    <div class="flex flex-wrap gap-2 lg:flex-col" role="group" aria-label="Urutkan toko">
+                    </label>
+                    <select
+                        id="store-sort"
+                        x-model="sort"
+                        @change="selectSort($event.target.value)"
+                        class="h-10 min-w-0 rounded-lg border border-gray-300 bg-white pr-8 pl-3 text-sm font-medium text-gray-900 shadow-card focus:border-brand-600 focus:ring-2 focus:ring-brand-100 focus:outline-none"
+                    >
                         @foreach ($sortOptions as $sortKey => $sortLabel)
-                            <button
-                                type="button"
-                                @click="selectSort(@js($sortKey))"
-                                :aria-pressed="sort === @js($sortKey)"
-                                :class="sort === @js($sortKey)
-                                    ? 'border-brand-400 bg-brand-50 text-brand-800 shadow-xs'
-                                    : 'border-gray-300 bg-white text-gray-800 hover:border-brand-300 hover:bg-gray-50'"
-                                class="inline-flex min-h-10 items-center justify-between gap-2 rounded-xl border-[1.5px] px-3.5 py-2 text-xs font-bold transition duration-200 active:scale-[0.97] sm:text-sm lg:w-full"
-                            >
-                                <span class="flex items-center gap-2">
-                                    <x-customer.icon name="check" class="size-4 shrink-0 text-brand-700" x-show="sort === '{{ $sortKey }}'" />
-                                    <span>{{ $sortLabel }}</span>
-                                </span>
-                                <span x-show="sort === '{{ $sortKey }}'" class="hidden rounded-full bg-brand-700 px-2 py-0.5 text-[10px] font-bold text-white lg:inline">Aktif</span>
-                            </button>
+                            <option value="{{ $sortKey }}" @selected($selectedSort === $sortKey)>{{ $sortLabel }}</option>
                         @endforeach
-                    </div>
+                    </select>
                 </div>
 
                 <div class="hidden flex-col gap-3 border-t border-gray-100 pt-4 lg:flex">
-                    <p class="text-xs font-extrabold tracking-wide text-gray-500 uppercase">3 Langkah Mudah</p>
+                    <p class="text-sm font-semibold text-gray-900">Cara mengambil antrean</p>
                     <x-customer.how-it-works compact />
                 </div>
             </aside>
@@ -231,7 +222,7 @@
                     </span>
                     <p class="text-sm font-bold leading-5 text-gray-900" x-text="query.trim() === '' && category !== 'semua' ? 'Belum ada toko di kategori ini' : 'Tidak ada toko yang cocok'">Tidak ada toko yang cocok</p>
                     <p class="text-xs leading-4 text-gray-600" x-text="query.trim() === '' && category !== 'semua' ? 'Toko baru akan segera bergabung. Lihat kategori lain dulu, yuk.' : 'Coba kata kunci atau kategori lain.'">Coba kata kunci atau kategori lain.</p>
-                    <button type="button" @click="reset()" class="rounded-full bg-brand-700 px-4 py-2 text-xs font-bold text-white transition hover:bg-blue-900">Tampilkan semua toko</button>
+                    <x-button size="sm" @click="reset()">Tampilkan semua toko</x-button>
                 </div>
 
                 <div class="flex items-center gap-2 rounded-xl border border-brand-200 bg-brand-50 p-3">

@@ -1,291 +1,180 @@
-<x-layouts.admin 
-    title="Monitoring Antrean Platform" 
-    heading="Monitoring Antrean Lintas-UMKM" 
-    description="Pantau arus tiket antrean di seluruh mitra UMKM secara realtime dalam mode pengawasan (read-only)."
+@php
+    use App\Http\Controllers\Admin\QueueMonitoringController;
+    use App\Models\QueueTicket;
+
+    $filterQuery = array_filter(['search' => $search, 'business_id' => $businessId, 'source' => $source, 'date' => $date]);
+
+    /* Status tabs follow QueueTicket::statusPresentation(); "dilewati" stats already include "tidak hadir". */
+    $statusTabs = collect([null => ['label' => 'Semua', 'count' => $stats['total']]])
+        ->union(collect(QueueTicket::statusPresentation())->except(QueueTicket::STATUS_TIDAK_HADIR)->map(fn (array $presentation, string $key): array => [
+            'label' => $presentation['label'],
+            'count' => $stats[$key] ?? null,
+        ]))
+        ->map(fn (array $tab, string $key): array => [
+            'label' => $tab['label'],
+            'count' => $tab['count'],
+            'active' => ($status ?: '') === $key,
+            'href' => route('admin.queues.index', array_filter(['status' => $key ?: null, ...$filterQuery])),
+        ])
+        ->values()
+        ->all();
+
+    $runningNow = $stats['menunggu'] + $stats['dipanggil'] + $stats['sedang_dilayani'];
+
+    $sourceLabels = [
+        QueueTicket::SOURCE_ONLINE => 'Dari ponsel',
+        QueueTicket::SOURCE_WALK_IN => 'Datang langsung',
+    ];
+
+    $hasFilters = $filterQuery !== [];
+@endphp
+
+<x-layouts.admin
+    title="Pemantauan Antrean Platform"
+    heading="Pemantauan Antrean"
+    description="Pantau tiket antrean di semua UMKM. Halaman ini hanya untuk melihat; pemanggilan tiket tetap dilakukan oleh UMKM."
 >
-    <div class="space-y-5 sm:space-y-6">
-        {{-- Read-Only Notice Banner (M8-25) --}}
-        <div class="rounded-xl bg-blue-50/75 border border-blue-200 p-4 text-xs text-blue-900 flex items-start gap-3 shadow-xs">
-            <svg class="w-5 h-5 text-blue-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            <div>
-                <strong class="font-bold text-blue-950 block">Mode Pengawasan Global (Read-Only)</strong>
-                <p class="mt-0.5 text-blue-800">
-                    Sesuai spesifikasi arsitektur AntreIn, Administrator memiliki akses pemantauan lintas-gerai untuk analitik dan audit tanpa wewenang mengubah status operasional tiket. Seluruh panggilan dan penyelesaian tiket tetap berada di bawah kendali operasional UMKM terkait. Nomor telepon pelanggan disensor demi perlindungan privasi (OQ-14).
-                </p>
+    <div class="space-y-5">
+        <section aria-labelledby="queue-kpi-heading" class="space-y-3">
+            <h2 id="queue-kpi-heading" class="sr-only">Ringkasan antrean</h2>
+            <div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
+                <x-stat-tile label="Sedang berjalan" :value="number_format($runningNow)" tone="warning" icon="clock" :emphasis="true" class="col-span-2 lg:col-span-1" />
+                <x-stat-tile label="Selesai dilayani" :value="number_format($stats['selesai'])" tone="success" icon="check" />
+                <x-stat-tile label="Total tiket" :value="number_format($stats['total'])" hint="Seluruh UMKM" icon="ticket" />
             </div>
-        </div>
+        </section>
 
-        {{-- Metrics Summary Strip (M8-22) --}}
-        <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-8">
-            <x-stat-tile class="col-span-2 sm:col-span-1" label="Total Tiket" :value="number_format($stats['total'])" />
-            <x-stat-tile label="Menunggu" :value="number_format($stats['menunggu'])" tone="warning" />
-            <x-stat-tile label="Dipanggil" :value="number_format($stats['dipanggil'])" tone="brand" />
-            <x-stat-tile label="Sedang Dilayani" :value="number_format($stats['sedang_dilayani'])" tone="brand" />
-            <x-stat-tile label="Selesai" :value="number_format($stats['selesai'])" tone="success" />
-            <x-stat-tile label="Tidak Hadir" :value="number_format($stats['tidak_hadir'] ?? 0)" tone="danger" />
-            <x-stat-tile label="Dilewati" :value="number_format($stats['dilewati'])" tone="warning" />
-            <x-stat-tile label="Dibatalkan" :value="number_format($stats['dibatalkan'])" tone="muted" />
-        </div>
+        @include('admin.partials.filter-tabs', ['tabs' => $statusTabs, 'label' => 'Filter status tiket'])
 
-        {{-- Multi-Filter Bar (M8-23) --}}
-        <div class="bg-white rounded-xl border border-neutral-200 p-3 shadow-xs sm:p-4">
-            <form method="GET" action="{{ route('admin.queues.index') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
-                {{-- Search Box --}}
-                <div class="lg:col-span-2">
-                    <label for="queue-search" class="block text-caption font-semibold text-neutral-700 mb-1">Cari No Tiket / Pelanggan / UMKM</label>
-                    <div class="relative">
-                        <input
-                            id="queue-search"
-                            type="search"
-                            name="search"
-                            value="{{ $search }}" 
-                            placeholder="Contoh: TKT-001, Budi, Kopi Senja..." 
-                            class="h-11 w-full pl-9 pr-3 rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500"
-                        >
-                        <svg class="w-4 h-4 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                    </div>
-                </div>
-
-                {{-- Business Filter --}}
-                <div>
-                    <label for="queue-business" class="block text-caption font-semibold text-neutral-700 mb-1">Gerai UMKM</label>
-                    <select id="queue-business" name="business_id" class="h-11 w-full rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500">
-                        <option value="">Semua UMKM</option>
-                        @foreach ($businesses as $b)
-                            <option value="{{ $b->id }}" {{ $businessId == $b->id ? 'selected' : '' }}>
-                                {{ $b->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-
-                {{-- Status Filter --}}
-                <div>
-                    <label for="queue-status" class="block text-caption font-semibold text-neutral-700 mb-1">Status Tiket</label>
-                    <select id="queue-status" name="status" class="h-11 w-full rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500">
-                        <option value="">Semua Status</option>
-                        <option value="menunggu" {{ $status === 'menunggu' ? 'selected' : '' }}>Menunggu</option>
-                        <option value="dipanggil" {{ $status === 'dipanggil' ? 'selected' : '' }}>Dipanggil</option>
-                        <option value="sedang_dilayani" {{ $status === 'sedang_dilayani' ? 'selected' : '' }}>Sedang Dilayani</option>
-                        <option value="selesai" {{ $status === 'selesai' ? 'selected' : '' }}>Selesai</option>
-                        <option value="tidak_hadir" {{ $status === 'tidak_hadir' ? 'selected' : '' }}>Tidak Hadir</option>
-                        <option value="dilewati" {{ $status === 'dilewati' ? 'selected' : '' }}>Dilewati</option>
-                        <option value="dibatalkan" {{ $status === 'dibatalkan' ? 'selected' : '' }}>Dibatalkan</option>
-                    </select>
-                </div>
-
-                {{-- Source Filter --}}
-                <div>
-                    <label for="queue-source" class="block text-caption font-semibold text-neutral-700 mb-1">Sumber (Kanal)</label>
-                    <select id="queue-source" name="source" class="h-11 w-full rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500">
-                        <option value="">Semua Kanal</option>
-                        <option value="online" {{ $source === 'online' ? 'selected' : '' }}>Online (Web)</option>
-                        <option value="walk_in" {{ $source === 'walk_in' ? 'selected' : '' }}>Walk-In (Kasir)</option>
-                    </select>
-                </div>
-
-                {{-- Date Filter & Action Buttons --}}
-                <div class="sm:col-span-2 lg:col-span-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-neutral-100">
-                    <div class="grid grid-cols-2 gap-2 sm:flex sm:items-center">
-                        <div class="col-span-2 sm:w-44">
-                            <label for="queue-date" class="sr-only">Tanggal antrean</label>
-                            <input
-                                id="queue-date"
-                                type="date"
-                                name="date"
-                                value="{{ $date }}"
-                                class="h-11 w-full px-3 rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500"
-                            >
-                        </div>
-                        <button type="submit" class="inline-flex h-11 items-center justify-center px-4 rounded-lg bg-neutral-900 text-white text-xs font-bold hover:bg-neutral-800 transition shadow-xs">
-                            Filter
-                        </button>
-                        @if ($search || $businessId || $status || $source || $date)
-                            <a href="{{ route('admin.queues.index') }}" class="inline-flex h-11 items-center justify-center px-3 rounded-lg border border-neutral-300 text-neutral-700 text-xs font-medium hover:bg-neutral-50 transition">
-                                Reset
-                            </a>
-                        @endif
-                    </div>
-
-                    <span class="text-caption text-neutral-500">
-                        Total <strong>{{ $tickets->total() }}</strong> tiket terpantau
-                    </span>
-                </div>
-            </form>
-        </div>
-
-        {{-- Queue Table (M8-21, M8-26, M8-30, M8-33) --}}
-        <div class="bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-xs">
-            <div class="p-4 sm:p-5 border-b border-neutral-200 flex items-center justify-between">
-                <div>
-                    <h3 class="text-h3 font-bold text-neutral-900">Arus Antrean Lintas UMKM</h3>
-                    <p class="text-caption text-neutral-500 mt-0.5">Daftar tiket terkini dari semua gerai UMKM mitra.</p>
-                </div>
-            </div>
-
-            {{-- Desktop Table View --}}
-            <div class="hidden md:block overflow-x-auto">
-                <table class="w-full text-left border-collapse text-sm">
-                    <thead>
-                        <tr class="border-b border-neutral-200 bg-neutral-50/75 text-neutral-600 font-semibold text-xs tracking-wider uppercase">
-                            <th class="py-3.5 px-4">No. Tiket</th>
-                            <th class="py-3.5 px-4">Gerai UMKM</th>
-                            <th class="py-3.5 px-4">Layanan</th>
-                            <th class="py-3.5 px-4">Pelanggan</th>
-                            <th class="py-3.5 px-4">Kanal</th>
-                            <th class="py-3.5 px-4">Status</th>
-                            <th class="py-3.5 px-4">Waktu Dibuat</th>
-                            <th class="py-3.5 px-4 text-right">Detail</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-neutral-200">
-                        @forelse ($tickets as $ticket)
-                            <tr class="hover:bg-neutral-50/50 transition">
-                                {{-- Ticket Number --}}
-                                <td class="py-3.5 px-4 font-mono font-bold text-neutral-900">
-                                    <span class="px-2 py-1 rounded bg-neutral-100 border border-neutral-200">
-                                        {{ $ticket->ticket_number }}
-                                    </span>
-                                </td>
-
-                                {{-- Business Name --}}
-                                <td class="py-3.5 px-4">
-                                    @if ($ticket->business)
-                                        <a href="{{ route('admin.businesses.show', $ticket->business) }}" class="font-semibold text-neutral-900 hover:text-brand-600 hover:underline block truncate max-w-[160px]">
-                                            {{ $ticket->business->name }}
-                                        </a>
-                                    @else
-                                        <span class="text-neutral-400">—</span>
-                                    @endif
-                                </td>
-
-                                {{-- Service Name --}}
-                                <td class="py-3.5 px-4 text-neutral-700">
-                                    <span class="truncate block max-w-[140px]" title="{{ $ticket->service?->name }}">
-                                        {{ $ticket->service?->name ?? '—' }}
-                                    </span>
-                                </td>
-
-                                {{-- Customer Name & Masked Phone (OQ-14, M8-26) --}}
-                                <td class="py-3.5 px-4">
-                                    <span class="font-medium text-neutral-900 block truncate max-w-[140px]">{{ $ticket->customer_name }}</span>
-                                    <span class="text-caption font-mono text-neutral-400 block">
-                                        {{ \App\Http\Controllers\Admin\QueueMonitoringController::maskPhoneNumber($ticket->customer_phone) }}
-                                    </span>
-                                </td>
-
-                                {{-- Source --}}
-                                <td class="py-3.5 px-4">
-                                    @if ($ticket->source === 'online')
-                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-sky-50 text-sky-700 border border-sky-200">
-                                            Online
-                                        </span>
-                                    @else
-                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-neutral-100 text-neutral-700 border border-neutral-200">
-                                            Walk-in
-                                        </span>
-                                    @endif
-                                </td>
-
-                                {{-- Status Badge --}}
-                                <td class="py-3.5 px-4">
-                                    <x-status-badge :status="$ticket->status" size="sm" class="whitespace-nowrap" />
-                                </td>
-
-                                {{-- Created At --}}
-                                <td class="py-3.5 px-4 text-caption text-neutral-500 whitespace-nowrap">
-                                    {{ $ticket->created_at->format('d M, H:i') }}
-                                </td>
-
-                                {{-- View Detail Action --}}
-                                <td class="py-3.5 px-4 text-right">
-                                    <a 
-                                        href="{{ route('admin.queues.show', $ticket) }}" 
-                                        class="inline-flex size-9 items-center justify-center rounded-lg text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 transition"
-                                        aria-label="Pantau detail tiket {{ $ticket->ticket_number }}"
-                                        title="Pantau Detail Tiket"
-                                    >
-                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                                    </a>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="8" class="py-12 text-center">
-                                    <div class="max-w-xs mx-auto text-neutral-400">
-                                        <svg class="w-10 h-10 mx-auto text-neutral-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
-                                        <p class="font-semibold text-neutral-700">Tidak ada tiket antrean ditemukan</p>
-                                        <p class="text-caption text-neutral-500 mt-1">Coba ubah filter status, gerai UMKM, atau tanggal antrean.</p>
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-
-            {{-- Mobile Card View (M8-33) --}}
-            <div class="md:hidden divide-y divide-neutral-200">
-                @forelse ($tickets as $ticket)
-                    <div class="p-4 space-y-3">
-                        <div class="flex items-start justify-between gap-3">
-                            <div class="min-w-0">
-                                <span class="font-mono font-bold text-base text-neutral-900 bg-neutral-100 px-2.5 py-1 rounded border border-neutral-200 inline-block">
-                                    {{ $ticket->ticket_number }}
-                                </span>
-                                <h4 class="font-semibold text-neutral-900 mt-2">{{ $ticket->customer_name }}</h4>
-                                <p class="text-caption font-mono text-neutral-400">
-                                    {{ \App\Http\Controllers\Admin\QueueMonitoringController::maskPhoneNumber($ticket->customer_phone) }}
-                                </p>
-                            </div>
-
-                            <div class="text-right shrink-0">
-                                <x-status-badge :status="$ticket->status" size="sm" class="whitespace-nowrap" />
-
-                                <span class="block text-[11px] text-neutral-400 mt-1">
-                                    {{ $ticket->source === 'online' ? 'Online' : 'Walk-in' }}
-                                </span>
-                            </div>
-                        </div>
-
-                        <div class="text-caption text-neutral-600 space-y-1 bg-neutral-50/75 p-2.5 rounded-lg border border-neutral-200/60">
-                            <div class="flex justify-between gap-3">
-                                <span class="text-neutral-500">UMKM:</span>
-                                <span class="font-semibold text-neutral-900 truncate max-w-[180px]">{{ $ticket->business?->name ?? '—' }}</span>
-                            </div>
-                            <div class="flex justify-between gap-3">
-                                <span class="text-neutral-500">Layanan:</span>
-                                <span class="font-medium text-neutral-800 truncate max-w-[180px]">{{ $ticket->service?->name ?? '—' }}</span>
-                            </div>
-                            <div class="flex justify-between gap-3">
-                                <span class="text-neutral-500">Waktu:</span>
-                                <span class="tabular-nums">{{ $ticket->created_at->format('d M Y, H:i') }}</span>
-                            </div>
-                        </div>
-
-                        <div>
-                            <a
-                                href="{{ route('admin.queues.show', $ticket) }}"
-                                class="inline-flex h-11 w-full items-center justify-center px-3 rounded-lg border border-neutral-300 text-neutral-700 text-xs font-medium hover:bg-neutral-50 transition"
-                            >
-                                Pantau Detail Tiket
-                            </a>
-                        </div>
-                    </div>
-                @empty
-                    <div class="py-8 text-center text-neutral-400">
-                        <p class="font-semibold text-neutral-700">Tidak ada tiket antrean ditemukan</p>
-                    </div>
-                @endforelse
-            </div>
-
-            {{-- Pagination Links --}}
-            @if ($tickets->hasPages())
-                <div class="p-4 border-t border-neutral-200 bg-neutral-50/50">
-                    {{ $tickets->links() }}
-                </div>
+        <form method="GET" action="{{ route('admin.queues.index') }}" class="grid grid-cols-1 gap-3 rounded-xl border border-neutral-200/80 bg-white p-3 shadow-card sm:grid-cols-2 sm:p-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,0.8fr)_auto] lg:items-end">
+            @if ($status)
+                <input type="hidden" name="status" value="{{ $status }}">
             @endif
-        </div>
+
+            <div class="sm:col-span-2 lg:col-span-1">
+                <label for="queue-search" class="mb-1.5 block text-sm font-medium text-neutral-800">Cari tiket</label>
+                <x-input id="queue-search" type="search" name="search" :value="$search" placeholder="Tiket, pelanggan, UMKM">
+                    <x-slot:icon>
+                        <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    </x-slot:icon>
+                </x-input>
+            </div>
+
+            <div>
+                <label for="queue-business" class="mb-1.5 block text-sm font-medium text-neutral-800">UMKM</label>
+                <x-select id="queue-business" name="business_id">
+                    <option value="">Semua UMKM</option>
+                    @foreach ($businesses as $b)
+                        <option value="{{ $b->id }}" @selected($businessId == $b->id)>{{ $b->name }}</option>
+                    @endforeach
+                </x-select>
+            </div>
+
+            <div>
+                <label for="queue-source" class="mb-1.5 block text-sm font-medium text-neutral-800">Asal tiket</label>
+                <x-select id="queue-source" name="source">
+                    <option value="">Semua</option>
+                    @foreach ($sourceLabels as $value => $label)
+                        <option value="{{ $value }}" @selected($source === $value)>{{ $label }}</option>
+                    @endforeach
+                </x-select>
+            </div>
+
+            <div>
+                <label for="queue-date" class="mb-1.5 block text-sm font-medium text-neutral-800">Tanggal</label>
+                <x-input id="queue-date" type="date" name="date" :value="$date" />
+            </div>
+
+            <div class="flex gap-2 *:flex-1 sm:col-span-2 lg:col-span-1 sm:*:flex-none">
+                <x-button type="submit">Terapkan</x-button>
+                @if ($hasFilters)
+                    <x-button variant="ghost" :href="route('admin.queues.index', array_filter(['status' => $status]))">Hapus filter</x-button>
+                @endif
+            </div>
+        </form>
+
+        <p class="text-sm text-neutral-600" aria-live="polite">
+            Menampilkan <strong class="font-semibold tabular-nums text-neutral-900">{{ number_format($tickets->total()) }}</strong> tiket. Nomor telepon pelanggan disamarkan.
+        </p>
+
+        @if ($tickets->isEmpty())
+            <x-empty-state title="Tidak ada tiket ditemukan" description="Coba ubah status, UMKM, asal tiket, atau tanggal.">
+                @if ($hasFilters || $status)
+                    <x-button variant="outline" :href="route('admin.queues.index')">Tampilkan semua tiket</x-button>
+                @endif
+            </x-empty-state>
+        @else
+            <div class="hidden md:block">
+                <x-table>
+                    <x-slot:header>
+                        <tr>
+                            <x-table.th>Tiket</x-table.th>
+                            <x-table.th>UMKM &amp; layanan</x-table.th>
+                            <x-table.th>Pelanggan</x-table.th>
+                            <x-table.th>Status</x-table.th>
+                            <x-table.th>Dibuat</x-table.th>
+                            <x-table.th align="right">Aksi</x-table.th>
+                        </tr>
+                    </x-slot:header>
+
+                    @foreach ($tickets as $ticket)
+                        <tr>
+                            <x-table.td>
+                                <span class="font-semibold tracking-tight text-neutral-950">{{ $ticket->ticket_number }}</span>
+                                <p class="text-xs text-neutral-600">{{ $sourceLabels[$ticket->source] ?? $ticket->source }}</p>
+                            </x-table.td>
+                            <x-table.td class="whitespace-normal! text-sm">
+                                @if ($ticket->business)
+                                    <a href="{{ route('admin.businesses.show', $ticket->business) }}" class="font-medium text-neutral-900 hover:text-brand-700 hover:underline">{{ $ticket->business->name }}</a>
+                                @else
+                                    <span class="text-neutral-500">UMKM tidak ditemukan</span>
+                                @endif
+                                <p class="text-xs text-neutral-600">{{ $ticket->service?->name ?? 'Layanan dihapus' }}</p>
+                            </x-table.td>
+                            <x-table.td class="text-sm">
+                                <p class="font-medium text-neutral-900">{{ $ticket->customer_name }}</p>
+                                <p class="text-xs text-neutral-600">{{ QueueMonitoringController::maskPhoneNumber($ticket->customer_phone) }}</p>
+                            </x-table.td>
+                            <x-table.td><x-status-badge :status="$ticket" size="sm" /></x-table.td>
+                            <x-table.td class="text-sm text-neutral-600">{{ $ticket->created_at->translatedFormat('d M, H:i') }}</x-table.td>
+                            <x-table.td align="right">
+                                <x-button variant="ghost" size="sm" :href="route('admin.queues.show', $ticket)" aria-label="Lihat detail tiket {{ $ticket->ticket_number }}">Detail</x-button>
+                            </x-table.td>
+                        </tr>
+                    @endforeach
+
+                    @if ($tickets->hasPages())
+                        <x-slot:footer>
+                            <x-pagination :paginator="$tickets" />
+                        </x-slot:footer>
+                    @endif
+                </x-table>
+            </div>
+
+            <div class="md:hidden">
+                <x-card padding="none">
+                    <ul class="divide-y divide-neutral-100">
+                        @foreach ($tickets as $ticket)
+                            <li>
+                                <a href="{{ route('admin.queues.show', $ticket) }}" class="flex items-start justify-between gap-3 p-4 transition-colors hover:bg-neutral-50">
+                                    <div class="min-w-0">
+                                        <p class="font-semibold text-neutral-950">{{ $ticket->ticket_number }} <span class="font-normal text-neutral-600">{{ $ticket->customer_name }}</span></p>
+                                        <p class="text-sm text-neutral-700">{{ $ticket->business?->name ?? 'UMKM tidak ditemukan' }}</p>
+                                        <p class="text-xs text-neutral-600">{{ $ticket->service?->name ?? 'Layanan dihapus' }}, {{ $ticket->created_at->translatedFormat('d M, H:i') }}</p>
+                                        <p class="text-xs text-neutral-600">{{ QueueMonitoringController::maskPhoneNumber($ticket->customer_phone) }}</p>
+                                    </div>
+                                    <x-status-badge :status="$ticket" size="sm" class="shrink-0" />
+                                </a>
+                            </li>
+                        @endforeach
+                    </ul>
+                    @if ($tickets->hasPages())
+                        <x-slot:footer>
+                            <x-pagination :paginator="$tickets" />
+                        </x-slot:footer>
+                    @endif
+                </x-card>
+            </div>
+        @endif
     </div>
 </x-layouts.admin>
-

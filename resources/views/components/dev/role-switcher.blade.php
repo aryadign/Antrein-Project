@@ -79,9 +79,9 @@
         <div class="flex items-center justify-between border-b border-neutral-800 pb-2.5">
             <div>
                 <div class="text-xs font-bold text-amber-300 tracking-wider uppercase font-mono">Peralihan Persona Demo</div>
-                <div class="text-[11px] text-neutral-400">Pilih akun untuk langsung beralih role</div>
+                <div class="text-xs text-neutral-400">Pilih akun untuk langsung beralih role</div>
             </div>
-            <span class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-neutral-800 text-neutral-400 border border-neutral-700">
+            <span class="px-1.5 py-0.5 rounded text-xs font-mono bg-neutral-800 text-neutral-400 border border-neutral-700">
                 LOCAL ONLY
             </span>
         </div>
@@ -89,13 +89,13 @@
         {{-- Current User Info --}}
         @if ($currentUser)
             <div class="bg-neutral-950/70 rounded-xl p-2.5 border border-neutral-800/80 text-xs space-y-0.5">
-                <div class="text-neutral-400 text-[10px] uppercase font-semibold">Sedang Aktif:</div>
+                <div class="text-neutral-400 text-xs uppercase font-semibold">Sedang Aktif:</div>
                 <div class="font-bold text-neutral-200 truncate">{{ $currentUser->name }}</div>
-                <div class="text-[11px] text-neutral-400 font-mono truncate">{{ $currentUser->email }}</div>
+                <div class="text-xs text-neutral-400 font-mono truncate">{{ $currentUser->email }}</div>
             </div>
         @else
             <div class="bg-neutral-950/70 rounded-xl p-2.5 border border-neutral-800/80 text-xs">
-                <div class="text-neutral-400 text-[10px] uppercase font-semibold">Sedang Aktif:</div>
+                <div class="text-neutral-400 text-xs uppercase font-semibold">Sedang Aktif:</div>
                 <div class="font-bold text-neutral-300">Tamu Publik (Guest / Belum Login)</div>
             </div>
         @endif
@@ -113,12 +113,12 @@
                 >
                     <div>
                         <div class="text-xs font-bold text-neutral-200 group-hover:text-rose-400">Admin AntreIn</div>
-                        <div class="text-[11px] text-neutral-400 font-mono">
+                        <div class="text-xs text-neutral-400 font-mono">
                             <span x-show="!submitting || selectedPersona !== 'admin'">admin@antrein.id</span>
                             <span x-show="submitting && selectedPersona === 'admin'" class="text-rose-400 font-semibold" style="display: none;">Beralih ke Admin...</span>
                         </div>
                     </div>
-                    <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-rose-950/80 text-rose-300 border border-rose-800/60">
+                    <span class="text-xs font-mono px-1.5 py-0.5 rounded bg-rose-950/80 text-rose-300 border border-rose-800/60">
                         Admin
                     </span>
                 </button>
@@ -135,12 +135,12 @@
                 >
                     <div>
                         <div class="text-xs font-bold text-neutral-200 group-hover:text-blue-400">Made Aryawan (Owner)</div>
-                        <div class="text-[11px] text-neutral-400 font-mono">
+                        <div class="text-xs text-neutral-400 font-mono">
                             <span x-show="!submitting || selectedPersona !== 'owner'">owner@garasi.id</span>
                             <span x-show="submitting && selectedPersona === 'owner'" class="text-blue-400 font-semibold" style="display: none;">Beralih ke Owner...</span>
                         </div>
                     </div>
-                    <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-950/80 text-blue-300 border border-blue-800/60">
+                    <span class="text-xs font-mono px-1.5 py-0.5 rounded bg-blue-950/80 text-blue-300 border border-blue-800/60">
                         Owner
                     </span>
                 </button>
@@ -157,12 +157,12 @@
                 >
                     <div>
                         <div class="text-xs font-bold text-neutral-200 group-hover:text-emerald-400">Wayan Sudirga (Operator)</div>
-                        <div class="text-[11px] text-neutral-400 font-mono">
+                        <div class="text-xs text-neutral-400 font-mono">
                             <span x-show="!submitting || selectedPersona !== 'operator'">operator@garasi.id (Loket 1)</span>
                             <span x-show="submitting && selectedPersona === 'operator'" class="text-emerald-400 font-semibold" style="display: none;">Beralih ke Operator...</span>
                         </div>
                     </div>
-                    <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-800/60">
+                    <span class="text-xs font-mono px-1.5 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-800/60">
                         Operator
                     </span>
                 </button>
@@ -179,12 +179,12 @@
                 >
                     <div>
                         <div class="text-xs font-bold text-neutral-200 group-hover:text-amber-400">Raka Pratama (Pelanggan)</div>
-                        <div class="text-[11px] text-neutral-400 font-mono">
+                        <div class="text-xs text-neutral-400 font-mono">
                             <span x-show="!submitting || selectedPersona !== 'customer'">pelanggan@antrein.id</span>
                             <span x-show="submitting && selectedPersona === 'customer'" class="text-amber-400 font-semibold" style="display: none;">Beralih ke Pelanggan...</span>
                         </div>
                     </div>
-                    <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-800/60">
+                    <span class="text-xs font-mono px-1.5 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-800/60">
                         Pelanggan
                     </span>
                 </button>
@@ -197,16 +197,16 @@
             >
                 <div>
                     <div class="text-xs font-bold text-neutral-200 group-hover:text-blue-400">Portal Pelanggan</div>
-                    <div class="text-[11px] text-neutral-400">Beranda, cari toko &amp; antrean saya</div>
+                    <div class="text-xs text-neutral-400">Beranda, cari toko &amp; antrean saya</div>
                 </div>
-                <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-950/80 text-blue-300 border border-blue-800/60">
+                <span class="text-xs font-mono px-1.5 py-0.5 rounded bg-blue-950/80 text-blue-300 border border-blue-800/60">
                     Katalog
                 </span>
             </a>
         </div>
 
         {{-- Footer Links --}}
-        <div class="pt-2 border-t border-neutral-800 flex items-center justify-between text-[11px] text-neutral-400">
+        <div class="pt-2 border-t border-neutral-800 flex items-center justify-between text-xs text-neutral-400">
             <a href="{{ route('preview.design-system') }}" class="hover:text-white underline">
                 Design System
             </a>

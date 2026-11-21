@@ -217,8 +217,8 @@ class StationLogoAndGradientRefinementsTest extends TestCase
             ->get(route('merchant.dashboard'))
             ->assertOk()
             ->assertSee('header_counter_select')
-            ->assertSee('from-slate-800 via-slate-900 to-brand-950')
-            ->assertSee('from-amber-500 via-amber-600 to-orange-700');
+            ->assertSee('data-stat-tile data-tone="warning"', false)
+            ->assertSee('data-now-serving', false);
 
         // Switch to 1 Station mode
         $this->business->update(['use_stations' => false]);
@@ -228,31 +228,31 @@ class StationLogoAndGradientRefinementsTest extends TestCase
         $this->actingAs($owner)
             ->get(route('merchant.counters.index'))
             ->assertOk()
-            ->assertSee('Mode 1 Station Utama')
+            ->assertSee('Mode 1 Loket Utama')
             ->assertSee('Kelola Loket Pelayanan')
-            ->assertSee('bg-linear-to-br from-emerald-600');
+            ->assertSee('data-stat-tile data-tone="success"', false);
 
         $this->actingAs($owner)
             ->get(route('merchant.services.index'))
             ->assertOk()
-            ->assertSee('bg-linear-to-br from-emerald-600');
+            ->assertSee('data-stat-tile data-tone="success"', false);
 
         $this->actingAs($operator)
             ->get(route('merchant.display.index'))
             ->assertOk()
-            ->assertSee('1 Station Utama')
+            ->assertSee('1 Loket Utama')
             ->assertSee('max-w-md mx-auto');
 
         $this->actingAs($operator)
             ->get(route('merchant.dashboard'))
             ->assertOk()
-            ->assertSee('1 Station Utama')
+            ->assertSee('1 Loket Utama')
             ->assertDontSee('id="header_counter_select"', false);
 
         $this->actingAs($operator)
             ->get(route('merchant.queues'))
             ->assertOk()
-            ->assertSee('1 Station Utama')
+            ->assertSee('1 Loket Utama')
             ->assertDontSee('id="queue_counter_filter"', false);
     }
 
@@ -272,9 +272,10 @@ class StationLogoAndGradientRefinementsTest extends TestCase
         $this->get(route('customer.queue', ['slug' => $this->business->slug]))
             ->assertOk()
             ->assertSee('images/antrein-logo.svg')
-            ->assertSee('from-brand-900 via-blue-900 to-indigo-950')
-            ->assertSee('from-blue-900 via-brand-800 to-slate-900')
-            ->assertSee('from-indigo-950 via-brand-900 to-blue-800');
+            ->assertSee('Menunggu')
+            ->assertSee('Perkiraan tunggu')
+            ->assertSee('Layanan tersedia')
+            ->assertDontSee('from-brand-900 via-blue-900 to-indigo-950');
     }
 
     public function test_expanded_development_seeder_populates_many_services_reviews_and_scaling_controls(): void

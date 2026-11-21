@@ -3,16 +3,16 @@
     'footer' => null,
 ])
 
-<div class="w-full overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
+<div class="w-full overflow-hidden rounded-xl border border-neutral-200/80 bg-white shadow-card">
     <div class="overflow-x-auto">
         <table {{ $attributes->merge(['class' => 'min-w-full divide-y divide-neutral-200 text-left text-body']) }}>
             @if ($header)
-                <thead class="bg-neutral-50/75 text-label font-semibold text-neutral-700">
+                <thead class="bg-neutral-50 text-label font-semibold text-neutral-700">
                     {{ $header }}
                 </thead>
             @endif
 
-            <tbody class="divide-y divide-neutral-200 bg-white text-neutral-800">
+            <tbody class="divide-y divide-neutral-100 bg-white text-neutral-800 [&>tr]:transition-colors [&>tr:hover]:bg-neutral-50/70">
                 {{ $slot }}
             </tbody>
         </table>

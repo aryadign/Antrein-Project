@@ -8,25 +8,14 @@
         {{-- Judul layar --}}
         <div class="flex flex-col gap-1 px-5 pt-8 pb-5 md:px-0 md:pt-2 md:pb-8">
             <h1 class="text-2xl font-bold leading-8 text-gray-900 md:text-3xl md:leading-10">Riwayat Antrean</h1>
-            <p class="text-xs leading-4 text-gray-700">
+            <p class="text-sm leading-5 text-pretty text-gray-600">
                 {{ $hasHistory ? 'Catatan antrean yang pernah Anda ambil.' : 'Semua perjalanan antrean Anda, di satu tempat.' }}
             </p>
         </div>
 
         <div class="flex flex-col gap-4 px-5 pb-5 md:px-0">
             {{-- Filter status --}}
-            <div class="flex gap-2" role="tablist" aria-label="Filter status riwayat">
-                @foreach ($filters as $key => $label)
-                    <button
-                        type="button"
-                        role="tab"
-                        @click="filter = @js($key)"
-                        :aria-selected="filter === @js($key)"
-                        :class="filter === @js($key) ? 'bg-brand-700 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-                        class="flex h-[34px] items-center rounded-[18px] px-3.5 text-xs font-medium transition-colors duration-200"
-                    >{{ $label }}</button>
-                @endforeach
-            </div>
+            <x-customer.filter-tabs :options="$filters" model="filter" label="Filter status riwayat" />
 
             @if ($hasHistory)
                 @foreach ($historyByMonth as $month => $tickets)

@@ -77,10 +77,10 @@
                 </a>
                 <div class="flex items-center gap-2">
                     @auth
-                        <span class="max-w-[130px] truncate rounded-full bg-brand-50 px-2.5 py-1 text-[11px] font-bold text-brand-700">{{ auth()->user()->name }}</span>
+                        <span class="max-w-[130px] truncate rounded-full bg-brand-50 px-2.5 py-1 text-xs font-bold text-brand-700">{{ auth()->user()->name }}</span>
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
-                            <button type="submit" class="rounded-lg border border-gray-200 px-2.5 py-1 text-[11px] font-semibold text-gray-700">Keluar</button>
+                            <button type="submit" class="rounded-lg border border-gray-200 px-2.5 py-1 text-xs font-semibold text-gray-700">Keluar</button>
                         </form>
                     @else
                         <a href="{{ route('login') }}" class="rounded-lg border border-gray-200 px-2.5 py-1 text-xs font-bold text-gray-800">Masuk</a>
@@ -92,7 +92,7 @@
             <main class="flex-1 md:px-8 md:py-8">
                 @if ($backUrl)
                     <div class="px-5 pt-6 md:px-0 md:pt-0">
-                        <a href="{{ $backUrl }}" class="inline-flex items-center gap-1 rounded-lg py-1 pr-2 text-sm font-semibold text-gray-700 transition hover:text-gray-900">
+                        <a href="{{ $backUrl }}" class="inline-flex min-h-11 items-center gap-1 rounded-lg py-2 pr-2 text-sm font-semibold text-gray-700 transition hover:text-gray-900">
                             <img src="{{ asset('images/figma/chevron-left.svg') }}" alt="" width="24" height="24" class="size-5" />
                             Kembali
                         </a>
@@ -109,7 +109,7 @@
 
         {{-- Navigasi konsumen mobile (Figma: Navbar 85px) --}}
         <nav
-            class="fixed bottom-0 left-1/2 z-40 h-[85px] w-full max-w-[430px] -translate-x-1/2 border border-gray-200 bg-white shadow-[0_0_10px_rgba(0,0,0,0.1)] md:hidden"
+            class="fixed bottom-0 left-1/2 z-40 h-[85px] w-full max-w-[430px] -translate-x-1/2 border-t border-gray-200 bg-white shadow-[0_-6px_20px_-8px_rgba(15,23,42,0.12)] md:hidden"
             aria-label="Navigasi pelanggan"
         >
             <div class="flex h-full items-start justify-between px-5 pt-[13px]">
@@ -121,7 +121,7 @@
                             'flex h-[38px] flex-col items-center justify-center gap-[3px] rounded-lg transition-colors duration-200',
                             $item['width'],
                             'text-brand-700' => $isActive,
-                            'text-gray-400 hover:text-gray-700' => ! $isActive,
+                            'text-gray-600 hover:text-gray-900' => ! $isActive,
                         ])
                         @if ($isActive) aria-current="page" @endif
                     >
@@ -132,7 +132,7 @@
                             height="22"
                             class="size-[22px]"
                         />
-                        <span class="text-[10px] font-semibold leading-4 whitespace-nowrap">{{ $item['label'] }}</span>
+                        <span class="text-xs font-semibold leading-4 whitespace-nowrap">{{ $item['label'] }}</span>
                     </a>
                 @endforeach
             </div>

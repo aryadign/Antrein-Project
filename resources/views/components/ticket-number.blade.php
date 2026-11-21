@@ -26,8 +26,8 @@
             @endif
 
             @if ($source)
-                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium {{ $source === 'online' ? 'bg-blue-50 text-blue-700' : 'bg-neutral-100 text-neutral-600' }}">
-                    {{ $source === 'online' ? 'Online' : 'Walk-in' }}
+                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium {{ $source === 'online' ? 'bg-blue-50 text-blue-700' : 'bg-neutral-100 text-neutral-600' }}">
+                    {{ $source === 'online' ? 'Dari ponsel' : 'Datang langsung' }}
                 </span>
             @endif
         </div>

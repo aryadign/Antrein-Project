@@ -1,11 +1,7 @@
-<x-layouts.auth title="Lupa Kata Sandi" heading="Atur Ulang Kata Sandi" subheading="Masukkan alamat email akun Anda. Kami akan mengirimkan instruksi untuk mengatur ulang kata sandi Anda.">
-    @if (session('status'))
-        <div class="mb-4 rounded-md bg-emerald-50 p-4 text-sm font-medium text-emerald-800 border border-emerald-200">
-            {{ session('status') }}
-        </div>
-    @endif
+<x-layouts.auth title="Lupa Kata Sandi" heading="Atur Ulang Kata Sandi" subheading="Masukkan email akun Anda. Kami kirimkan tautan untuk membuat kata sandi baru.">
+    @include('auth.partials.flash')
 
-    <form method="POST" action="{{ route('password.email') }}" class="space-y-4">
+    <form method="POST" action="{{ route('password.email') }}" class="space-y-5" x-data="{ submitting: false }" @submit="submitting = true">
         @csrf
 
         <div>
@@ -17,24 +13,29 @@
                 :value="old('email')"
                 required
                 autofocus
-                placeholder="nama@usaha.id"
+                autocomplete="email"
+                inputmode="email"
+                placeholder="nama@email.id"
                 :error="$errors->has('email')"
+                :aria-invalid="$errors->has('email') ? 'true' : 'false'"
+                aria-describedby="email-hint email-error"
             />
-            <x-input-error :messages="$errors->get('email')" class="mt-1" />
+            @if ($errors->has('email'))
+                <x-input-error id="email-error" :messages="$errors->get('email')" />
+            @else
+                <p id="email-hint" class="mt-1.5 text-caption text-neutral-600">Gunakan email yang sama dengan saat Anda mendaftar. Periksa juga folder spam.</p>
+            @endif
         </div>
 
-        <div class="pt-2">
-            <x-button type="submit" variant="primary" class="w-full h-11 justify-center">
-                Kirim Instruksi Atur Ulang
-            </x-button>
-        </div>
-
-        <div class="mt-2 text-center text-sm text-neutral-600">
-            Ingat kata sandi Anda?
-            <a href="{{ route('login') }}" class="inline-flex min-h-11 items-center font-semibold text-brand-700 hover:text-brand-800 hover:underline">
-                Kembali ke Halaman Masuk
-            </a>
-        </div>
+        <x-button type="submit" variant="primary" size="lg" class="w-full" x-bind:disabled="submitting">
+            <span x-text="submitting ? 'Mengirim…' : 'Kirim Tautan Atur Ulang'">Kirim Tautan Atur Ulang</span>
+        </x-button>
     </form>
-</x-layouts.auth>
 
+    <div class="mt-6 border-t border-neutral-200 pt-5 text-center text-label text-neutral-600">
+        <a href="{{ route('login') }}" class="inline-flex min-h-11 items-center gap-1.5 font-semibold text-brand-700 underline-offset-4 hover:text-brand-800 hover:underline">
+            <x-customer.icon name="arrow-left" class="size-4" />
+            Kembali ke Halaman Masuk
+        </a>
+    </div>
+</x-layouts.auth>

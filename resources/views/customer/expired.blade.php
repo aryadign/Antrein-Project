@@ -1,47 +1,28 @@
-<x-layouts.customer 
+<x-layouts.customer
     title="Tiket Pelacakan Kedaluwarsa"
     :business="$business"
     :backUrl="$business ? route('customer.queue', ['slug' => $business->slug]) : '/'"
 >
-    <div class="max-w-md mx-auto py-8 sm:py-16 text-center">
-        <x-card padding="lg" class="shadow-sm">
-            <div class="w-16 h-16 rounded-2xl bg-neutral-100 text-neutral-400 mx-auto flex items-center justify-center mb-5">
-                <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-            </div>
+    <div class="mx-auto max-w-md px-5 py-8 sm:py-16 md:px-0">
+        <x-card padding="lg">
+            <div class="flex flex-col gap-4">
+                <div class="flex items-start gap-3">
+                    <x-customer.icon name="clock" class="mt-1 size-5 text-gray-500" />
+                    <div class="flex flex-col gap-1.5">
+                        <h1 class="text-xl font-bold leading-7 text-gray-900 sm:text-2xl">Tiket Pelacakan Kedaluwarsa</h1>
+                        <p class="text-sm leading-6 text-pretty text-gray-600">Akses pelacakan untuk tiket antrean ini telah kedaluwarsa setelah 24 jam status selesai atau dibatalkan.</p>
+                    </div>
+                </div>
 
-            <h1 class="text-xl sm:text-2xl font-extrabold text-neutral-950 tracking-tight">
-                Tiket Pelacakan Kedaluwarsa
-            </h1>
+                <p class="border-t border-gray-100 pt-4 text-sm leading-5 text-pretty text-gray-600">
+                    <span class="font-semibold text-gray-900">Kebijakan Privasi Pelanggan:</span>
+                    untuk melindungi privasi Anda, nama dan nomor telepon otomatis disembunyikan setelah tiket kedaluwarsa.
+                </p>
 
-            <p class="text-sm text-neutral-600 mt-2 leading-relaxed">
-                Akses pelacakan untuk tiket antrean ini telah kedaluwarsa setelah 24 jam status selesai atau dibatalkan.
-            </p>
-
-            <div class="p-4 rounded-xl bg-neutral-50 border border-neutral-200 mt-5 text-caption text-neutral-500 text-left">
-                <div class="font-semibold text-neutral-700 mb-0.5">Kebijakan Privasi Pelanggan:</div>
-                Untuk melindungi privasi Anda, data nama dan riwayat nomor telepon otomatis disembunyikan setelah tiket kedaluwarsa.
-            </div>
-
-            <div class="mt-6 pt-2">
-                @if ($business)
-                    <a 
-                        href="{{ route('customer.queue', ['slug' => $business->slug]) }}" 
-                        class="inline-flex items-center justify-center w-full px-5 py-3 text-sm font-bold text-white bg-brand-700 hover:bg-brand-600 rounded-xl shadow-2xs transition focus:outline-none focus:ring-2 focus:ring-brand-500"
-                    >
-                        Kembali ke Halaman {{ $business->name }}
-                    </a>
-                @else
-                    <a 
-                        href="/" 
-                        class="inline-flex items-center justify-center w-full px-5 py-3 text-sm font-bold text-white bg-brand-700 hover:bg-brand-600 rounded-xl shadow-2xs transition focus:outline-none focus:ring-2 focus:ring-brand-500"
-                    >
-                        Halaman Utama AntreIn
-                    </a>
-                @endif
+                <x-button size="lg" :href="$business ? route('customer.queue', ['slug' => $business->slug]) : '/'" class="w-full">
+                    {{ $business ? 'Kembali ke halaman kedai' : 'Halaman Utama AntreIn' }}
+                </x-button>
             </div>
         </x-card>
     </div>
 </x-layouts.customer>
-

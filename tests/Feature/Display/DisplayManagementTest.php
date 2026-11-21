@@ -76,7 +76,7 @@ class DisplayManagementTest extends TestCase
 
         $response->assertOk();
         $response->assertViewIs('merchant.display.index');
-        $response->assertSee('Layar Antrean Publik (TV Display)');
+        $response->assertSee('Layar TV Antrean');
     }
 
     public function test_owner_cannot_access_display_management_page(): void
@@ -119,7 +119,7 @@ class DisplayManagementTest extends TestCase
         $indexResponse = $this->actingAs($this->operator)
             ->withSession(['one_time_display_token' => $rawToken])
             ->get(route('merchant.display.index'));
-        $indexResponse->assertSee('Buka atau Pindai Layar Display Sekarang', false);
+        $indexResponse->assertSee('Buka atau pindai layar TV sekarang', false);
         $indexResponse->assertSee('Buka Layar Monitor');
         $indexResponse->assertDontSee('Salin Tautan');
 

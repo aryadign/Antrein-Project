@@ -422,7 +422,7 @@ class NineUpgradesCoverageTest extends TestCase
 
         $dashboard = $this->actingAs($this->owner)->get(route('merchant.dashboard'));
         $dashboard->assertOk()
-            ->assertSee('Ringkasan Gabungan')
+            ->assertSee('Ringkasan gabungan')
             ->assertSee('Kopi Senja Canggu')
             ->assertSee('Kopi Senja Ubud')
             ->assertSee('Layanan')

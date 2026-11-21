@@ -118,8 +118,8 @@ class CustomerTrackingPageTest extends TestCase
         $response = $this->get(route('customer.queue.track', ['token' => $ticket->access_token]));
 
         $response->assertOk();
-        $response->assertSee('Sedang Dipanggil');
-        $response->assertSee('NOMOR ANDA SEDANG DIPANGGIL!');
+        $response->assertSee(QueueTicket::labelForStatus(QueueTicket::STATUS_DIPANGGIL));
+        $response->assertSee('Nomor Anda sedang dipanggil');
     }
 
     public function test_tracking_page_displays_sedang_dilayani_status(): void
@@ -138,7 +138,7 @@ class CustomerTrackingPageTest extends TestCase
         $response = $this->get(route('customer.queue.track', ['token' => $ticket->access_token]));
 
         $response->assertOk();
-        $response->assertSee('Sedang Dilayani');
+        $response->assertSee(QueueTicket::labelForStatus(QueueTicket::STATUS_SEDANG_DILAYANI));
         $response->assertSee('Pelayanan Sedang Berlangsung');
     }
 

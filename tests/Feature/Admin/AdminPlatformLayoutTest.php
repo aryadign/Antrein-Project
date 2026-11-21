@@ -116,7 +116,7 @@ class AdminPlatformLayoutTest extends TestCase
     {
         $this->actingAs($this->admin)->get(route('admin.dashboard'))
             ->assertOk()
-            ->assertSee('title="Platform Online"', false)
+            ->assertSee('title="Platform aktif"', false)
             ->assertDontSee('animate-pulse', false);
     }
 }

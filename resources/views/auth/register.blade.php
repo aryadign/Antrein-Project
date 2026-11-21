@@ -1,51 +1,55 @@
 @php
     $initialType = old('account_type', $defaultAccountType ?? 'merchant');
     $initialType = in_array($initialType, ['customer', 'merchant'], true) ? $initialType : 'merchant';
+
+    $accountTypes = [
+        'customer' => [
+            'label' => 'Pelanggan',
+            'icon' => 'ticket',
+            'summary' => 'Ambil hingga 3 antrean aktif sekaligus, pantau tiket digital lewat kode QR, dan simpan riwayat kunjungan Anda.',
+        ],
+        'merchant' => [
+            'label' => 'Pemilik UMKM',
+            'icon' => 'store',
+            'summary' => 'Setelah mendaftar, Anda dipandu mengisi profil usaha, jam operasional, dan layanan. Admin meninjau pendaftaran sebelum toko tampil.',
+        ],
+    ];
 @endphp
 
 <x-layouts.auth title="Daftar Akun" heading="Buat Akun AntreIn" subheading="Pilih jenis akun sebagai Pelanggan untuk mengambil antrean atau Pemilik UMKM untuk mengelola toko.">
-    <div x-data="{ accountType: '{{ $initialType }}' }" class="space-y-5">
-        {{-- Account Type Switcher --}}
-        <div class="grid grid-cols-2 gap-2 rounded-xl border border-neutral-200 bg-neutral-100 p-1">
-            <button
-                type="button"
-                @click="accountType = 'customer'"
-                :class="accountType === 'customer' ? 'bg-white text-brand-700 shadow-sm ring-1 ring-neutral-200/80' : 'text-neutral-600 hover:text-neutral-900'"
-                class="flex min-h-11 items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold transition"
-            >
-                <x-customer.icon name="user" class="size-4" />
-                Pelanggan
-            </button>
-            <button
-                type="button"
-                @click="accountType = 'merchant'"
-                :class="accountType === 'merchant' ? 'bg-white text-brand-700 shadow-sm ring-1 ring-neutral-200/80' : 'text-neutral-600 hover:text-neutral-900'"
-                class="flex min-h-11 items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold transition"
-            >
-                <x-customer.icon name="store" class="size-4" />
-                Pemilik UMKM
-            </button>
+    <div x-data="{ accountType: '{{ $initialType }}', submitting: false }">
+        <div class="grid grid-cols-2 gap-1 rounded-lg bg-neutral-100 p-1" role="tablist" aria-label="Jenis akun">
+            @foreach ($accountTypes as $typeKey => $type)
+                <button
+                    type="button"
+                    role="tab"
+                    id="account-tab-{{ $typeKey }}"
+                    aria-controls="account-summary"
+                    @click="accountType = '{{ $typeKey }}'"
+                    :aria-selected="(accountType === '{{ $typeKey }}').toString()"
+                    :class="accountType === '{{ $typeKey }}' ? 'bg-white text-brand-700 shadow-card' : 'text-neutral-600 hover:text-neutral-900'"
+                    class="flex min-h-11 items-center justify-center gap-2 rounded-md px-3 text-label font-semibold transition-[background-color,color,box-shadow] duration-150 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                >
+                    <x-customer.icon :name="$type['icon']" class="size-4" />
+                    {{ $type['label'] }}
+                </button>
+            @endforeach
         </div>
 
-        <div x-show="accountType === 'customer'" class="flex items-start gap-3 rounded-lg border border-brand-200 bg-brand-50/70 p-3.5 text-sm text-brand-900">
-            <x-customer.icon name="ticket" class="mt-0.5 size-5 shrink-0 text-brand-700" />
-            <p>Buat akun pelanggan untuk mengambil hingga <strong>3 antrean aktif sekaligus</strong>, memantau tiket digital via QR Code, dan menyimpan riwayat kunjungan.</p>
+        <div id="account-summary" role="tabpanel" class="mt-4 text-label text-pretty text-neutral-600" aria-live="polite">
+            @foreach ($accountTypes as $typeKey => $type)
+                <p x-show="accountType === '{{ $typeKey }}'" @if ($typeKey !== $initialType) style="display: none;" @endif>{{ $type['summary'] }}</p>
+            @endforeach
         </div>
 
-        <div x-show="accountType === 'merchant'" class="flex items-start gap-3 rounded-lg border border-neutral-200 bg-neutral-50 p-3.5 text-sm text-neutral-700">
-            <x-customer.icon name="store" class="mt-0.5 size-5 shrink-0 text-brand-700" />
-            <p>Setelah mendaftar, Anda akan dipandu mengisi profil usaha, jam operasional, layanan, lalu pendaftaran akan ditinjau oleh Admin sebelum toko tampil.</p>
-        </div>
-
-        <form method="POST" action="{{ route('register') }}" class="space-y-4">
+        <form method="POST" action="{{ route('register') }}" class="mt-6 space-y-5" @submit="submitting = true">
             @csrf
-            <input type="hidden" name="account_type" :value="accountType">
+            <input type="hidden" name="account_type" :value="accountType" value="{{ $initialType }}">
 
             <div>
-                <label for="name" class="mb-1.5 block text-sm font-medium text-neutral-800">
-                    <span x-text="accountType === 'customer' ? 'Nama Lengkap' : 'Nama Pemilik / Pengelola'">Nama Pemilik / Pengelola</span>
-                    <span class="text-red-500">*</span>
-                </label>
+                <x-form-label for="name" :required="true">
+                    <span x-text="accountType === 'customer' ? 'Nama Lengkap' : 'Nama Pemilik / Pengelola'">{{ $initialType === 'customer' ? 'Nama Lengkap' : 'Nama Pemilik / Pengelola' }}</span>
+                </x-form-label>
                 <x-input
                     id="name"
                     name="name"
@@ -56,26 +60,30 @@
                     autocomplete="name"
                     placeholder="Contoh: Raka Pratama"
                     :error="$errors->has('name')"
+                    :aria-invalid="$errors->has('name') ? 'true' : 'false'"
+                    aria-describedby="name-error"
                 />
-                <x-input-error :messages="$errors->get('name')" class="mt-1" />
+                <x-input-error id="name-error" :messages="$errors->get('name')" />
             </div>
 
             <div>
-                <label for="email" class="mb-1.5 block text-sm font-medium text-neutral-800">
-                    <span x-text="accountType === 'customer' ? 'Alamat Email' : 'Alamat Email Usaha'">Alamat Email</span>
-                    <span class="text-red-500">*</span>
-                </label>
+                <x-form-label for="email" :required="true">
+                    <span x-text="accountType === 'customer' ? 'Alamat Email' : 'Alamat Email Usaha'">{{ $initialType === 'customer' ? 'Alamat Email' : 'Alamat Email Usaha' }}</span>
+                </x-form-label>
                 <x-input
                     id="email"
                     name="email"
                     type="email"
                     :value="old('email')"
                     required
-                    autocomplete="username"
+                    autocomplete="email"
+                    inputmode="email"
                     placeholder="nama@email.id"
                     :error="$errors->has('email')"
+                    :aria-invalid="$errors->has('email') ? 'true' : 'false'"
+                    aria-describedby="email-error"
                 />
-                <x-input-error :messages="$errors->get('email')" class="mt-1" />
+                <x-input-error id="email-error" :messages="$errors->get('email')" />
             </div>
 
             <div>
@@ -84,11 +92,18 @@
                     id="password"
                     name="password"
                     required
+                    minlength="8"
                     autocomplete="new-password"
-                    placeholder="Minimal 8 karakter"
+                    placeholder="Buat kata sandi"
                     :error="$errors->has('password')"
+                    :aria-invalid="$errors->has('password') ? 'true' : 'false'"
+                    aria-describedby="password-hint password-error"
                 />
-                <x-input-error :messages="$errors->get('password')" class="mt-1" />
+                @if ($errors->has('password'))
+                    <x-input-error id="password-error" :messages="$errors->get('password')" />
+                @else
+                    <p id="password-hint" class="mt-1.5 text-caption text-neutral-600">Gunakan minimal 8 karakter.</p>
+                @endif
             </div>
 
             <div>
@@ -97,30 +112,34 @@
                     id="password_confirmation"
                     name="password_confirmation"
                     required
+                    minlength="8"
                     autocomplete="new-password"
                     placeholder="Ulangi kata sandi"
                     :error="$errors->has('password_confirmation')"
+                    :aria-invalid="$errors->has('password_confirmation') ? 'true' : 'false'"
+                    aria-describedby="password_confirmation-error"
                 />
-                <x-input-error :messages="$errors->get('password_confirmation')" class="mt-1" />
+                <x-input-error id="password_confirmation-error" :messages="$errors->get('password_confirmation')" />
             </div>
 
-            <div class="pt-2">
-                <x-button type="submit" variant="primary" class="w-full h-11 justify-center">
-                    <span x-text="accountType === 'customer' ? 'Daftar sebagai Pelanggan' : 'Daftar & Lanjutkan Onboarding'">Daftar Akun</span>
-                </x-button>
-            </div>
-
-            <div class="mt-2 text-center text-sm text-neutral-600">
-                Sudah memiliki akun?
-                <a href="{{ route('login') }}" class="inline-flex min-h-11 items-center font-semibold text-brand-700 hover:text-brand-800 hover:underline">
-                    Masuk ke Akun
-                </a>
-            </div>
+            <x-button type="submit" variant="primary" size="lg" class="w-full" x-bind:disabled="submitting">
+                <svg x-show="submitting" x-cloak class="size-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                </svg>
+                <span x-text="submitting ? 'Memproses…' : (accountType === 'customer' ? 'Daftar sebagai Pelanggan' : 'Daftar & Atur Usaha')">{{ $initialType === 'customer' ? 'Daftar sebagai Pelanggan' : 'Daftar & Atur Usaha' }}</span>
+            </x-button>
         </form>
 
-        <p class="border-t border-neutral-200 pt-4 text-center text-caption text-neutral-500">
-            Ingin melihat daftar UMKM yang tersedia?
-            <a href="{{ route('customer.dashboard') }}" class="inline-flex min-h-11 items-center font-semibold text-brand-700 hover:underline">Jelajahi toko di sini</a>
-        </p>
+        <div class="mt-6 border-t border-neutral-200 pt-5 text-center text-label text-neutral-600">
+            <p>
+                Sudah memiliki akun?
+                <a href="{{ route('login') }}" class="inline-flex min-h-11 items-center font-semibold text-brand-700 underline-offset-4 hover:text-brand-800 hover:underline">Masuk ke Akun</a>
+            </p>
+            <p class="-mt-2">
+                Hanya ingin melihat toko?
+                <a href="{{ route('customer.dashboard') }}" class="inline-flex min-h-11 items-center font-semibold text-brand-700 underline-offset-4 hover:text-brand-800 hover:underline">Jelajahi Toko</a>
+            </p>
+        </div>
     </div>
 </x-layouts.auth>

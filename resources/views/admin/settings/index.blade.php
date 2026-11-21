@@ -1,67 +1,49 @@
-<x-layouts.admin 
-    title="Pengaturan Platform" 
-    heading="Pengaturan Identitas Platform" 
-    description="Kelola konfigurasi global AntreIn, identitas branding, informasi kontak bantuan, dan zona waktu standar."
->
-    <div class="space-y-5 sm:space-y-6 max-w-4xl" x-data="{ logoPreview: @js($settings['logo_url'] ?? '') }">
-        {{-- Flash Messages --}}
-        @if (session('status'))
-            <div class="rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-sm font-medium text-emerald-800 flex items-center justify-between shadow-xs">
-                <div class="flex items-center gap-2">
-                    <svg class="w-5 h-5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    <span>{{ session('status') }}</span>
-                </div>
-            </div>
-        @endif
+@php
+    $timezones = [
+        'Asia/Makassar' => 'WITA (UTC+8), Asia/Makassar',
+        'Asia/Jakarta' => 'WIB (UTC+7), Asia/Jakarta',
+        'Asia/Jayapura' => 'WIT (UTC+9), Asia/Jayapura',
+    ];
+    $selectedTimezone = old('default_timezone', $settings['default_timezone']);
+@endphp
 
-        @if ($errors->any())
-            <div class="rounded-xl bg-rose-50 border border-rose-200 p-4 text-sm text-rose-800 shadow-xs">
-                <p class="font-semibold mb-1">Terjadi kesalahan validasi pada data pengaturan:</p>
-                <ul class="list-disc list-inside space-y-0.5 text-xs">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
+<x-layouts.admin
+    title="Pengaturan Platform"
+    heading="Pengaturan Platform"
+    description="Identitas, kontak bantuan, dan zona waktu bawaan yang dipakai di seluruh AntreIn."
+>
+    <div class="max-w-3xl space-y-6" x-data="{ logoPreview: @js($settings['logo_url'] ?? '') }">
+        @include('admin.partials.flash')
 
         <form method="POST" action="{{ route('admin.settings.update') }}" enctype="multipart/form-data" class="space-y-6">
             @csrf
             @method('PUT')
 
-            {{-- Identity & Branding Card (M8-27) --}}
-            <div class="bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-xs">
-                <div class="p-5 border-b border-neutral-200">
-                    <h3 class="text-h3 font-bold text-neutral-900">Identitas Platform & Branding</h3>
-                    <p class="text-caption text-neutral-500 mt-0.5">Nama layanan dan logo resmi yang tampil pada header publik dan aplikasi.</p>
-                </div>
+            <x-card padding="none">
+                <x-slot:header>
+                    <h2 class="text-h3 font-semibold text-neutral-900">Identitas platform</h2>
+                    <p class="text-sm text-neutral-600">Nama dan logo yang tampil di halaman publik.</p>
+                </x-slot:header>
 
-                <div class="p-4 sm:p-6 space-y-5">
-                    {{-- Logo Upload (M8-29) --}}
+                <div class="space-y-5 px-5 py-5 sm:px-6">
                     <div>
-                        <label class="block text-caption font-semibold text-neutral-700 mb-2">
-                            Logo Resmi Platform
-                        </label>
-                        <div class="flex flex-col sm:flex-row sm:items-center gap-5">
-                            <div class="w-24 h-24 rounded-2xl bg-neutral-100 border border-neutral-200 flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
+                        <label for="logo" class="mb-2 block text-sm font-medium text-neutral-800">Logo</label>
+                        <div class="flex flex-col gap-4 sm:flex-row sm:items-center">
+                            <div class="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-neutral-200 bg-neutral-50">
                                 <template x-if="logoPreview">
-                                    <img :src="logoPreview" alt="Logo Preview" class="w-full h-full object-contain p-2">
+                                    <img :src="logoPreview" alt="Pratinjau logo" class="size-full object-contain p-2">
                                 </template>
                                 <template x-if="!logoPreview">
-                                    <div class="text-center p-2">
-                                        <svg class="w-8 h-8 text-neutral-400 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                        <span class="text-[10px] text-neutral-500 mt-1 block">Belum ada logo</span>
-                                    </div>
+                                    <svg class="size-8 text-neutral-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" role="img" aria-label="Belum ada logo"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                                 </template>
                             </div>
-
-                            <div class="flex-1 space-y-2">
-                                <input 
-                                    type="file" 
-                                    name="logo" 
-                                    id="logo" 
+                            <div class="min-w-0 flex-1 space-y-1.5">
+                                <input
+                                    type="file"
+                                    name="logo"
+                                    id="logo"
                                     accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                                    class="block w-full text-xs text-neutral-600 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-neutral-100 file:text-neutral-800 hover:file:bg-neutral-200 cursor-pointer"
+                                    class="block w-full cursor-pointer text-sm text-neutral-700 file:mr-3 file:h-10 file:cursor-pointer file:rounded-lg file:border file:border-neutral-300 file:bg-white file:px-4 file:text-sm file:font-semibold file:text-neutral-800 hover:file:bg-neutral-50"
                                     @change="
                                         const file = $event.target.files[0];
                                         if (file) {
@@ -71,123 +53,58 @@
                                         }
                                     "
                                 >
-                                <p class="text-[11px] text-neutral-400">
-                                    Format: PNG, JPG, WebP, atau SVG. Ukuran maksimal 2MB. Resolusi rasio 1:1 atau lanskap disarankan.
-                                </p>
+                                <p class="text-xs text-neutral-600">PNG, JPG, WebP, atau SVG, maksimal 2 MB. Rasio persegi atau melebar paling rapi.</p>
                             </div>
                         </div>
                     </div>
 
-                    {{-- Platform Name --}}
                     <div>
-                        <label for="platform_name" class="block text-caption font-semibold text-neutral-700 mb-1">
-                            Nama Platform <span class="text-rose-500">*</span>
-                        </label>
-                        <input 
-                            type="text" 
-                            name="platform_name" 
-                            id="platform_name" 
-                            required 
-                            value="{{ old('platform_name', $settings['platform_name']) }}" 
-                            class="min-h-11 w-full rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500"
-                        >
+                        <x-form-label for="platform_name" value="Nama platform" :required="true" />
+                        <x-input id="platform_name" name="platform_name" required :value="old('platform_name', $settings['platform_name'])" />
                     </div>
 
-                    {{-- Platform Tagline --}}
                     <div>
-                        <label for="platform_tagline" class="block text-caption font-semibold text-neutral-700 mb-1">
-                            Slogan (Tagline) Platform
-                        </label>
-                        <input 
-                            type="text" 
-                            name="platform_tagline" 
-                            id="platform_tagline" 
-                            value="{{ old('platform_tagline', $settings['platform_tagline']) }}" 
-                            placeholder="Contoh: Solusi Antrean Digital UMKM Terpadu" 
-                            class="min-h-11 w-full rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500"
-                        >
+                        <x-form-label for="platform_tagline" value="Slogan" />
+                        <x-input id="platform_tagline" name="platform_tagline" :value="old('platform_tagline', $settings['platform_tagline'])" placeholder="Contoh: Antrean Lebih Teratur, Pelayanan Lebih Lancar." />
                     </div>
                 </div>
-            </div>
+            </x-card>
 
-            {{-- Contact Information & System Defaults Card (M8-28) --}}
-            <div class="bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-xs">
-                <div class="p-5 border-b border-neutral-200">
-                    <h3 class="text-h3 font-bold text-neutral-900">Kontak Bantuan & Standar Wilayah</h3>
-                    <p class="text-caption text-neutral-500 mt-0.5">Informasi saluran bantuan resmi dan konfigurasi zona waktu default aplikasi.</p>
-                </div>
+            <x-card padding="none">
+                <x-slot:header>
+                    <h2 class="text-h3 font-semibold text-neutral-900">Kontak bantuan &amp; zona waktu</h2>
+                    <p class="text-sm text-neutral-600">Ditampilkan ke pelanggan dan UMKM yang membutuhkan bantuan.</p>
+                </x-slot:header>
 
-                <div class="p-4 sm:p-6 space-y-5">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                        {{-- Contact Email --}}
+                <div class="space-y-5 px-5 py-5 sm:px-6">
+                    <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
                         <div>
-                            <label for="contact_email" class="block text-caption font-semibold text-neutral-700 mb-1">
-                                Email Layanan Pelanggan <span class="text-rose-500">*</span>
-                            </label>
-                            <input 
-                                type="email" 
-                                name="contact_email" 
-                                id="contact_email" 
-                                required 
-                                value="{{ old('contact_email', $settings['contact_email']) }}" 
-                                class="min-h-11 w-full rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500"
-                            >
+                            <x-form-label for="contact_email" value="Email bantuan" :required="true" />
+                            <x-input type="email" id="contact_email" name="contact_email" required :value="old('contact_email', $settings['contact_email'])" />
                         </div>
-
-                        {{-- Contact Phone --}}
                         <div>
-                            <label for="contact_phone" class="block text-caption font-semibold text-neutral-700 mb-1">
-                                Nomor Telepon / WhatsApp Bantuan <span class="text-rose-500">*</span>
-                            </label>
-                            <input 
-                                type="text" 
-                                name="contact_phone" 
-                                id="contact_phone" 
-                                required 
-                                value="{{ old('contact_phone', $settings['contact_phone']) }}" 
-                                class="min-h-11 w-full rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500"
-                            >
+                            <x-form-label for="contact_phone" value="Telepon atau WhatsApp bantuan" :required="true" />
+                            <x-input id="contact_phone" name="contact_phone" required :value="old('contact_phone', $settings['contact_phone'])" />
                         </div>
                     </div>
 
-                    {{-- Default Timezone --}}
-                    <div>
-                        <label for="default_timezone" class="block text-caption font-semibold text-neutral-700 mb-1">
-                            Zona Waktu Baku Platform <span class="text-rose-500">*</span>
-                        </label>
-                        <select 
-                            name="default_timezone" 
-                            id="default_timezone" 
-                            required 
-                            class="h-11 w-full sm:w-80 rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500"
-                        >
-                            <option value="Asia/Makassar" {{ old('default_timezone', $settings['default_timezone']) === 'Asia/Makassar' ? 'selected' : '' }}>
-                                Asia/Makassar (WITA, UTC+8) — Default Pilot Bali
-                            </option>
-                            <option value="Asia/Jakarta" {{ old('default_timezone', $settings['default_timezone']) === 'Asia/Jakarta' ? 'selected' : '' }}>
-                                Asia/Jakarta (WIB, UTC+7)
-                            </option>
-                            <option value="Asia/Jayapura" {{ old('default_timezone', $settings['default_timezone']) === 'Asia/Jayapura' ? 'selected' : '' }}>
-                                Asia/Jayapura (WIT, UTC+9)
-                            </option>
-                        </select>
-                        <p class="text-[11px] text-neutral-400 mt-1">
-                            Zona waktu ini dijadikan acuan dasar bagi pendaftaran gerai UMKM baru sebelum diatur secara spesifik per UMKM (OQ-05).
-                        </p>
+                    <div class="sm:max-w-sm">
+                        <x-form-label for="default_timezone" value="Zona waktu bawaan" :required="true" />
+                        <x-select id="default_timezone" name="default_timezone" required>
+                            @foreach ($timezones as $value => $label)
+                                <option value="{{ $value }}" @selected($selectedTimezone === $value)>{{ $label }}</option>
+                            @endforeach
+                        </x-select>
+                        <p class="mt-1.5 text-xs text-pretty text-neutral-600">Dipakai untuk UMKM baru sampai pemiliknya mengatur zona waktu sendiri.</p>
                     </div>
                 </div>
 
-                <div class="bg-neutral-50 px-4 py-4 sm:px-6 border-t border-neutral-200 flex justify-end">
-                    <button 
-                        type="submit" 
-                        class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-neutral-900 px-5 text-sm font-bold text-white shadow-xs transition hover:bg-neutral-800 sm:w-auto"
-                    >
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                        Simpan Perubahan Pengaturan
-                    </button>
-                </div>
-            </div>
+                <x-slot:footer>
+                    <div class="flex justify-end">
+                        <x-button type="submit" class="w-full sm:w-auto">Simpan pengaturan</x-button>
+                    </div>
+                </x-slot:footer>
+            </x-card>
         </form>
     </div>
 </x-layouts.admin>
-

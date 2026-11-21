@@ -9,7 +9,7 @@
         <div class="border-b border-gray-200 bg-white px-5 pt-6 pb-4 md:border-0 md:bg-transparent md:px-0 md:pt-2 md:pb-6">
             <div class="flex flex-col gap-1">
                 <h1 class="text-2xl font-extrabold tracking-tight leading-8 text-gray-900 md:text-3xl md:leading-10">Halo{{ $firstName ? ', '.$firstName : '' }}</h1>
-                <p class="text-sm leading-5 text-gray-600">Ambil nomor antrean dari HP, datang pas giliran Anda.</p>
+                <p class="text-sm leading-5 text-pretty text-gray-600">Ambil nomor antrean dari ponsel, datang saat giliran Anda.</p>
             </div>
 
             <div class="mt-3.5 flex h-12 items-center gap-2 rounded-xl border-[1.5px] border-gray-300 bg-gray-50/90 pr-1.5 pl-3.5 shadow-xs transition focus-within:border-brand-700 focus-within:bg-white focus-within:ring-2 focus-within:ring-brand-100 lg:max-w-2xl">
@@ -31,7 +31,7 @@
                     aria-label="Pindai QR kedai"
                 >
                     <img src="{{ asset('images/icons/qr-code.svg') }}" alt="" width="16" height="16" class="size-4 brightness-0 invert" />
-                    <span>Scan QR</span>
+                    <span>Pindai QR</span>
                 </button>
             </div>
         </div>
@@ -40,73 +40,14 @@
             {{-- Panel kiri: status pribadi & kategori --}}
             <aside class="flex min-w-0 flex-col gap-5 lg:sticky lg:top-24 lg:col-span-4">
                 @if ($activeTicket)
-                    @php
-                        $peopleAhead = max(0, (int) ($activeTicket->queue_position ?? 0) - 1);
-                        $scheduleEstimate = $activeTicket->schedule_estimate ?? [];
-                        $serveTimeLabel = data_get($scheduleEstimate, 'estimated_serve_time_label');
-                        $waitRangeLabel = data_get($scheduleEstimate, 'wait_range_label');
-                        $hasDelayShift = (bool) data_get($scheduleEstimate, 'has_delay_shift');
-                        $shiftNotice = data_get($scheduleEstimate, 'shift_notice');
-                        $bookingSlotLabel = $activeTicket->bookingSlotWindowLabel();
-                        ['label' => $storeHoursLabel] = $activeTicket->business->customerHoursBadge();
-                        [$ticketStatusLabel, $ticketStatusClass] = match ($activeTicket->status) {
-                            \App\Models\QueueTicket::STATUS_DIPANGGIL => ['Dipanggil', 'bg-white text-brand-700'],
-                            \App\Models\QueueTicket::STATUS_SEDANG_DILAYANI => ['Sedang dilayani', 'bg-emerald-200 text-emerald-950'],
-                            default => ['Menunggu', 'bg-amber-300 text-slate-900'],
-                        };
-                    @endphp
-                    <section class="overflow-hidden rounded-2xl border border-brand-600/30 bg-white shadow-md" aria-labelledby="active-ticket-title">
-                        <div class="flex items-center justify-between gap-3 bg-linear-to-r from-brand-800 to-brand-600 px-4 py-3 text-white">
-                            <div class="flex min-w-0 flex-col">
-                                <h2 id="active-ticket-title" class="text-[11px] font-bold tracking-wider text-brand-100 uppercase">Antrean aktif Anda ({{ $activeTicketCount ?? 1 }}/3)</h2>
-                                <p class="truncate text-xs font-bold leading-4 text-white">{{ $storeHoursLabel }}</p>
-                            </div>
-                            <span class="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-extrabold {{ $ticketStatusClass }}">{{ $ticketStatusLabel }}</span>
+                    <section class="flex flex-col gap-2.5" aria-label="Antrean aktif Anda">
+                        <div class="flex items-center justify-between gap-2">
+                            <h2 class="text-base font-bold leading-6 text-gray-900">Antrean aktif Anda</h2>
+                            <a href="{{ route('customer.my-tickets') }}" class="inline-flex min-h-9 items-center gap-1 text-sm font-semibold text-brand-700 hover:underline">
+                                Antrean Saya ({{ $activeTicketCount ?? 1 }} dari 3)
+                            </a>
                         </div>
-
-                        <div class="relative p-4">
-                            <span class="pointer-events-none absolute -top-2 -left-2 size-4 rounded-full bg-gray-100 md:bg-white" aria-hidden="true"></span>
-                            <span class="pointer-events-none absolute -top-2 -right-2 size-4 rounded-full bg-gray-100 md:bg-white" aria-hidden="true"></span>
-
-                            <div class="flex items-center justify-between gap-3">
-                                <div class="flex shrink-0 flex-col items-center rounded-xl border border-brand-200 bg-brand-50 px-3.5 py-2 text-center">
-                                    <span class="text-[9px] font-bold tracking-wider text-brand-700/80 uppercase">Tiket</span>
-                                    <span class="text-2xl font-extrabold leading-none text-brand-700 tabular-nums">{{ $activeTicket->ticket_number }}</span>
-                                </div>
-
-                                <div class="flex min-w-0 flex-1 flex-col gap-0.5">
-                                    <p class="truncate text-sm font-extrabold leading-5 text-gray-900">{{ $activeTicket->business->name }}</p>
-                                    <p class="truncate text-xs leading-4 text-gray-600">
-                                        {{ $activeTicket->service?->name ?? 'Layanan' }}
-                                    </p>
-                                    @if ($bookingSlotLabel)
-                                        <p class="text-[11px] font-bold text-brand-700 tabular-nums">Slot {{ $bookingSlotLabel }}</p>
-                                    @endif
-                                </div>
-
-                                <a href="{{ route('customer.queue.track', $activeTicket->access_token) }}" class="inline-flex shrink-0 items-center gap-1 rounded-xl bg-brand-700 px-3.5 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-blue-900 active:scale-[0.98]">
-                                    Pantau
-                                    <x-customer.icon name="arrow-right" class="size-3.5" />
-                                </a>
-                            </div>
-
-                            @if ($activeTicket->status === \App\Models\QueueTicket::STATUS_MENUNGGU)
-                                <div class="mt-3 flex flex-col gap-1.5 border-t border-dashed border-gray-200 pt-2.5 text-xs">
-                                    <div class="flex items-center justify-between gap-2">
-                                        <span class="font-bold text-gray-900">Posisi #{{ $activeTicket->queue_position }} ({{ $peopleAhead > 0 ? $peopleAhead.' orang di depan' : 'Giliran berikutnya' }})</span>
-                                        <span class="font-extrabold text-brand-700 tabular-nums">{{ $serveTimeLabel ? 'Est. '.$serveTimeLabel : ($waitRangeLabel ?? 'Segera') }}</span>
-                                    </div>
-                                    @if ($hasDelayShift && $shiftNotice)
-                                        <p class="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[11px] leading-4 font-medium text-amber-900">{{ $shiftNotice }}</p>
-                                    @endif
-                                </div>
-                            @endif
-
-                            <div class="mt-3 flex items-center justify-between border-t border-gray-100 pt-2.5">
-                                <span class="truncate text-xs text-gray-500">{{ $activeTicket->business->areaLabel() ?? 'Layanan' }}</span>
-                                <a href="{{ route('customer.my-tickets') }}" class="shrink-0 text-xs font-bold text-brand-700 hover:underline">Semua tiket</a>
-                            </div>
-                        </div>
+                        <x-customer.ticket-card :ticket="$activeTicket" compact heading-id="active-ticket-title" />
                     </section>
                 @elseif ($isFirstVisit)
                     <section class="flex flex-col gap-3.5 rounded-2xl border-[1.5px] border-brand-200 bg-linear-to-b from-brand-50 to-white p-4 shadow-xs" aria-labelledby="how-title">
@@ -115,7 +56,7 @@
                                 <h2 id="how-title" class="text-base font-extrabold leading-6 text-gray-900">Cara pakai AntreIn</h2>
                                 <p class="text-xs leading-4 text-gray-600">3 langkah mudah mengambil hingga 3 antrean aktif.</p>
                             </div>
-                            <span class="shrink-0 rounded-full bg-brand-100 px-2.5 py-1 text-[11px] font-extrabold text-brand-700">Maks 3 Tiket</span>
+                            <span class="shrink-0 rounded-full bg-brand-100 px-2.5 py-1 text-xs font-extrabold text-brand-700">Maks 3 Tiket</span>
                         </div>
 
                         <x-customer.how-it-works />
@@ -153,7 +94,7 @@
                                 </div>
                             </div>
                             @auth
-                                <span class="shrink-0 rounded-full bg-brand-100 px-2.5 py-0.5 text-[11px] font-bold text-brand-700 tabular-nums">{{ $activeTicketCount ?? 0 }}/3 aktif</span>
+                                <span class="shrink-0 rounded-full bg-brand-100 px-2.5 py-0.5 text-xs font-bold text-brand-700 tabular-nums">{{ $activeTicketCount ?? 0 }}/3 aktif</span>
                             @endauth
                         </div>
                         <x-customer.how-it-works class="border-t border-brand-100 pt-3" />
@@ -163,7 +104,7 @@
                         <h2 id="featured-title" class="text-base font-extrabold leading-6 text-gray-900">Kunjungi lagi</h2>
                         <a href="{{ route('customer.queue', $featuredStore->slug) }}" class="group overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:shadow-md">
                             <x-customer.store-cover :business="$featuredStore" :show-category="false">
-                                <span class="absolute top-3 left-3 rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-bold tracking-wide text-brand-700 shadow-sm">KEDAI PILIHAN ANDA</span>
+                                <span class="absolute top-3 left-3 rounded-full bg-white/95 px-2.5 py-1 text-xs font-bold tracking-wide text-brand-700 shadow-sm">KEDAI PILIHAN ANDA</span>
                             </x-customer.store-cover>
                             <div class="flex flex-col gap-2.5 p-4">
                                 <p class="text-lg font-extrabold leading-6 text-gray-900">{{ $featuredStore->name }}</p>
@@ -187,22 +128,22 @@
                         </a>
                     </div>
                     <div class="grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-2">
-                        <a href="{{ route('customer.search') }}" class="flex min-w-0 flex-col items-center justify-center gap-1.5 rounded-2xl border border-brand-700 bg-brand-700 p-3 text-white shadow-xs transition hover:bg-blue-900 active:scale-[0.97] lg:flex-row lg:justify-start lg:gap-2.5">
-                            <span class="size-6 shrink-0 bg-white" style="mask: url('{{ asset('images/figma/layout-grid.svg') }}') center / contain no-repeat; -webkit-mask: url('{{ asset('images/figma/layout-grid.svg') }}') center / contain no-repeat;" aria-hidden="true"></span>
+                        <a href="{{ route('customer.search') }}" class="flex min-w-0 flex-col items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white p-3 shadow-card transition duration-200 ease-out hover:border-brand-300 hover:bg-brand-50/40 active:scale-[0.97] lg:flex-row lg:justify-start lg:gap-2.5">
+                            <span class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand-50"><span class="size-5 bg-brand-700" style="mask: url('{{ asset('images/figma/layout-grid.svg') }}') center / contain no-repeat; -webkit-mask: url('{{ asset('images/figma/layout-grid.svg') }}') center / contain no-repeat;" aria-hidden="true"></span></span>
                             <span class="flex min-w-0 flex-col items-center text-center lg:items-start lg:text-left">
-                                <span class="text-xs font-bold leading-tight">Semua</span>
-                                <span class="text-[10px] leading-tight text-white/85">{{ $storeCount }} toko</span>
+                                <span class="text-xs font-bold leading-tight text-gray-900">Semua</span>
+                                <span class="text-xs leading-tight text-gray-600">{{ $storeCount }} toko</span>
                             </span>
                         </a>
                         @foreach ($categories as $category)
                             @php
-                                ['background' => $categoryBackground, 'border' => $categoryBorder, 'tint' => $categoryTint] = $category->customerPalette();
+                                ['background' => $categoryBackground, 'tint' => $categoryTint] = $category->customerPalette();
                             @endphp
-                            <a href="{{ route('customer.search', ['kategori' => $category->slug]) }}" class="flex min-w-0 flex-col items-center justify-center gap-1.5 rounded-2xl border p-3 shadow-xs transition hover:brightness-95 active:scale-[0.97] lg:flex-row lg:justify-start lg:gap-2.5 {{ $categoryBackground }} {{ $categoryBorder }}">
-                                <span class="size-6 shrink-0 {{ $categoryTint }}" style="mask: url('{{ asset($category->iconPath()) }}') center / contain no-repeat; -webkit-mask: url('{{ asset($category->iconPath()) }}') center / contain no-repeat;" aria-hidden="true"></span>
+                            <a href="{{ route('customer.search', ['kategori' => $category->slug]) }}" class="flex min-w-0 flex-col items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white p-3 shadow-card transition duration-200 ease-out hover:border-brand-300 hover:bg-brand-50/40 active:scale-[0.97] lg:flex-row lg:justify-start lg:gap-2.5">
+                                <span class="flex size-9 shrink-0 items-center justify-center rounded-lg {{ $categoryBackground }}"><span class="size-5 {{ $categoryTint }}" style="mask: url('{{ asset($category->iconPath()) }}') center / contain no-repeat; -webkit-mask: url('{{ asset($category->iconPath()) }}') center / contain no-repeat;" aria-hidden="true"></span></span>
                                 <span class="flex min-w-0 w-full flex-col items-center text-center lg:items-start lg:text-left">
                                     <span class="w-full wrap-break-word text-xs font-bold leading-tight text-gray-900">{{ $category->shortName() }}</span>
-                                    <span class="text-[10px] leading-tight text-gray-600">{{ $category->stores_count > 0 ? $category->stores_count.' toko' : 'Segera hadir' }}</span>
+                                    <span class="text-xs leading-tight text-gray-600">{{ $category->stores_count > 0 ? $category->stores_count.' toko' : 'Segera hadir' }}</span>
                                 </span>
                             </a>
                         @endforeach

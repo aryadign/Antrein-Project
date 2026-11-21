@@ -130,15 +130,7 @@ class SendQueueNotificationListener implements ShouldQueue
         // 2. Customer Web Push Notification (if browser push subscription exists)
         if ($ticket->pushSubscriptions()->exists()) {
             try {
-                $statusLabel = match ($status) {
-                    QueueTicket::STATUS_DIPANGGIL => 'Dipanggil',
-                    QueueTicket::STATUS_SEDANG_DILAYANI => 'Sedang Dilayani',
-                    QueueTicket::STATUS_SELESAI => 'Pelayanan Selesai',
-                    QueueTicket::STATUS_DILEWATI => 'Dilewati',
-                    QueueTicket::STATUS_TIDAK_HADIR => 'Tidak hadir',
-                    QueueTicket::STATUS_DIBATALKAN => 'Dibatalkan',
-                    default => ucfirst($status),
-                };
+                $statusLabel = QueueTicket::labelForStatus($status);
 
                 $counterName = $ticket->counter?->name;
                 $counterInfo = $counterName ? ' di '.$counterName : '';

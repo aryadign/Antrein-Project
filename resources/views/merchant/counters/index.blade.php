@@ -20,7 +20,7 @@
         {{-- Header --}}
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div class="min-w-0">
-                <h1 class="text-h2 font-bold text-neutral-950">Kelola Loket Pelayanan</h1>
+                <h1 class="text-[1.375rem] leading-[1.875rem] font-bold sm:text-[1.75rem] sm:leading-9 text-neutral-950">Kelola Loket Pelayanan</h1>
                 <p class="mt-1 text-body text-neutral-600">
                     Atur loket operasional, kode pemanggil, dan penugasan operator untuk melayani antrean secara paralel.
                 </p>
@@ -54,22 +54,22 @@
             </div>
         @endif
 
-        {{-- Mode Operasional Station / Loket --}}
-        <section class="rounded-2xl border border-neutral-200 bg-white p-4 shadow-xs sm:p-5" aria-labelledby="station-mode-heading">
+        {{-- Mode loket --}}
+        <section class="rounded-2xl border border-neutral-200 bg-white p-4 shadow-card sm:p-5" aria-labelledby="station-mode-heading">
             <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div class="min-w-0">
                     <div class="flex flex-wrap items-center gap-2">
-                        <h2 id="station-mode-heading" class="text-sm font-bold text-neutral-950">Mode Operasional Station / Loket</h2>
+                        <h2 id="station-mode-heading" class="text-sm font-bold text-neutral-950">Mode loket</h2>
                         <span @class([
-                            'inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-bold',
+                            'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold',
                             'bg-brand-100 text-brand-800' => $business->usesStations(),
                             'bg-slate-100 text-slate-800' => ! $business->usesStations(),
                         ])>
-                            {{ $business->usesStations() ? 'Multi-Station Aktif' : 'Mode 1 Station Utama' }}
+                            {{ $business->usesStations() ? 'Banyak loket aktif' : 'Mode 1 Loket Utama' }}
                         </span>
                     </div>
                     <p class="mt-1 text-xs text-neutral-600">
-                        Pilih apakah usaha Anda menggunakan banyak station/loket paralel (mis. Kursi 1, Kursi 2) atau cukup 1 antrean tunggal tanpa pembagian multi-station.
+                        Pilih banyak loket bila beberapa kursi atau meja melayani bersamaan, atau satu loket bila semua pelanggan dilayani di satu tempat.
                     </p>
                 </div>
 
@@ -82,11 +82,11 @@
                             type="submit"
                             @class([
                                 'inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-xl border px-3.5 text-xs font-bold transition sm:w-auto',
-                                'border-brand-700 bg-brand-700 text-white shadow-xs' => $business->usesStations(),
+                                'border-brand-700 bg-brand-700 text-white shadow-card' => $business->usesStations(),
                                 'border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50' => ! $business->usesStations(),
                             ])
                         >
-                            Multi-Station
+                            Banyak loket
                         </button>
                     </form>
                     <form method="POST" action="{{ route('merchant.counters.toggle-station-mode') }}">
@@ -97,11 +97,11 @@
                             type="submit"
                             @class([
                                 'inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-xl border px-3.5 text-xs font-bold transition sm:w-auto',
-                                'border-slate-900 bg-slate-900 text-white shadow-xs' => ! $business->usesStations(),
+                                'border-slate-900 bg-slate-900 text-white shadow-card' => ! $business->usesStations(),
                                 'border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50' => $business->usesStations(),
                             ])
                         >
-                            1 Station (Tanpa Multi-Station)
+                            Satu loket
                         </button>
                     </form>
                 </div>
@@ -111,7 +111,7 @@
                 <div class="mt-3 flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50/70 p-3 text-xs text-amber-900" role="status">
                     <svg class="mt-0.5 size-4 shrink-0 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     <p>
-                        <strong>Mode 1 Station Aktif:</strong> Estimasi waktu tunggu pelanggan, kapasitas slot per jam, meja operator, dan layar TV publik otomatis menghitung kapasitas sebagai <strong>1 station utama</strong> meskipun ada lebih dari satu loket tersimpan di bawah.
+                        <strong>Mode satu loket aktif:</strong> Estimasi waktu tunggu pelanggan, kapasitas slot per jam, meja operator, dan layar TV publik otomatis menghitung kapasitas sebagai <strong>1 station utama</strong> meskipun ada lebih dari satu loket tersimpan di bawah.
                     </p>
                 </div>
             @endunless
@@ -129,7 +129,7 @@
         <section class="space-y-3">
             <div>
                 <h2 class="text-h3 font-bold text-neutral-900">Daftar Loket Usaha</h2>
-                <p class="mt-0.5 text-xs text-neutral-500">Semua loket melayani antrean terpadu (FIFO global) dari antrean harian usaha.</p>
+                <p class="mt-0.5 text-xs text-neutral-500">Semua loket melayani antrean terpadu sesuai urutan kedatangan dari antrean harian usaha.</p>
             </div>
 
             @if ($counters->isEmpty())
@@ -142,9 +142,9 @@
                             $counter = $row['counter'];
                             $activeTicket = $row['activeTicket'];
                         @endphp
-                        <li class="rounded-xl border border-neutral-200 bg-white p-4 shadow-xs">
+                        <li class="rounded-xl border border-neutral-200 bg-white p-4 shadow-card">
                             <div class="flex items-start gap-3">
-                                <span class="flex size-11 shrink-0 items-center justify-center rounded-lg font-mono text-xs font-bold {{ $counter->is_active ? 'bg-brand-100 text-brand-700' : 'bg-neutral-100 text-neutral-400' }}">
+                                <span class="flex size-11 shrink-0 items-center justify-center rounded-lg font-mono text-xs font-bold {{ $counter->is_active ? 'bg-brand-100 text-brand-700' : 'bg-neutral-100 text-neutral-500' }}">
                                     {{ $counter->code }}
                                 </span>
                                 <div class="min-w-0 flex-1">
@@ -185,7 +185,7 @@
                                             </form>
                                         </span>
                                     @empty
-                                        <span class="text-xs italic text-neutral-400">Hanya Pemilik Usaha</span>
+                                        <span class="text-xs italic text-neutral-500">Hanya Pemilik Usaha</span>
                                     @endforelse
                                 </div>
                             </div>
@@ -231,7 +231,7 @@
                 </ul>
 
                 {{-- Tablet & desktop: table --}}
-                <div class="hidden overflow-x-auto rounded-xl border border-neutral-200 bg-white shadow-xs md:block">
+                <div class="hidden overflow-x-auto rounded-xl border border-neutral-200 bg-white shadow-card md:block">
                     <table class="w-full border-collapse text-left text-sm">
                         <thead>
                             <tr class="border-b border-neutral-200 bg-neutral-50/75 text-xs font-semibold uppercase tracking-wider text-neutral-500">
@@ -252,7 +252,7 @@
                                 <tr class="transition-colors hover:bg-neutral-50/50">
                                     <td class="px-4 py-4 lg:px-6">
                                         <div class="flex items-center gap-3">
-                                            <div class="flex size-9 shrink-0 items-center justify-center rounded-lg {{ $counter->is_active ? 'bg-brand-100 text-brand-700' : 'bg-neutral-100 text-neutral-400' }}">
+                                            <div class="flex size-9 shrink-0 items-center justify-center rounded-lg {{ $counter->is_active ? 'bg-brand-100 text-brand-700' : 'bg-neutral-100 text-neutral-500' }}">
                                                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                                             </div>
                                             <div class="min-w-0">
@@ -263,7 +263,7 @@
                                             </div>
                                         </div>
                                     </td>
-                                    <td class="px-4 py-4 font-mono text-xs font-bold text-neutral-700">
+                                    <td class="px-4 py-4 whitespace-nowrap font-mono text-xs font-bold text-neutral-700">
                                         <span class="inline-flex items-center rounded border border-neutral-200 bg-neutral-100 px-2 py-0.5">{{ $counter->code }}</span>
                                     </td>
                                     <td class="px-4 py-4">
@@ -283,9 +283,9 @@
                                                     </form>
                                                 </span>
                                             @empty
-                                                <span class="text-xs italic text-neutral-400">Hanya Pemilik Usaha</span>
+                                                <span class="text-xs italic text-neutral-500">Hanya Pemilik Usaha</span>
                                             @endforelse
-                                            <button type="button" onclick="openAssignModal({{ $counter->id }}, @js($counter->name))" class="inline-flex h-7 items-center rounded border border-brand-200 bg-brand-50 px-2 text-[11px] font-semibold text-brand-700 transition-colors hover:bg-brand-100">
+                                            <button type="button" onclick="openAssignModal({{ $counter->id }}, @js($counter->name))" class="inline-flex h-7 items-center rounded border border-brand-200 bg-brand-50 px-2 text-xs font-semibold text-brand-700 transition-colors hover:bg-brand-100">
                                                 + Tugaskan
                                             </button>
                                         </div>
@@ -297,7 +297,7 @@
                                                 <x-status-badge :status="$activeTicket->status" size="sm" />
                                             </div>
                                         @else
-                                            <span class="text-xs text-neutral-400">Kosong / Siap</span>
+                                            <span class="text-xs text-neutral-500">Kosong / Siap</span>
                                         @endif
                                     </td>
                                     <td class="whitespace-nowrap px-4 py-4 pr-6 text-right">
@@ -357,18 +357,18 @@
 
             <div>
                 <label for="add_name" class="block text-xs font-semibold text-neutral-700 mb-1">Nama Loket *</label>
-                <input id="add_name" name="name" type="text" class="w-full min-h-11 rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500" placeholder="Contoh: Loket 2" required />
+                <input id="add_name" name="name" type="text" class="border placeholder:text-neutral-500 w-full min-h-11 rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500" placeholder="Contoh: Loket 2" required />
             </div>
 
             <div>
                 <label for="add_code" class="block text-xs font-semibold text-neutral-700 mb-1">Kode Loket *</label>
-                <input id="add_code" name="code" type="text" class="w-full min-h-11 rounded-lg border-neutral-300 text-sm font-mono uppercase focus:border-brand-500 focus:ring-brand-500" placeholder="Contoh: L-02" required maxlength="10" />
-                <p class="text-[11px] text-neutral-500 mt-1">Kode unik identifikasi loket, maksimal 10 karakter.</p>
+                <input id="add_code" name="code" type="text" class="border placeholder:text-neutral-500 w-full min-h-11 rounded-lg border-neutral-300 text-sm font-mono uppercase focus:border-brand-500 focus:ring-brand-500" placeholder="Contoh: L-02" required maxlength="10" />
+                <p class="text-xs text-neutral-500 mt-1">Kode unik identifikasi loket, maksimal 10 karakter.</p>
             </div>
 
             <div>
                 <label for="add_description" class="block text-xs font-semibold text-neutral-700 mb-1">Deskripsi (Opsional)</label>
-                <textarea id="add_description" name="description" rows="2" class="w-full min-h-11 rounded-lg border-neutral-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm" placeholder="Contoh: Loket khusus pembayaran & konsultasi cepat"></textarea>
+                <textarea id="add_description" name="description" rows="2" class="border w-full min-h-11 rounded-lg border-neutral-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm" placeholder="Contoh: Loket khusus pembayaran & konsultasi cepat"></textarea>
             </div>
 
             <div class="grid grid-cols-2 gap-2 border-t border-neutral-100 pt-3 sm:flex sm:justify-end">
@@ -392,17 +392,17 @@
 
             <div>
                 <label for="edit_name" class="block text-xs font-semibold text-neutral-700 mb-1">Nama Loket *</label>
-                <input id="edit_name" name="name" type="text" class="w-full min-h-11 rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500" required />
+                <input id="edit_name" name="name" type="text" class="border w-full min-h-11 rounded-lg border-neutral-300 text-sm focus:border-brand-500 focus:ring-brand-500" required />
             </div>
 
             <div>
                 <label for="edit_code" class="block text-xs font-semibold text-neutral-700 mb-1">Kode Loket *</label>
-                <input id="edit_code" name="code" type="text" class="w-full min-h-11 rounded-lg border-neutral-300 text-sm font-mono uppercase focus:border-brand-500 focus:ring-brand-500" required maxlength="10" />
+                <input id="edit_code" name="code" type="text" class="border w-full min-h-11 rounded-lg border-neutral-300 text-sm font-mono uppercase focus:border-brand-500 focus:ring-brand-500" required maxlength="10" />
             </div>
 
             <div>
                 <label for="edit_description" class="block text-xs font-semibold text-neutral-700 mb-1">Deskripsi (Opsional)</label>
-                <textarea id="edit_description" name="description" rows="2" class="w-full min-h-11 rounded-lg border-neutral-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm"></textarea>
+                <textarea id="edit_description" name="description" rows="2" class="border w-full min-h-11 rounded-lg border-neutral-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm"></textarea>
             </div>
 
             <div class="grid grid-cols-2 gap-2 border-t border-neutral-100 pt-3 sm:flex sm:justify-end">
@@ -428,13 +428,13 @@
 
             <div>
                 <label for="assign_membership_id" class="block text-xs font-semibold text-neutral-700 mb-1">Pilih Staf Operator *</label>
-                <select id="assign_membership_id" name="business_membership_id" class="mt-1 block h-11 w-full rounded-lg border-neutral-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm" required>
+                <select id="assign_membership_id" name="business_membership_id" class="border mt-1 block h-11 w-full rounded-lg border-neutral-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm" required>
                     <option value="">-- Pilih Anggota Staf --</option>
                     @foreach ($availableOperators as $op)
                         <option value="{{ $op->id }}">{{ $op->user->name }} ({{ $op->user->email }})</option>
                     @endforeach
                 </select>
-                <p class="text-[11px] text-neutral-500 mt-1">Staf operator yang ditugaskan dapat memilih dan mengoperasikan loket ini dari dashboard.</p>
+                <p class="text-xs text-neutral-500 mt-1">Staf operator yang ditugaskan dapat memilih dan mengoperasikan loket ini dari dashboard.</p>
             </div>
 
             <div class="grid grid-cols-2 gap-2 border-t border-neutral-100 pt-3 sm:flex sm:justify-end">

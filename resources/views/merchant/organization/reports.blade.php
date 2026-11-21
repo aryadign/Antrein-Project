@@ -33,13 +33,13 @@
         <x-merchant.organization-tabs active="reports" :branches-count="$branches->count()" />
 
         {{-- Period Filter Toolbar --}}
-        <div class="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-3 shadow-xs sm:p-4 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
+        <div class="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-3 shadow-card sm:p-4 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
             <div class="grid grid-cols-3 gap-1 rounded-xl border border-neutral-200 bg-neutral-100 p-1 sm:inline-flex sm:w-fit">
                 @foreach ($periods as $key => $label)
                     <a
                         href="{{ route('merchant.organization.reports', ['period' => $key]) }}"
                         @if ($period === $key) aria-current="true" @endif
-                        class="inline-flex min-h-10 items-center justify-center rounded-lg px-2 text-center text-xs font-bold transition sm:px-3.5 {{ $period === $key ? 'bg-white text-neutral-900 shadow-xs' : 'text-neutral-600 hover:text-neutral-900' }}"
+                        class="inline-flex min-h-10 items-center justify-center rounded-lg px-2 text-center text-xs font-bold transition sm:px-3.5 {{ $period === $key ? 'bg-white text-neutral-900 shadow-card' : 'text-neutral-600 hover:text-neutral-900' }}"
                     >
                         {{ $label }}
                     </a>
@@ -88,26 +88,26 @@
             </div>
 
             @if (empty($summary['rows']))
-                <p class="rounded-xl border border-dashed border-neutral-300 bg-white px-4 py-8 text-center text-sm font-medium text-neutral-400">
+                <p class="rounded-xl border border-dashed border-neutral-300 bg-white px-4 py-8 text-center text-sm font-medium text-neutral-500">
                     Tidak ada data antrean pada periode ini.
                 </p>
             @else
                 {{-- Mobile: card list --}}
                 <ul class="space-y-3 lg:hidden" aria-label="Performa per cabang">
                     @foreach ($summary['rows'] as $row)
-                        <li class="rounded-xl border border-neutral-200 bg-white p-4 shadow-xs">
+                        <li class="rounded-xl border border-neutral-200 bg-white p-4 shadow-card">
                             <div class="flex items-start justify-between gap-2">
                                 <div class="min-w-0">
                                     <p class="truncate font-bold text-neutral-900">{{ $row['branch_name'] }}</p>
-                                    <p class="truncate font-mono text-[11px] text-neutral-400">/q/{{ $row['branch_slug'] }}</p>
+                                    <p class="truncate font-mono text-xs text-neutral-500">/q/{{ $row['branch_slug'] }}</p>
                                 </div>
                                 <x-status-badge :status="$row['is_active'] ? 'aktif' : 'nonaktif'" size="sm" />
                             </div>
                             <dl class="mt-3 grid grid-cols-4 gap-2 rounded-lg border border-neutral-200/60 bg-neutral-50/75 p-2 text-center text-xs tabular-nums">
-                                <div><dt class="text-[10px] text-neutral-400">Total</dt><dd class="font-bold text-neutral-900">{{ $row['total_tickets'] }}</dd></div>
-                                <div><dt class="text-[10px] text-emerald-600">Selesai</dt><dd class="font-bold text-emerald-800">{{ $row['completed_count'] }}</dd></div>
-                                <div><dt class="text-[10px] text-orange-600">Skip</dt><dd class="font-bold text-orange-800">{{ $row['skipped_count'] }}</dd></div>
-                                <div><dt class="text-[10px] text-neutral-400">Batal</dt><dd class="font-bold text-neutral-700">{{ $row['cancelled_count'] }}</dd></div>
+                                <div><dt class="text-xs text-neutral-500">Total</dt><dd class="font-bold text-neutral-900">{{ $row['total_tickets'] }}</dd></div>
+                                <div><dt class="text-xs text-emerald-600">Selesai</dt><dd class="font-bold text-emerald-800">{{ $row['completed_count'] }}</dd></div>
+                                <div><dt class="text-xs text-orange-600">Skip</dt><dd class="font-bold text-orange-800">{{ $row['skipped_count'] }}</dd></div>
+                                <div><dt class="text-xs text-neutral-500">Batal</dt><dd class="font-bold text-neutral-700">{{ $row['cancelled_count'] }}</dd></div>
                             </dl>
                             <p class="mt-2 text-xs text-neutral-600 tabular-nums">
                                 Pemasukan <strong class="text-emerald-800">Rp {{ number_format($row['gross_revenue'] ?? 0, 0, ',', '.') }}</strong>,
@@ -126,7 +126,7 @@
                 </ul>
 
                 {{-- Desktop: table --}}
-                <div class="hidden overflow-x-auto rounded-xl border border-neutral-200 bg-white shadow-xs lg:block">
+                <div class="hidden overflow-x-auto rounded-xl border border-neutral-200 bg-white shadow-card lg:block">
                     <table class="w-full border-collapse text-left text-xs">
                         <thead>
                             <tr class="border-b border-neutral-200 bg-neutral-50/75 font-bold uppercase tracking-wider text-neutral-500">
@@ -147,7 +147,7 @@
                                 <tr class="transition hover:bg-neutral-50/50">
                                     <td class="px-5 py-3.5">
                                         <p class="font-bold text-neutral-900">{{ $row['branch_name'] }}</p>
-                                        <p class="font-mono text-[10px] text-neutral-400">/q/{{ $row['branch_slug'] }}</p>
+                                        <p class="font-mono text-xs text-neutral-500">/q/{{ $row['branch_slug'] }}</p>
                                     </td>
                                     <td class="px-4 py-3.5 text-center">
                                         <x-status-badge :status="$row['is_active'] ? 'aktif' : 'nonaktif'" size="sm" />
@@ -163,7 +163,7 @@
                                         <form method="POST" action="{{ route('merchant.branches.switch') }}">
                                             @csrf
                                             <input type="hidden" name="business_id" value="{{ $row['branch_id'] }}">
-                                            <button type="submit" class="inline-flex h-9 items-center whitespace-nowrap rounded-lg px-2.5 text-[11px] font-bold text-brand-700 transition hover:bg-brand-50">
+                                            <button type="submit" class="inline-flex h-9 items-center whitespace-nowrap rounded-lg px-2.5 text-xs font-bold text-brand-700 transition hover:bg-brand-50">
                                                 Buka Laporan Rinci &rarr;
                                             </button>
                                         </form>

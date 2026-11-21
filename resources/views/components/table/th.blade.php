@@ -10,7 +10,7 @@
     };
 @endphp
 
-<th scope="col" {{ $attributes->merge(['class' => "px-4 py-3.5 text-label font-semibold text-neutral-700 select-none {$alignClasses}"]) }}>
+<th scope="col" {{ $attributes->merge(['class' => "px-4 py-3 text-label font-semibold text-neutral-600 whitespace-nowrap select-none {$alignClasses}"]) }}>
     {{ $slot }}
 </th>
 

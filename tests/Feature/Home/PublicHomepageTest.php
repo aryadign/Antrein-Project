@@ -25,7 +25,7 @@ class PublicHomepageTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee('Antrean Lebih Teratur, Pelayanan Lebih Lancar.');
-        $response->assertSee('Kelola antrean online dan walk-in dalam satu platform digital yang membantu UMKM melayani pelanggan dengan lebih mudah.');
+        $response->assertSee('Satu antrean untuk pelanggan yang mendaftar dari ponsel dan yang datang langsung, sehingga UMKM melayani dengan urutan yang adil.');
     }
 
     public function test_homepage_renders_all_mandatory_sections_and_features(): void
@@ -36,17 +36,39 @@ class PublicHomepageTest extends TestCase
         $response->assertSee('Cara Kerja');
         $response->assertSee('Fitur');
         $response->assertSee('Untuk UMKM');
-        $response->assertSee('Pertanyaan yang Sering Diajukan (FAQ)');
+        $response->assertSee('Pertanyaan yang sering diajukan');
         $response->assertSee('TKT-001'); // Mockup queue card number
-        $response->assertSee('Unified Online &amp; Walk-in Queue', false);
-        $response->assertSee('Multi-Counter Management');
-        $response->assertSee('Real-Time Queue Updates');
-        $response->assertSee('Email &amp; Browser Notifications', false);
-        $response->assertSee('Reports &amp; Analytics', false);
-        $response->assertSee('CSV &amp; PDF Export', false);
-        $response->assertSee('Public Queue Display');
-        $response->assertSee('Customer Reviews');
-        $response->assertSee('Historical Waiting Time Estimation');
+        $response->assertSee('Satu antrean, urutan yang adil');
+        $response->assertSee('Satu antrean untuk pelanggan dari ponsel dan yang datang langsung');
+        $response->assertSee('Banyak loket, banyak staf, dan banyak cabang');
+        $response->assertSee('Posisi antrean dan estimasi tunggu diperbarui otomatis');
+        $response->assertSee('Pemberitahuan lewat email dan peramban saat giliran dekat');
+        $response->assertSee('Laporan harian yang bisa diunduh sebagai CSV atau PDF');
+        $response->assertSee('Layar antrean untuk TV atau monitor');
+        $response->assertSee('Ulasan dan rating setelah dilayani');
+        $response->assertSee('Estimasi waktu tunggu dari riwayat pelayanan');
+    }
+
+    public function test_homepage_copy_is_indonesian_without_developer_jargon_or_unbuilt_features(): void
+    {
+        $response = $this->get('/');
+
+        $response->assertOk();
+
+        foreach (['Unified Online', 'Multi-Counter Management', 'Reports &amp; Analytics', 'Customer Reviews', 'Laravel Reverb', 'WebSocket', 'RBAC', 'First-In First-Out', 'Text-to-Speech', 'Take-Away', 'Pilih stylist', 'walk-in', '(FAQ)', 'Dashboard UMKM', 'Dashboard Admin'] as $phrase) {
+            $response->assertDontSee($phrase, false);
+        }
+    }
+
+    public function test_homepage_hides_signup_links_from_signed_in_users(): void
+    {
+        $this->get('/')->assertSee('href="'.route('register', ['type' => 'merchant']).'"', false);
+
+        $merchant = User::factory()->merchant()->create();
+
+        $this->actingAs($merchant)->get('/')
+            ->assertOk()
+            ->assertDontSee('href="'.route('register', ['type' => 'merchant']).'"', false);
     }
 
     public function test_homepage_does_not_render_internal_design_system_testbed(): void
@@ -65,8 +87,8 @@ class PublicHomepageTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('Masuk');
         $response->assertSee('Daftarkan UMKM');
-        $response->assertDontSee('Dashboard Admin');
-        $response->assertDontSee('Dashboard UMKM');
+        $response->assertDontSee('Dasbor Admin');
+        $response->assertDontSee('Dasbor UMKM');
     }
 
     public function test_homepage_shows_merchant_dashboard_button_when_logged_in_as_merchant(): void
@@ -76,8 +98,8 @@ class PublicHomepageTest extends TestCase
         $response = $this->actingAs($merchant)->get('/');
 
         $response->assertStatus(200);
-        $response->assertSee('Dashboard UMKM');
-        $response->assertDontSee('Dashboard Admin');
+        $response->assertSee('Dasbor UMKM');
+        $response->assertDontSee('Dasbor Admin');
     }
 
     public function test_homepage_shows_admin_dashboard_button_when_logged_in_as_admin(): void
@@ -87,8 +109,8 @@ class PublicHomepageTest extends TestCase
         $response = $this->actingAs($admin)->get('/');
 
         $response->assertStatus(200);
-        $response->assertSee('Dashboard Admin');
-        $response->assertDontSee('Dashboard UMKM');
+        $response->assertSee('Dasbor Admin');
+        $response->assertDontSee('Dasbor UMKM');
     }
 
     public function test_preview_routes_are_accessible_in_local_or_testing_environments(): void
@@ -132,11 +154,12 @@ class PublicHomepageTest extends TestCase
         $response = $this->get('/');
 
         $response->assertOk();
-        $response->assertSee('Masuk Pelanggan');
+        $response->assertSee('href="'.route('login').'"', false);
         $response->assertSee('Daftar Pelanggan');
-        $response->assertSee('Jelajahi UMKM');
+        $response->assertSee('Cari Toko');
         $response->assertSee('href="'.route('customer.dashboard').'"', false);
-        $response->assertSee('Untuk Pemilik UMKM &amp; Staf', false);
+        $response->assertSee('Saya pelanggan');
+        $response->assertSee('Saya pemilik usaha');
     }
 
     public function test_homepage_has_no_decorative_dots_or_bullet_separators(): void
@@ -180,10 +203,10 @@ class PublicHomepageTest extends TestCase
 
         $response->assertOk()
             ->assertSee('images/landing/hero.jpg')
-            ->assertSee('images/landing/showcase-ticket.jpg')
-            ->assertSee('images/landing/showcase-merchant.jpg')
-            ->assertSee('images/landing/showcase-display.jpg')
-            ->assertSee('Skala &amp; Ekosistem AntreIn untuk Berbagai Jenis Usaha', false);
+            ->assertSee('images/landing/app-ticket.jpg')
+            ->assertSee('images/landing/app-merchant.jpg')
+            ->assertSee('images/landing/app-display.jpg')
+            ->assertSee('Cocok untuk berbagai jenis usaha');
     }
 
     public function test_customer_layout_brand_logo_links_guests_back_to_landing_page(): void
@@ -203,9 +226,8 @@ class PublicHomepageTest extends TestCase
         $response = $this->get(route('home'));
 
         $response->assertOk()
-            ->assertSee('bg-white/95', false)
-            ->assertSee('from-brand-800 via-brand-700 to-brand-900', false)
-            ->assertSee('from-brand-700 to-brand-900', false)
+            ->assertSee('bg-brand-800', false)
+            ->assertSee('bg-white', false)
             ->assertDontSee('#0B132B', false)
             ->assertDontSee('#060B19', false);
     }

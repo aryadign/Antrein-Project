@@ -7,7 +7,7 @@
     <div class="mx-auto max-w-3xl space-y-5 sm:space-y-6">
         {{-- Header --}}
         <div class="print:hidden">
-            <h1 class="text-h2 font-bold text-neutral-950">QR Code Antrean</h1>
+            <h1 class="text-[1.375rem] leading-[1.875rem] font-bold sm:text-[1.75rem] sm:leading-9 text-neutral-950">QR Code Antrean</h1>
             <p class="mt-1 text-body text-neutral-600">
                 Cetak atau tampilkan kode QR ini agar pelanggan yang telah masuk ke akun AntreIn dapat memindai dan mengambil nomor antrean langsung di lokasi usaha Anda.
             </p>
@@ -24,16 +24,16 @@
                     {!! $qrSvg !!}
                 </div>
 
-                <ol class="grid w-full grid-cols-3 gap-2 text-[11px] font-semibold text-neutral-700">
+                <ol class="grid w-full grid-cols-3 gap-2 text-xs font-semibold text-neutral-700">
                     <li class="rounded-lg bg-neutral-50 px-2 py-2"><span class="block text-base font-extrabold text-brand-700">1</span>Scan QR</li>
                     <li class="rounded-lg bg-neutral-50 px-2 py-2"><span class="block text-base font-extrabold text-brand-700">2</span>Masuk &amp; Antre</li>
                     <li class="rounded-lg bg-neutral-50 px-2 py-2"><span class="block text-base font-extrabold text-brand-700">3</span>Pantau Giliran</li>
                 </ol>
-                <p class="mt-3 text-[11px] text-neutral-500">Scan QR dengan kamera ponsel. Powered by AntreIn.</p>
+                <p class="mt-3 text-xs text-neutral-500">Scan QR dengan kamera ponsel. Powered by AntreIn.</p>
             </section>
 
             {{-- QR Actions --}}
-            <section class="flex flex-col gap-4 rounded-2xl border border-neutral-200 bg-white p-5 shadow-xs print:hidden">
+            <section class="flex flex-col gap-4 rounded-2xl border border-neutral-200 bg-white p-5 shadow-card print:hidden">
                 <div>
                     <h3 class="text-sm font-bold text-neutral-900">Unduh &amp; Cetak Kartu QR</h3>
                     <p class="mt-1 text-xs leading-relaxed text-neutral-600">
@@ -53,7 +53,7 @@
                     <button
                         type="button"
                         onclick="window.print()"
-                        class="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-neutral-300 bg-white px-4 text-sm font-semibold text-neutral-700 shadow-xs transition hover:bg-neutral-50"
+                        class="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-neutral-300 bg-white px-4 text-sm font-semibold text-neutral-700 shadow-card transition hover:bg-neutral-50"
                     >
                         <svg class="w-4 h-4 text-neutral-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
                         Cetak Kartu QR

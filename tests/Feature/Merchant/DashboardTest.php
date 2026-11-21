@@ -155,7 +155,7 @@ class DashboardTest extends TestCase
         $operatorResponse->assertSee('Klinik Sehat Denpasar');
         $operatorResponse->assertSee('Pelanggan Sedang Dilayani');
         $operatorResponse->assertSee('A-002');
-        $operatorResponse->assertSee('Sedang Berlangsung');
+        $operatorResponse->assertSee('data-now-serving', false);
         $operatorResponse->assertSee('Layar TV');
         $operatorResponse->assertSee('Asia/Makassar');
 
@@ -164,9 +164,9 @@ class DashboardTest extends TestCase
 
         $ownerResponse->assertOk();
         $ownerResponse->assertSee('Klinik Sehat Denpasar');
-        $ownerResponse->assertSee('Ringkasan Gabungan Organisasi');
-        $ownerResponse->assertSee('Laporan Gabungan Seluruh Cabang');
-        $ownerResponse->assertDontSee('Sedang Berlangsung');
+        $ownerResponse->assertSee('Ringkasan gabungan semua cabang');
+        $ownerResponse->assertSee('Rincian Performa Per Cabang');
+        $ownerResponse->assertDontSee('data-now-serving', false);
         $ownerResponse->assertDontSee('Antrean Aktif Berjalan');
         $ownerResponse->assertDontSee('A-002');
     }
@@ -194,11 +194,11 @@ class DashboardTest extends TestCase
 
         $ownerResponse = $this->actingAs($this->merchant)->get(route('merchant.dashboard'));
         $ownerResponse->assertOk();
-        $ownerResponse->assertSee('Akun Usaha Ditangguhkan (Suspended)');
+        $ownerResponse->assertSee('Akun usaha ditangguhkan');
 
         $operatorResponse = $this->actingAs($this->operator)->get(route('merchant.dashboard'));
         $operatorResponse->assertOk();
-        $operatorResponse->assertSee('Akun Usaha Ditangguhkan (Suspended)');
+        $operatorResponse->assertSee('Akun usaha ditangguhkan');
     }
 
     public function test_dashboard_strictly_scopes_metrics_and_tickets_to_current_business(): void
@@ -284,8 +284,8 @@ class DashboardTest extends TestCase
 
         $response->assertOk()
             ->assertSee('Pilih Periode Ringkasan')
-            ->assertSee('Total Tiket Dibuat')
-            ->assertSee('Estimasi Pemasukan Kotor')
+            ->assertSee('Total tiket')
+            ->assertSee('Estimasi pemasukan kotor')
             ->assertSee('Rp 50.000')
             ->assertSee('Tren Volume Antrean Harian')
             ->assertSee('Distribusi Status Antrean')
@@ -432,7 +432,7 @@ class DashboardTest extends TestCase
         $response = $this->actingAs($this->merchant)->get(route('merchant.dashboard', ['period' => 'today']));
 
         $response->assertOk()
-            ->assertSee('Estimasi Pemasukan Kotor')
+            ->assertSee('Estimasi pemasukan kotor')
             ->assertSee('Rp 300.000')
             ->assertSee('Rp 50.000')
             ->assertSee('Rp 250.000');

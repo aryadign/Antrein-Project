@@ -30,15 +30,15 @@
         <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <x-stat-tile label="Total Cabang" :value="$branchesCount" hint="Cabang dalam satu brand" />
             <x-stat-tile label="Cabang Aktif" :value="$activeBranchesCount" hint="Menerima antrean hari ini" tone="success" />
-            <div class="col-span-2 min-w-0 rounded-xl border border-neutral-200 bg-white p-3.5 shadow-xs sm:col-span-1 sm:p-4">
+            <div class="col-span-2 min-w-0 rounded-xl border border-neutral-200 bg-white p-3.5 shadow-card sm:col-span-1 sm:p-4">
                 <p class="truncate text-caption font-semibold text-neutral-500">Cabang Aktif Sesi Ini</p>
                 <p class="mt-1 truncate text-base font-bold text-brand-700 sm:text-lg">{{ $activeBranch?->name ?? 'Belum dipilih' }}</p>
-                <p class="mt-0.5 truncate text-[11px] text-neutral-500">Konteks dashboard operasional</p>
+                <p class="mt-0.5 truncate text-xs text-neutral-500">Konteks dashboard operasional</p>
             </div>
         </div>
 
         {{-- Organization Settings Form --}}
-        <div class="bg-white rounded-2xl border border-neutral-200 shadow-xs overflow-hidden">
+        <div class="bg-white rounded-2xl border border-neutral-200 shadow-card overflow-hidden">
             <form method="POST" action="{{ route('merchant.organization.update') }}" class="space-y-6 p-4 sm:p-8">
                 @csrf
                 @method('PUT')
@@ -78,7 +78,7 @@
                             <option value="Asia/Makassar" {{ $tz === 'Asia/Makassar' ? 'selected' : '' }}>WITA — Asia/Makassar (UTC+8)</option>
                             <option value="Asia/Jayapura" {{ $tz === 'Asia/Jayapura' ? 'selected' : '' }}>WIT — Asia/Jayapura (UTC+9)</option>
                         </select>
-                        <p class="text-[11px] text-neutral-400 mt-1">Digunakan sebagai acuan waktu default untuk pembuatan cabang baru dan laporan agregat.</p>
+                        <p class="text-xs text-neutral-500 mt-1">Digunakan sebagai acuan waktu default untuk pembuatan cabang baru dan laporan agregat.</p>
                     </div>
 
                     {{-- Description --}}

@@ -37,7 +37,7 @@
     @endif
 
     @if ($showCategory && $category)
-        <span class="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-semibold leading-4 text-gray-900 shadow-sm">
+        <span class="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-white/95 px-2.5 py-1 text-xs font-semibold leading-4 text-gray-900 shadow-sm">
             <span class="size-3.5 {{ $iconTint }}" style="{{ $mask }}" aria-hidden="true"></span>
             {{ $category->shortName() }}
         </span>

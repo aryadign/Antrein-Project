@@ -157,6 +157,92 @@ class QueueTicket extends Model
     }
 
     /**
+     * Single source of truth for how each ticket status is presented in the UI (Bahasa Indonesia).
+     *
+     * Tones map to badge colours: warning (amber), info (blue), brand (brand blue),
+     * success (green), neutral (grey), caution (orange), danger (red).
+     *
+     * @return array<string, array{label: string, tone: string}>
+     */
+    public static function statusPresentation(): array
+    {
+        return [
+            self::STATUS_MENUNGGU => ['label' => 'Menunggu', 'tone' => 'warning'],
+            self::STATUS_DIPANGGIL => ['label' => 'Dipanggil', 'tone' => 'info'],
+            self::STATUS_SEDANG_DILAYANI => ['label' => 'Sedang dilayani', 'tone' => 'brand'],
+            self::STATUS_SELESAI => ['label' => 'Selesai', 'tone' => 'success'],
+            self::STATUS_DILEWATI => ['label' => 'Dilewati', 'tone' => 'neutral'],
+            self::STATUS_TIDAK_HADIR => ['label' => 'Tidak hadir', 'tone' => 'caution'],
+            self::STATUS_DIBATALKAN => ['label' => 'Dibatalkan', 'tone' => 'danger'],
+        ];
+    }
+
+    /**
+     * Normalise a status value, accepting the English aliases (waiting, called, serving, ...).
+     */
+    public static function normalizeStatus(?string $status): ?string
+    {
+        $status = strtolower(trim((string) $status));
+
+        return match ($status) {
+            'waiting' => self::STATUS_MENUNGGU,
+            'called' => self::STATUS_DIPANGGIL,
+            'serving' => self::STATUS_SEDANG_DILAYANI,
+            'completed' => self::STATUS_SELESAI,
+            'skipped' => self::STATUS_DILEWATI,
+            'no_show' => self::STATUS_TIDAK_HADIR,
+            'cancelled' => self::STATUS_DIBATALKAN,
+            default => array_key_exists($status, self::statusPresentation()) ? $status : null,
+        };
+    }
+
+    /**
+     * Whether the given value is a known ticket status (including English aliases).
+     */
+    public static function isTicketStatus(?string $status): bool
+    {
+        return self::normalizeStatus($status) !== null;
+    }
+
+    /**
+     * Human label for a ticket status, e.g. "Sedang dilayani".
+     */
+    public static function labelForStatus(?string $status): string
+    {
+        $normalized = self::normalizeStatus($status);
+
+        return $normalized !== null
+            ? self::statusPresentation()[$normalized]['label']
+            : ucfirst(str_replace('_', ' ', (string) $status));
+    }
+
+    /**
+     * Presentation tone for a ticket status (see statusPresentation()).
+     */
+    public static function toneForStatus(?string $status): string
+    {
+        $normalized = self::normalizeStatus($status);
+
+        return $normalized !== null ? self::statusPresentation()[$normalized]['tone'] : 'neutral';
+    }
+
+    /**
+     * Human label for this ticket's status.
+     */
+    public function statusLabel(): string
+    {
+        return self::labelForStatus($this->status);
+    }
+
+    /**
+     * Presentation tone for this ticket's status.
+     */
+    public function statusTone(): string
+    {
+        return self::toneForStatus($this->status);
+    }
+
+    /**
      * Formatted start time of the customer's booking slot in the business timezone, e.g. "11:00".
      */
     public function bookingSlotLabel(?string $timezone = null): ?string

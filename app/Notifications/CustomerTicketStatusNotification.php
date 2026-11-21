@@ -40,15 +40,7 @@ class CustomerTicketStatusNotification extends Notification implements ShouldQue
         $trackUrl = route('customer.queue.track', ['token' => $this->ticket->access_token]);
         $counterName = $this->ticket->counter?->name;
 
-        $subjectStatus = match ($this->status) {
-            QueueTicket::STATUS_DIPANGGIL => 'Dipanggil',
-            QueueTicket::STATUS_SEDANG_DILAYANI => 'Sedang Dilayani',
-            QueueTicket::STATUS_SELESAI => 'Pelayanan Selesai',
-            QueueTicket::STATUS_DILEWATI => 'Dilewati',
-            QueueTicket::STATUS_TIDAK_HADIR => 'Tidak hadir',
-            QueueTicket::STATUS_DIBATALKAN => 'Dibatalkan',
-            default => ucfirst(str_replace('_', ' ', $this->status)),
-        };
+        $subjectStatus = QueueTicket::labelForStatus($this->status);
 
         $subject = sprintf('[AntreIn] Antrean %s %s — %s', $this->ticket->ticket_number, $subjectStatus, $businessName);
 

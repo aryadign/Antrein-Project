@@ -48,7 +48,7 @@
 
     @if ($badge)
         <span @class([
-            'px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase rounded border',
+            'px-1.5 py-0.5 text-xs leading-4 font-bold tracking-wide uppercase rounded-md border',
             'bg-brand-700/60 text-brand-200 border-brand-500/30' => $isDarkSurface,
             'bg-brand-50 text-brand-700 border-brand-200' => ! $isDarkSurface,
         ])>

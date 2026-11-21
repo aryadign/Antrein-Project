@@ -23,7 +23,7 @@
             </div>
         @endif
 
-        <div class="bg-white rounded-2xl border border-neutral-200 shadow-xs overflow-hidden">
+        <div class="bg-white rounded-2xl border border-neutral-200 shadow-card overflow-hidden">
             <form method="POST" action="{{ $isEdit ? route('merchant.branches.update', $branch) : route('merchant.branches.store') }}" class="space-y-6 p-4 sm:p-8">
                 @csrf
                 @if ($isEdit)
@@ -65,7 +65,7 @@
                         <label for="slug" class="block text-xs font-bold uppercase tracking-wider text-neutral-700 mb-1.5">
                             Slug URL Publik (Opsional)
                         </label>
-                        <div class="flex rounded-xl shadow-xs">
+                        <div class="flex rounded-xl shadow-card">
                             <span class="inline-flex items-center px-4 rounded-l-xl border border-r-0 border-neutral-300 bg-neutral-50 text-neutral-500 text-xs">
                                 /q/
                             </span>
@@ -78,7 +78,7 @@
                                 class="flex-1 min-w-0 block w-full px-4 py-2.5 rounded-none rounded-r-xl border border-neutral-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 text-sm text-neutral-900 placeholder:text-neutral-400 transition"
                             >
                         </div>
-                        <p class="text-[11px] text-neutral-400 mt-1">Kosongkan jika ingin dibuatkan secara otomatis dari nama cabang.</p>
+                        <p class="text-xs text-neutral-500 mt-1">Kosongkan jika ingin dibuatkan secara otomatis dari nama cabang.</p>
                     </div>
 
                     {{-- Category --}}

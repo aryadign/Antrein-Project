@@ -21,7 +21,7 @@ class QueueMonitoringTest extends TestCase
     {
         $category = BusinessCategory::create([
             'name' => 'Klinik Medis',
-            'slug' => 'klinik-medis-' . uniqid(),
+            'slug' => 'klinik-medis-'.uniqid(),
             'is_active' => true,
         ]);
 
@@ -30,7 +30,7 @@ class QueueMonitoringTest extends TestCase
             'user_id' => $merchant->id,
             'category_id' => $category->id,
             'name' => 'Klinik Bali Husada',
-            'slug' => 'klinik-bali-husada-' . uniqid(),
+            'slug' => 'klinik-bali-husada-'.uniqid(),
             'phone' => '081234567890',
             'address' => 'Jl. Diponegoro No. 12',
             'timezone' => 'Asia/Makassar',
@@ -166,7 +166,6 @@ class QueueMonitoringTest extends TestCase
         $detailResponse->assertDontSee(route('merchant.queues.skip', $ticket));
         $detailResponse->assertDontSee(route('merchant.queues.cancel', $ticket));
 
-        $detailResponse->assertSee('Mode Audit Read-Only');
+        $detailResponse->assertSee('Mode pemantauan, hanya baca');
     }
 }
-

@@ -143,7 +143,7 @@
                     <li class="flex min-w-0 flex-col gap-1.5">
                         <div class="h-1.5 w-full rounded-full transition-colors duration-300" :class="step >= {{ $number }} ? 'bg-brand-700' : 'bg-gray-200'"></div>
                         <span
-                            class="truncate text-[11px] font-bold transition-colors duration-300 sm:text-xs"
+                            class="truncate text-xs font-bold transition-colors duration-300 sm:text-xs"
                             :class="step >= {{ $number }} ? 'text-brand-700' : 'text-gray-500'"
                         >{{ $number }}. {{ $label }}</span>
                     </li>
@@ -165,7 +165,7 @@
 
             @unless ($business->canAcceptOnlineQueue())
                 <div class="flex flex-col gap-1 rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-xs leading-4" role="status">
-                    <p class="font-bold text-amber-900">Kedai belum menerima antrean online</p>
+                    <p class="font-bold text-amber-900">Kedai belum menerima antrean dari ponsel</p>
                     <p class="text-gray-700">Silakan kembali saat kedai sudah buka.</p>
                 </div>
             @endunless
@@ -178,7 +178,7 @@
                     </div>
                 @endforeach
                 <div class="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <span class="w-fit rounded-md bg-amber-100 px-2 py-0.5 text-[10px] font-extrabold tracking-wide text-amber-900 uppercase">Layanan Dipilih</span>
+                    <span class="w-fit rounded-md bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900">Layanan Dipilih</span>
                     <p class="truncate text-sm font-extrabold leading-5 text-gray-900" x-text="service ? service.name : ''"></p>
                     <div class="flex flex-wrap items-center gap-1.5 text-xs leading-4 text-gray-600">
                         <span x-show="service && service.price" class="font-bold text-gray-900" x-text="service ? service.price : ''"></span>
@@ -200,7 +200,7 @@
                     <div class="flex flex-col gap-1.5">
                         <label for="customer_name" class="flex items-center justify-between text-xs font-bold leading-4 text-gray-900">
                             <span>Nama lengkap</span>
-                            <span class="rounded-md bg-brand-50 px-2 py-0.5 text-[10px] font-extrabold text-brand-700">Wajib</span>
+                            <span class="rounded-md bg-brand-50 px-2 py-0.5 text-xs font-extrabold text-brand-700">Wajib</span>
                         </label>
                         <input
                             id="customer_name"
@@ -213,7 +213,7 @@
                             autocomplete="name"
                             maxlength="100"
                             placeholder="Nama Anda"
-                            class="min-h-[46px] rounded-xl border-[1.5px] bg-white px-3.5 py-2.5 text-sm font-medium leading-5 text-gray-900 placeholder:text-gray-400 transition focus:border-brand-700 focus:outline-none focus:ring-3 focus:ring-brand-100 @error('customer_name') border-danger-700 @else border-gray-300 @enderror"
+                            class="min-h-[46px] rounded-xl border-[1.5px] bg-white px-3.5 py-2.5 text-sm font-medium leading-5 text-gray-900 placeholder:text-gray-500 transition focus:border-brand-700 focus:outline-none focus:ring-3 focus:ring-brand-100 @error('customer_name') border-danger-700 @else border-gray-300 @enderror"
                             :class="nameError && 'border-danger-700'"
                         />
                         <p x-show="nameError" x-cloak class="text-xs font-medium leading-4 text-danger-700">Nama lengkap wajib diisi.</p>
@@ -225,7 +225,7 @@
                     <div class="flex flex-col gap-1.5">
                         <label for="customer_phone" class="flex items-center justify-between text-xs font-bold leading-4 text-gray-900">
                             <span>Nomor WhatsApp</span>
-                            <span class="rounded-md bg-gray-100 px-2 py-0.5 text-[10px] font-bold text-gray-600">Opsional</span>
+                            <span class="rounded-md bg-gray-100 px-2 py-0.5 text-xs font-bold text-gray-600">Opsional</span>
                         </label>
                         <input
                             id="customer_phone"
@@ -236,7 +236,7 @@
                             autocomplete="tel"
                             maxlength="20"
                             placeholder="0812 3456 7890"
-                            class="min-h-[46px] rounded-xl border-[1.5px] bg-white px-3.5 py-2.5 text-sm font-medium leading-5 text-gray-900 placeholder:text-gray-400 transition focus:border-brand-700 focus:outline-none focus:ring-3 focus:ring-brand-100 @error('customer_phone') border-danger-700 @else border-gray-300 @enderror"
+                            class="min-h-[46px] rounded-xl border-[1.5px] bg-white px-3.5 py-2.5 text-sm font-medium leading-5 text-gray-900 placeholder:text-gray-500 transition focus:border-brand-700 focus:outline-none focus:ring-3 focus:ring-brand-100 @error('customer_phone') border-danger-700 @else border-gray-300 @enderror"
                         />
                         @error('customer_phone')
                             <p class="text-xs font-medium leading-4 text-danger-700">{{ $message }}</p>
@@ -246,7 +246,7 @@
                     <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-gray-200 bg-gray-50/70 p-3 transition hover:bg-gray-50">
                         <input type="checkbox" name="notify_email" value="1" x-model="notifyEmail" @checked(old('notify_email')) class="mt-0.5 size-4 rounded border-gray-300 text-brand-700 focus:ring-brand-700" />
                         <span class="flex flex-col gap-0.5 text-xs leading-4">
-                            <span class="flex flex-wrap items-center gap-1.5 font-bold text-gray-900">Kirim pembaruan status ke email saya <span class="rounded-md bg-gray-200/70 px-2 py-0.5 text-[10px] font-bold text-gray-600">Opsional</span></span>
+                            <span class="flex flex-wrap items-center gap-1.5 font-bold text-gray-900">Kirim pembaruan status ke email saya <span class="rounded-md bg-gray-200/70 px-2 py-0.5 text-xs font-bold text-gray-600">Opsional</span></span>
                             <span class="text-gray-600">Kami kabari saat nomor Anda dipanggil atau selesai dilayani.</span>
                         </span>
                     </label>
@@ -264,7 +264,7 @@
                             autocomplete="email"
                             maxlength="255"
                             placeholder="nama@email.com"
-                            class="min-h-[46px] rounded-xl border-[1.5px] bg-white px-3.5 py-2.5 text-sm font-medium leading-5 text-gray-900 placeholder:text-gray-400 transition focus:border-brand-700 focus:outline-none focus:ring-3 focus:ring-brand-100 @error('customer_email') border-danger-700 @else border-gray-300 @enderror"
+                            class="min-h-[46px] rounded-xl border-[1.5px] bg-white px-3.5 py-2.5 text-sm font-medium leading-5 text-gray-900 placeholder:text-gray-500 transition focus:border-brand-700 focus:outline-none focus:ring-3 focus:ring-brand-100 @error('customer_email') border-danger-700 @else border-gray-300 @enderror"
                             :class="emailError && 'border-danger-700'"
                         />
                         <p x-show="emailError" x-cloak class="text-xs font-medium leading-4 text-danger-700">Masukkan alamat email yang valid.</p>
@@ -297,7 +297,7 @@
                                 type="search"
                                 x-model.debounce.150ms="serviceQuery"
                                 placeholder="Cari layanan..."
-                                class="w-full min-w-0 border-0 bg-transparent p-0 text-sm leading-5 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-0"
+                                class="w-full min-w-0 border-0 bg-transparent p-0 text-sm leading-5 text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-0"
                             />
                         </label>
                     @endif
@@ -338,9 +338,9 @@
                                             <span class="text-sm font-extrabold leading-5 text-gray-900 whitespace-nowrap">Rp {{ number_format($service->price, 0, ',', '.') }}</span>
                                         @endif
                                         @if ($service->is_quota_full)
-                                            <span class="rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-bold text-danger-700">Kuota hari ini habis</span>
+                                            <span class="rounded-full bg-red-50 px-2 py-0.5 text-xs font-bold text-danger-700">Kuota hari ini habis</span>
                                         @else
-                                            <span class="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-bold text-brand-700">
+                                            <span class="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2 py-0.5 text-xs font-bold text-brand-700">
                                                 <x-customer.icon name="clock" class="size-3" />
                                                 {{ $service->duration_minutes ? '±'.$service->duration_minutes.' menit' : 'Durasi fleksibel' }}
                                             </span>
@@ -382,7 +382,7 @@
                             >
                                 <span class="text-xs font-extrabold text-gray-900 tabular-nums" x-text="slot.label"></span>
                                 <span
-                                    class="text-[11px] font-semibold"
+                                    class="text-xs font-semibold"
                                     :class="slot.is_available ? 'text-emerald-700' : (slot.is_started ? 'text-gray-500' : 'text-danger-700')"
                                     x-text="slot.is_started ? 'Sudah berjalan' : (slot.is_full ? 'Penuh' : 'Sisa ' + slot.remaining + '/' + slot.capacity + ' slot')"
                                 ></span>
@@ -425,7 +425,7 @@
                         </div>
                     @endforeach
                     <div class="flex min-w-0 flex-1 flex-col gap-1">
-                        <span class="w-fit rounded-md bg-amber-100 px-2 py-0.5 text-[10px] font-extrabold tracking-wide text-amber-900 uppercase">Layanan Dipilih</span>
+                        <span class="w-fit rounded-md bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900">Layanan Dipilih</span>
                         <p class="wrap-break-word text-base font-extrabold leading-snug text-gray-900" x-text="service ? service.name : ''"></p>
                         <div class="flex flex-wrap items-center gap-1.5 text-xs leading-4">
                             <span x-show="service && service.price" class="font-extrabold text-gray-900" x-text="service ? service.price : ''"></span>
@@ -474,7 +474,7 @@
                     <p class="text-gray-700">Anda belum masuk antrean sebelum menekan tombol di bawah.</p>
                 </div>
 
-                <p class="text-center text-xs leading-4 text-gray-600">Setelah konfirmasi, QR Code tiket Anda langsung siap dipantau dari HP.</p>
+                <p class="text-center text-xs leading-4 text-gray-600">Setelah konfirmasi, QR Code tiket Anda langsung siap dipantau dari ponsel.</p>
 
                 <button
                     type="submit"

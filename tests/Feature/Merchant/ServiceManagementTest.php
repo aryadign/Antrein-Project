@@ -64,7 +64,7 @@ class ServiceManagementTest extends TestCase
         $response->assertOk();
         $response->assertSee('Cuci & Blow');
         $response->assertSee('50.000');
-        $response->assertSee('20 tiket/hari');
+        $response->assertSee('20/hari');
     }
 
     public function test_merchant_can_create_new_service(): void

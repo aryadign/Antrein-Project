@@ -81,7 +81,7 @@ class DevDemoAccessTest extends TestCase
         // Subsequent homepage render is guest-facing
         $homeResponse = $this->get(route('home'));
         $homeResponse->assertStatus(200);
-        $homeResponse->assertDontSee('Dashboard Admin');
+        $homeResponse->assertDontSee('Dasbor Admin');
         $homeResponse->assertSee('Masuk');
 
         // Subsequent protected admin route access is blocked

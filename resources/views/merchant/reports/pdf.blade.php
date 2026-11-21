@@ -267,7 +267,7 @@
             <td class="kpi-card">
                 <div class="kpi-label">Total Tiket Diterbitkan</div>
                 <div class="kpi-value">{{ number_format($report['totalTickets']) }}</div>
-                <div class="kpi-sub">Seluruh kanal (Online &amp; Walk-in)</div>
+                <div class="kpi-sub">Seluruh kanal (Dari ponsel &amp; Datang langsung)</div>
             </td>
             <td class="kpi-card success">
                 <div class="kpi-label">Tiket Selesai Dilayani</div>
@@ -420,9 +420,9 @@
                         <td>{{ $ticket->service?->name ?? 'Layanan Dihapus' }}</td>
                         <td class="text-center">
                             @if ($ticket->source === 'online')
-                                <span class="badge badge-primary">Online</span>
+                                <span class="badge badge-primary">Dari ponsel</span>
                             @else
-                                <span class="badge badge-secondary">Walk-in</span>
+                                <span class="badge badge-secondary">Datang langsung</span>
                             @endif
                         </td>
                         <td class="text-center">
