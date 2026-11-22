@@ -71,6 +71,7 @@ class Business extends Model
         'name',
         'slug',
         'logo_path',
+        'cover_path',
         'description',
         'address',
         'area',
@@ -434,6 +435,21 @@ class Business extends Model
         $isBeforeOpening = $openTime && now($this->timezone ?: config('app.timezone'))->format('H.i') < $openTime;
 
         return ['label' => $isBeforeOpening ? 'Buka pukul '.$openTime : 'Tutup', 'tone' => 'closed'];
+    }
+
+    /**
+     * Public URL of the photo behind the store card: the merchant's own cover when uploaded,
+     * otherwise a category stock photo (null when neither fits).
+     */
+    public function coverImageUrl(): ?string
+    {
+        if ($this->cover_path) {
+            return Storage::disk('public')->url($this->cover_path);
+        }
+
+        $stockPath = $this->coverImagePath();
+
+        return $stockPath ? asset($stockPath) : null;
     }
 
     /**

@@ -23,13 +23,13 @@
         ->implode('');
 
     $logoUrl = $business->getLogoUrl();
-    $photoPath = $business->coverImagePath();
+    $photoUrl = $business->coverImageUrl();
     $isHero = $size === 'hero';
 @endphp
 
 <div {{ $attributes->class(['relative isolate overflow-hidden', $background, $isHero ? 'h-40 md:h-48' : 'h-32']) }}>
-    @if ($photoPath)
-        <img src="{{ asset($photoPath) }}" alt="" loading="lazy" class="absolute inset-0 -z-10 size-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" />
+    @if ($photoUrl)
+        <img src="{{ $photoUrl }}" alt="" loading="lazy" class="absolute inset-0 -z-10 size-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" />
         <span class="absolute inset-0 -z-10 bg-linear-to-t from-gray-950/70 via-gray-950/15 to-gray-950/5" aria-hidden="true"></span>
     @else
         <span class="absolute -right-4 -bottom-6 -z-10 opacity-20 {{ $iconTint }} {{ $isHero ? 'size-40' : 'size-28' }}" style="{{ $mask }}" aria-hidden="true"></span>

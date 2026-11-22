@@ -16,7 +16,9 @@ class BusinessProfileTest extends TestCase
     use RefreshDatabase;
 
     private User $merchant;
+
     private Business $business;
+
     private BusinessCategory $category;
 
     protected function setUp(): void
@@ -181,6 +183,43 @@ class BusinessProfileTest extends TestCase
         Storage::disk('public')->assertMissing($path);
     }
 
+    public function test_uploaded_cover_replaces_category_photo_on_store_page(): void
+    {
+        Storage::fake('public');
+
+        $this->get(route('customer.queue', $this->business->slug))->assertSee('images/stores/barbershop.jpg', false);
+
+        $this->actingAs($this->merchant)->put(route('merchant.settings.profile'), [
+            'name' => $this->business->name,
+            'category_id' => $this->category->id,
+            'slug' => $this->business->slug,
+            'phone' => $this->business->phone,
+            'timezone' => $this->business->timezone,
+            'cover' => UploadedFile::fake()->image('bengkel.jpg', 1200, 675),
+        ])->assertRedirect();
+
+        $coverPath = $this->business->fresh()->cover_path;
+        $this->assertNotNull($coverPath);
+        Storage::disk('public')->assertExists($coverPath);
+
+        $this->get(route('customer.queue', $this->business->slug))
+            ->assertSee(Storage::disk('public')->url($coverPath), false);
+    }
+
+    public function test_merchant_can_remove_cover_and_fall_back_to_category_photo(): void
+    {
+        Storage::fake('public');
+
+        $path = UploadedFile::fake()->image('cover.jpg', 1200, 675)->store('covers', 'public');
+        $this->business->update(['cover_path' => $path]);
+
+        $this->actingAs($this->merchant)->delete(route('merchant.settings.cover.remove'))->assertRedirect();
+
+        $this->assertNull($this->business->fresh()->cover_path);
+        Storage::disk('public')->assertMissing($path);
+        $this->assertSame(asset('images/stores/barbershop.jpg'), $this->business->fresh()->coverImageUrl());
+    }
+
     public function test_guest_is_redirected_when_accessing_merchant_settings(): void
     {
         $response = $this->get(route('merchant.settings'));
@@ -188,4 +227,3 @@ class BusinessProfileTest extends TestCase
         $response->assertRedirect(route('login'));
     }
 }
-

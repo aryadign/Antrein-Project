@@ -120,6 +120,53 @@
                         <x-input-error :messages="$errors->get('logo')" class="mt-1" />
                     </div>
 
+                    {{-- Cover Section --}}
+                    <div
+                        x-data="{
+                            preview: @js($business->coverImageUrl()),
+                            fileName: '',
+                            pick(event) {
+                                const file = event.target.files[0];
+                                if (! file) { return; }
+                                this.fileName = file.name;
+                                this.preview = URL.createObjectURL(file);
+                            },
+                        }"
+                    >
+                        <x-form-label value="Foto Sampul Toko" />
+                        <div class="mt-2 flex flex-col gap-4 rounded-xl border border-dashed border-neutral-300 bg-neutral-50/60 p-4 sm:flex-row sm:items-center">
+                            <div class="flex aspect-[16/9] w-full shrink-0 items-center justify-center overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-card sm:w-40">
+                                <img x-show="preview" :src="preview" @if ($business->coverImageUrl()) src="{{ $business->coverImageUrl() }}" @else style="display: none;" @endif alt="Foto sampul toko" class="size-full object-cover">
+                                <span x-show="! preview" class="px-3 text-center text-caption text-neutral-500" @if ($business->coverImageUrl()) style="display: none;" @endif>Belum ada foto</span>
+                            </div>
+
+                            <div class="flex min-w-0 flex-1 flex-col gap-1">
+                                <p class="text-caption text-neutral-600">Tampil di atas halaman toko dan kartu toko pelanggan. Maksimal 4 MB, format JPG, PNG, atau WebP. Foto mendatar (landscape) disarankan.</p>
+                                @unless ($business->cover_path)
+                                    <p class="text-caption text-neutral-500">Saat ini memakai foto bawaan sesuai kategori.</p>
+                                @endunless
+                                <p x-show="fileName" x-text="fileName" class="truncate text-caption font-medium text-brand-700" style="display: none;"></p>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
+                                <label for="cover" class="inline-flex h-11 cursor-pointer items-center justify-center rounded-lg border border-neutral-300 bg-white px-4 text-sm font-semibold text-neutral-800 shadow-card transition hover:bg-neutral-50 focus-within:ring-2 focus-within:ring-brand-500 {{ $business->cover_path ? '' : 'col-span-2' }}">
+                                    {{ $business->cover_path ? 'Ganti Foto' : 'Unggah Foto' }}
+                                    <input type="file" name="cover" id="cover" accept="image/jpeg,image/png,image/webp" class="sr-only" @change="pick($event)" />
+                                </label>
+                                @if ($business->cover_path)
+                                    <button
+                                        type="button"
+                                        onclick="if (confirm('Hapus foto sampul dan kembali ke foto bawaan kategori?')) document.getElementById('form-delete-cover').submit();"
+                                        class="inline-flex h-11 items-center justify-center rounded-lg border border-rose-200 bg-rose-50 px-4 text-sm font-semibold text-rose-700 transition-colors hover:bg-rose-100"
+                                    >
+                                        Hapus Foto
+                                    </button>
+                                @endif
+                            </div>
+                        </div>
+                        <x-input-error :messages="$errors->get('cover')" class="mt-1" />
+                    </div>
+
                     <hr class="border-neutral-200">
 
                     {{-- Basic Info --}}
@@ -237,6 +284,10 @@
 
                 {{-- Hidden Logo Deletion Form --}}
                 <form id="form-delete-logo" method="POST" action="{{ route('merchant.settings.logo.remove') }}" class="hidden">
+                    @csrf
+                    @method('DELETE')
+                </form>
+                <form id="form-delete-cover" method="POST" action="{{ route('merchant.settings.cover.remove') }}" class="hidden">
                     @csrf
                     @method('DELETE')
                 </form>

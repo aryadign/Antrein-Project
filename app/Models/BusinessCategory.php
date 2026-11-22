@@ -126,7 +126,7 @@ class BusinessCategory extends Model
             Str::contains($this->slug, ['salon', 'kecantikan', 'spa']) => 'salon',
             Str::contains($this->slug, ['klinik', 'dokter', 'kesehatan']) => 'klinik',
             Str::contains($this->slug, ['kuliner', 'kafe', 'kopi', 'makan', 'minuman', 'resto']) => 'kuliner',
-            Str::contains($this->slug, ['jasa', 'servis', 'elektronik']) => 'jasa',
+            Str::contains($this->slug, ['jasa', 'servis', 'service', 'elektronik', 'bengkel', 'otomotif', 'motor', 'mobil', 'laundry']) => 'jasa',
             default => 'umum',
         };
     }

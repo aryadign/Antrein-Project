@@ -79,6 +79,11 @@ class SettingsController extends Controller
                 Rule::unique('businesses', 'slug')->ignore($business->id),
             ],
             'logo' => ['nullable', 'image', 'mimes:jpeg,png,webp', 'max:2048'],
+            'cover' => ['nullable', 'image', 'mimes:jpeg,png,webp', 'max:4096'],
+        ], [
+            'cover.image' => 'Foto sampul harus berupa gambar.',
+            'cover.mimes' => 'Foto sampul harus berformat JPG, PNG, atau WEBP.',
+            'cover.max' => 'Ukuran foto sampul maksimal 4 MB.',
         ]);
 
         $oldLogo = $business->logo_path;
@@ -92,8 +97,13 @@ class SettingsController extends Controller
             $newLogoPath = $file->storeAs('logos', $safeName, 'public');
         }
 
+        $oldCover = $business->cover_path;
+        $newCoverPath = $request->hasFile('cover')
+            ? $request->file('cover')->storeAs('covers', 'cover-'.$business->id.'-'.Str::random(24).'.'.$request->file('cover')->extension(), 'public')
+            : null;
+
         try {
-            DB::transaction(function () use ($business, $validated, $newLogoPath) {
+            DB::transaction(function () use ($business, $validated, $newLogoPath, $newCoverPath) {
                 $payload = [
                     'name' => $validated['name'],
                     'category_id' => $validated['category_id'],
@@ -107,6 +117,10 @@ class SettingsController extends Controller
 
                 if ($newLogoPath !== null) {
                     $payload['logo_path'] = $newLogoPath;
+                }
+
+                if ($newCoverPath !== null) {
+                    $payload['cover_path'] = $newCoverPath;
                 }
 
                 $business->update($payload);
@@ -123,10 +137,18 @@ class SettingsController extends Controller
             if ($newLogoPath !== null && $oldLogo && Storage::disk('public')->exists($oldLogo)) {
                 Storage::disk('public')->delete($oldLogo);
             }
+
+            if ($newCoverPath !== null && $oldCover) {
+                Storage::disk('public')->delete($oldCover);
+            }
         } catch (\Throwable $e) {
             // If database transaction failed and new file was uploaded, safely purge orphaned new file
             if ($newLogoPath !== null && Storage::disk('public')->exists($newLogoPath)) {
                 Storage::disk('public')->delete($newLogoPath);
+            }
+
+            if ($newCoverPath !== null) {
+                Storage::disk('public')->delete($newCoverPath);
             }
 
             throw $e;
@@ -163,6 +185,32 @@ class SettingsController extends Controller
 
         return redirect()->route('merchant.settings', ['tab' => 'profile'])
             ->with('status', 'Logo usaha berhasil dihapus.');
+    }
+
+    /**
+     * Remove the uploaded store cover so the category photo is shown again.
+     */
+    public function removeCover(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+        /** @var Business $business */
+        $business = $user->business;
+
+        if ($business && $business->cover_path) {
+            $oldPath = $business->cover_path;
+            $business->update(['cover_path' => null]);
+            Storage::disk('public')->delete($oldPath);
+
+            ActivityLog::log(
+                action: 'business_cover_removed',
+                description: 'Foto sampul usaha dihapus',
+                business: $business,
+                user: $user
+            );
+        }
+
+        return redirect()->route('merchant.settings', ['tab' => 'profile'])
+            ->with('status', 'Foto sampul berhasil dihapus.');
     }
 
     /**

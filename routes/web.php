@@ -332,6 +332,7 @@ Route::middleware(['auth', 'active'])->group(function () {
                 Route::get('/settings', [SettingsController::class, 'show'])->name('settings');
                 Route::put('/settings/profile', [SettingsController::class, 'updateProfile'])->name('settings.profile');
                 Route::delete('/settings/logo', [SettingsController::class, 'removeLogo'])->name('settings.logo.remove');
+                Route::delete('/settings/cover', [SettingsController::class, 'removeCover'])->name('settings.cover.remove');
                 Route::put('/settings/hours', [SettingsController::class, 'updateHours'])->name('settings.hours');
                 Route::patch('/settings/status', [SettingsController::class, 'updateStatus'])->name('settings.status');
                 Route::put('/settings/account', [SettingsController::class, 'updateAccount'])->name('settings.account');
