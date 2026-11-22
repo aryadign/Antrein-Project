@@ -391,7 +391,7 @@
                     </div>
 
                     <div x-show="currentSlots().length > 0 && !hasAvailableSlot()" x-cloak class="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-danger-700">
-                        Semua slot waktu untuk hari ini sudah berjalan atau penuh. Silakan coba kembali di hari operasional berikutnya.
+                        {{ $business->isWithinOperatingHours() ? 'Semua slot hari ini sudah penuh atau sudah berjalan.' : 'Toko sudah tutup untuk hari ini.' }}{{ ($nextOpening = $business->nextOpeningLabel()) ? ' '.$nextOpening.'.' : '' }}
                     </div>
                 </div>
 

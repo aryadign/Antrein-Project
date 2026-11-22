@@ -271,13 +271,13 @@ class CustomerHomeController extends Controller
     {
         $sorted = match ($sort) {
             'antrean' => $stores->sortBy([
-                fn (Business $a, Business $b): int => $b->isOpen() <=> $a->isOpen(),
+                fn (Business $a, Business $b): int => $b->isOpenNow() <=> $a->isOpenNow(),
                 fn (Business $a, Business $b): int => (int) $a->waiting_count <=> (int) $b->waiting_count,
                 fn (Business $a, Business $b): int => strcasecmp($a->name, $b->name),
             ]),
             'nama' => $stores->sortBy(fn (Business $business): string => Str::lower($business->name)),
             default => $stores->sortBy([
-                fn (Business $a, Business $b): int => $b->isOpen() <=> $a->isOpen(),
+                fn (Business $a, Business $b): int => $b->isOpenNow() <=> $a->isOpenNow(),
                 fn (Business $a, Business $b): int => ($b->customerRating() ?? 0) <=> ($a->customerRating() ?? 0),
                 fn (Business $a, Business $b): int => (int) $a->waiting_count <=> (int) $b->waiting_count,
                 fn (Business $a, Business $b): int => strcasecmp($a->name, $b->name),

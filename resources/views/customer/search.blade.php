@@ -6,7 +6,7 @@
             'name' => Str::lower($business->name.' '.$business->category?->name.' '.$business->address.' '.$business->area),
             'category' => $business->category?->slug,
             'area' => $business->area ?? '',
-            'open' => $business->isOpen(),
+            'open' => $business->isOpenNow(),
             'waiting' => (int) ($business->waiting_count ?? 0),
             'rating' => $business->customerRating(),
         ])->values();

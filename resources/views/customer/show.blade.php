@@ -114,7 +114,7 @@
                                             <p class="truncate font-bold text-gray-900 group-hover:text-brand-700">{{ $branch->name }}</p>
                                             <p class="truncate text-xs text-gray-500">{{ $branch->cityLabel() ?: ($branch->address ?? 'Cabang resmi') }}</p>
                                         </div>
-                                        <x-status-badge :status="$branch->isOpen() ? 'buka' : ($branch->isPaused() ? 'jeda' : 'tutup')" size="sm" class="shrink-0" />
+                                        <x-status-badge :status="$branch->isOpenNow() ? 'buka' : ($branch->isPaused() ? 'jeda' : 'tutup')" size="sm" class="shrink-0" />
                                     </a>
                                 @endforeach
                             </div>

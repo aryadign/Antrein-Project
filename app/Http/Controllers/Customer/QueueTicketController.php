@@ -137,7 +137,7 @@ class QueueTicketController extends Controller
                         'address' => $business->address,
                         'phone' => $business->phone,
                         'status' => $business->status,
-                        'is_open' => $business->isOpen(),
+                        'is_open' => $business->isOpenNow(),
                         'is_paused' => $business->isPaused(),
                         'is_closed' => $business->isClosed(),
                         'is_suspended' => (bool) $business->is_suspended,

@@ -1,7 +1,7 @@
 <x-layouts.customer title="Beranda" activeNav="beranda">
     @php
         $firstName = $customerName ? Str::before($customerName, ' ') : null;
-        $openStoreCount = $stores->filter(fn ($store) => $store->isOpen())->count();
+        $openStoreCount = $stores->filter(fn ($store) => $store->isOpenNow())->count();
     @endphp
 
     <div x-data="customerQrScanner()" @keydown.escape.window="closeScanner()">

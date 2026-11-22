@@ -164,7 +164,7 @@ class DashboardTest extends TestCase
 
         $ownerResponse->assertOk();
         $ownerResponse->assertSee('Klinik Sehat Denpasar');
-        $ownerResponse->assertSee('Ringkasan gabungan semua cabang');
+        $ownerResponse->assertSee('Ringkasan semua cabang');
         $ownerResponse->assertSee('Rincian Performa Per Cabang');
         $ownerResponse->assertDontSee('data-now-serving', false);
         $ownerResponse->assertDontSee('Antrean Aktif Berjalan');

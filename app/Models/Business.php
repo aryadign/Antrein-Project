@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -283,6 +284,75 @@ class Business extends Model
     }
 
     /**
+     * Whether customers can actually be served right now: the merchant's status switch is on
+     * and the current time falls inside today's opening hours.
+     */
+    public function isOpenNow(): bool
+    {
+        return $this->isOpen() && $this->isWithinOperatingHours();
+    }
+
+    /**
+     * Whether the current time (business timezone) falls inside today's opening hours.
+     * A business without any configured schedule is treated as always within hours.
+     */
+    public function isWithinOperatingHours(?CarbonInterface $at = null): bool
+    {
+        if ($this->hours->isEmpty()) {
+            return true;
+        }
+
+        $now = ($at ?? now())->copy()->setTimezone($this->timezone ?: config('app.timezone'));
+        $hours = $this->hours->firstWhere('day_of_week', (int) $now->dayOfWeek);
+
+        if (! $hours || $hours->is_closed || ! $hours->open_time || ! $hours->close_time) {
+            return false;
+        }
+
+        $time = $now->format('H:i:s');
+        $open = substr((string) $hours->open_time, 0, 8);
+        $close = substr((string) $hours->close_time, 0, 8);
+
+        // Overnight schedules (e.g. 18:00-02:00) wrap past midnight.
+        return $close > $open
+            ? $time >= $open && $time < $close
+            : $time >= $open || $time < $close;
+    }
+
+    /**
+     * When the business opens next, e.g. "Buka pukul 08.00", "Buka besok 08.00" or "Buka Senin 08.00".
+     */
+    public function nextOpeningLabel(?CarbonInterface $at = null): ?string
+    {
+        $now = ($at ?? now())->copy()->setTimezone($this->timezone ?: config('app.timezone'));
+
+        for ($offset = 0; $offset <= 7; $offset++) {
+            $day = $now->copy()->addDays($offset);
+            $hours = $this->hours->firstWhere('day_of_week', (int) $day->dayOfWeek);
+
+            if (! $hours || $hours->is_closed || ! $hours->open_time) {
+                continue;
+            }
+
+            $openTime = substr((string) $hours->open_time, 0, 5);
+
+            if ($offset === 0 && $now->format('H:i') >= $openTime) {
+                continue;
+            }
+
+            $time = str_replace(':', '.', $openTime);
+
+            return match ($offset) {
+                0 => 'Buka pukul '.$time,
+                1 => 'Buka besok '.$time,
+                default => 'Buka '.$day->locale('id')->translatedFormat('l').' '.$time,
+            };
+        }
+
+        return null;
+    }
+
+    /**
      * Determine whether the business is temporarily paused.
      */
     public function isPaused(): bool
@@ -345,8 +415,12 @@ class Business extends Model
         $closeTime = $hours && ! $hours->is_closed && $hours->close_time ? str_replace(':', '.', substr((string) $hours->close_time, 0, 5)) : null;
         $openTime = $hours && ! $hours->is_closed && $hours->open_time ? str_replace(':', '.', substr((string) $hours->open_time, 0, 5)) : null;
 
-        if ($this->isOpen()) {
+        if ($this->isOpen() && $this->isWithinOperatingHours()) {
             return ['label' => $closeTime ? 'Buka s/d '.$closeTime : 'Buka sekarang', 'tone' => 'open'];
+        }
+
+        if ($this->isOpen()) {
+            return ['label' => $this->nextOpeningLabel() ?? 'Tutup', 'tone' => 'closed'];
         }
 
         if ($this->isPaused() && ! $this->is_suspended) {

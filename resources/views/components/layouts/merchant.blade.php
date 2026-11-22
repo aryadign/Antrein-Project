@@ -17,6 +17,10 @@
         && ($currentUser?->canManageOrganization() ?? false)
         && session('merchant_dashboard_scope') === 'all'
         && $accessibleBranches->count() > 1;
+    // The organisation can share its name with its first branch, so the header always says which one it shows.
+    $organizationName = $isOwnerUser ? $currentUser?->primaryOrganization()?->name : null;
+    $headerScopeLabel = $isCombinedScope ? 'Semua cabang' : ($accessibleBranches->count() > 1 ? 'Cabang aktif' : 'Usaha');
+    $headerName = $isCombinedScope && $organizationName ? $organizationName : $businessName;
     $businessInitials = collect(preg_split('/\s+/', trim((string) $businessName)))
         ->filter()
         ->take(2)
@@ -107,9 +111,9 @@
                     <x-merchant.business-avatar :name="$businessName" :logo-url="$businessLogoUrl" :initials="$businessInitials" class="size-9 lg:hidden" />
 
                     <div class="min-w-0">
-                        <span class="hidden text-caption font-medium text-neutral-500 sm:block">Unit Usaha</span>
+                        <span class="hidden text-caption font-medium text-neutral-500 sm:block">{{ $headerScopeLabel }}</span>
                         <div class="flex min-w-0 items-center gap-1.5 sm:gap-2">
-                            <h1 class="truncate text-sm font-bold text-neutral-900 sm:text-body" title="{{ $businessName }}">{{ $businessName }}</h1>
+                            <p class="truncate text-sm font-bold text-neutral-900 sm:text-body" title="{{ $headerName }}">{{ $headerName }}</p>
 
                             @if ($isOwnerUser && $accessibleBranches->count() > 1)
                                 <div x-data="{ openBranch: false }" @keydown.escape="openBranch = false" class="relative shrink-0">

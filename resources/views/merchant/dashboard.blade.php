@@ -87,10 +87,10 @@
             <div class="flex flex-col gap-4 border-b border-neutral-200 pb-4 lg:flex-row lg:items-center lg:justify-between">
                 <div class="min-w-0">
                     <div class="flex flex-wrap items-center gap-2">
-                        <h1 class="truncate text-[1.375rem] leading-[1.875rem] font-bold sm:text-[1.75rem] sm:leading-9 text-neutral-950">{{ $organization?->name ?? $business->name }}</h1>
+                        <h1 class="truncate text-[1.375rem] leading-[1.875rem] font-bold sm:text-[1.75rem] sm:leading-9 text-neutral-950">Ringkasan semua cabang</h1>
                     </div>
                     <p class="mt-1 text-sm text-pretty text-neutral-500">
-                        Ringkasan gabungan semua cabang: jumlah tiket, lama menunggu, dan performa tiap cabang.
+                        <span class="font-semibold text-neutral-700">{{ $organization?->name ?? $business->name }}</span>{{ $organization ? ', '.$organization->branches()->count().' cabang' : '' }}. Jumlah tiket, lama menunggu, dan performa tiap cabang dalam satu tampilan.
                     </p>
                 </div>
 

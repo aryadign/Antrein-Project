@@ -1,7 +1,7 @@
 @props(['business'])
 
 @php
-    $isOpen = $business->isOpen();
+    $isOpen = $business->isOpenNow();
     $waitingCount = (int) ($business->waiting_count ?? 0);
     $waitRange = $isOpen ? $business->customerWaitRange($waitingCount) : null;
     $location = $business->areaLabel() ?? $business->cityLabel() ?? $business->address;
