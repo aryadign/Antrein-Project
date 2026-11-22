@@ -340,7 +340,7 @@
                 },
 
                 /**
-                 * Only store queue links (/q/{slug}) and ticket links (/q/track/{token}) are opened,
+                 * Only store queue links (/q/{slug}, /q/{slug}/take-queue from the TV display) and ticket links (/q/track/{token}) are opened,
                  * always on this site, so a QR can never send the customer to another website.
                  */
                 handleCode(rawValue) {
@@ -352,7 +352,7 @@
                         path = null;
                     }
 
-                    if (path && /^\/q\/(track\/)?[A-Za-z0-9_-]+\/?$/.test(path)) {
+                    if (path && /^\/q\/(track\/[A-Za-z0-9_-]+|[A-Za-z0-9_-]+(\/take-queue)?)\/?$/.test(path)) {
                         this.status = 'found';
                         this.message = '';
                         this.stopCamera();

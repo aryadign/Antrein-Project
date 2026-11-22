@@ -439,12 +439,16 @@ class Business extends Model
 
     /**
      * Public URL of the photo behind the store card: the merchant's own cover when uploaded,
-     * otherwise a category stock photo (null when neither fits).
+     * otherwise the category's custom default cover or a matching stock photo (null when none fits).
      */
     public function coverImageUrl(): ?string
     {
         if ($this->cover_path) {
             return Storage::disk('public')->url($this->cover_path);
+        }
+
+        if ($this->category?->cover_path) {
+            return $this->category->coverImageUrl();
         }
 
         $stockPath = $this->coverImagePath();

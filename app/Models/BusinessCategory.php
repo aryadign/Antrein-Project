@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class BusinessCategory extends Model
@@ -13,9 +14,9 @@ class BusinessCategory extends Model
     use HasFactory;
 
     /**
-     * Customer-facing colour classes per category theme: soft background, icon tint and text colour.
+     * Customer-facing colour classes per category theme: soft background, border, icon tint and text colour.
      *
-     * @var array<string, array{background: string, tint: string, text: string}>
+     * @var array<string, array{background: string, border: string, tint: string, text: string}>
      */
     public const array CUSTOMER_PALETTES = [
         'barbershop' => ['background' => 'bg-emerald-100', 'border' => 'border-emerald-200', 'tint' => 'bg-emerald-600', 'text' => 'text-emerald-800'],
@@ -27,6 +28,20 @@ class BusinessCategory extends Model
     ];
 
     /**
+     * Human-readable Indonesian labels for each customer colour theme.
+     *
+     * @var array<string, string>
+     */
+    public const array COLOR_THEME_LABELS = [
+        'barbershop' => 'Hijau',
+        'salon' => 'Pink',
+        'klinik' => 'Biru',
+        'kuliner' => 'Kuning',
+        'jasa' => 'Ungu',
+        'umum' => 'Biru brand',
+    ];
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var list<string>
@@ -35,6 +50,9 @@ class BusinessCategory extends Model
         'name',
         'slug',
         'description',
+        'icon',
+        'color_theme',
+        'cover_path',
         'is_active',
     ];
 
@@ -81,7 +99,13 @@ class BusinessCategory extends Model
      */
     public function iconPath(): string
     {
-        return match ($this->customerTheme()) {
+        $icons = config('category_icons', []);
+
+        if (is_string($this->icon) && $this->icon !== '' && isset($icons[$this->icon]['path'])) {
+            return (string) $icons[$this->icon]['path'];
+        }
+
+        return match ($this->guessedCustomerTheme()) {
             'barbershop' => 'images/icons/scissors.svg',
             'salon' => 'images/icons/sparkles.svg',
             'klinik' => 'images/icons/stethoscope.svg',
@@ -94,11 +118,26 @@ class BusinessCategory extends Model
     }
 
     /**
+     * Public URL of the default cover photo for stores in this category:
+     * admin-uploaded cover first, otherwise the stock photo matching the category slug.
+     */
+    public function coverImageUrl(): ?string
+    {
+        if ($this->cover_path) {
+            return Storage::disk('public')->url($this->cover_path);
+        }
+
+        $stockPath = $this->coverImagePath();
+
+        return $stockPath ? asset($stockPath) : null;
+    }
+
+    /**
      * Stock photo used as the visual fallback for stores in this category (null when none fits).
      */
     public function coverImagePath(): ?string
     {
-        return match ($this->customerTheme()) {
+        return match ($this->guessedCustomerTheme()) {
             'barbershop' => 'images/stores/barbershop.jpg',
             'klinik' => 'images/stores/klinik.jpg',
             'kuliner' => Str::contains($this->slug, ['kopi', 'kafe']) ? 'images/stores/kopi.jpg' : 'images/stores/restoran.jpg',
@@ -120,6 +159,18 @@ class BusinessCategory extends Model
      * Visual theme key used to colour store covers and chips of this category.
      */
     public function customerTheme(): string
+    {
+        if (is_string($this->color_theme) && array_key_exists($this->color_theme, self::CUSTOMER_PALETTES)) {
+            return $this->color_theme;
+        }
+
+        return $this->guessedCustomerTheme();
+    }
+
+    /**
+     * Fallback visual theme guessed from the category slug when no explicit theme is stored.
+     */
+    public function guessedCustomerTheme(): string
     {
         return match (true) {
             Str::contains($this->slug, ['barber', 'pangkas', 'rambut']) => 'barbershop',

@@ -102,6 +102,20 @@ class Service extends Model
     }
 
     /**
+     * Public fallback image URL matching the service name, then the category's default cover URL.
+     */
+    public function fallbackImageUrl(?BusinessCategory $category = null): ?string
+    {
+        $serviceStockPath = $this->fallbackImagePath(null);
+
+        if ($serviceStockPath !== null) {
+            return asset($serviceStockPath);
+        }
+
+        return $category?->coverImageUrl();
+    }
+
+    /**
      * Scope query to only include active services.
      *
      * @param  Builder<Service>  $query

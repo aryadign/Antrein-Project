@@ -63,16 +63,16 @@
 
                     <button
                         type="button"
-                        @click="toggleFullscreen()"
+                        @click="toggleFullscreen(); $el.blur()"
                         class="flex size-11 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-700 transition-colors duration-150 ease-out hover:bg-neutral-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 sm:size-12"
                         :title="isFullscreen ? 'Keluar dari layar penuh' : 'Tampilkan layar penuh'"
                         aria-label="Layar penuh"
                     >
                         <svg x-show="!isFullscreen" class="size-5 sm:size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
                         </svg>
                         <svg x-show="isFullscreen" class="size-5 sm:size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 9L4 4m0 0v4m0-4h4m6 5l5-5m0 0v4m0-4h-4M9 15l-5 5m0 0v-4m0 4h4m11-5l5 5m0 0v-4m0 4h-4" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7" />
                         </svg>
                     </button>
                 </div>

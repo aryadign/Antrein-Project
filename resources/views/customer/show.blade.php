@@ -8,7 +8,9 @@
     $availableServiceCount = $services->reject(fn ($service) => $service->is_quota_full)->count();
 
     $category = $business->category;
-    ['text' => $initialsColor] = $category?->customerPalette() ?? \App\Models\BusinessCategory::CUSTOMER_PALETTES['umum'];
+    ['background' => $categoryBackground, 'tint' => $categoryTint, 'text' => $initialsColor] = $category?->customerPalette() ?? \App\Models\BusinessCategory::CUSTOMER_PALETTES['umum'];
+    $categoryIconUrl = $category ? asset($category->iconPath()) : null;
+    $categoryIconMask = $categoryIconUrl ? "mask: url('{$categoryIconUrl}') center / contain no-repeat; -webkit-mask: url('{$categoryIconUrl}') center / contain no-repeat;" : '';
     $initials = collect(preg_split('/\s+/', trim(preg_replace('/\(.*?\)/', '', (string) $business->name))))
         ->filter()
         ->take(2)
@@ -54,7 +56,10 @@
                                         <span class="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold leading-4 text-gray-600">Belum ada ulasan</span>
                                     @endif
                                     @if ($business->category)
-                                        <span class="rounded-full bg-brand-50 px-2.5 py-1 text-xs font-bold leading-4 text-brand-700">{{ $business->category->name }}</span>
+                                        <span class="inline-flex items-center gap-1.5 rounded-full {{ $categoryBackground }} px-2.5 py-1 text-xs font-bold leading-4 {{ $initialsColor }}">
+                                            <span class="size-3.5 shrink-0 {{ $categoryTint }}" style="{{ $categoryIconMask }}" aria-hidden="true"></span>
+                                            {{ $business->category->name }}
+                                        </span>
                                     @endif
                                     @if ($business->areaLabel())
                                         <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold leading-4 text-slate-700">

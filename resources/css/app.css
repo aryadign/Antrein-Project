@@ -4,6 +4,7 @@
 @source '../../storage/framework/views/*.php';
 @source '../views/**/*.blade.php';
 @source '../js/**/*.js';
+@source '../../app/Models/BusinessCategory.php';
 
 @theme {
     /* Primary Typography */

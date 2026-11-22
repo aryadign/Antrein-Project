@@ -8,7 +8,7 @@
     or store category, and finally an illustration in the category colours.
 --}}
 @php
-    $imageUrl = $service->imageUrl() ?? (($fallbackPath = $service->fallbackImagePath($category)) ? asset($fallbackPath) : null);
+    $imageUrl = $service->imageUrl() ?? $service->fallbackImageUrl($category);
     ['background' => $background, 'tint' => $tint] = $category?->customerPalette() ?? \App\Models\BusinessCategory::CUSTOMER_PALETTES['umum'];
     $iconUrl = asset($service->iconPath() ?? $category?->iconPath() ?? 'images/figma/shopping-bag.svg');
     $mask = "mask: url('{$iconUrl}') center / contain no-repeat; -webkit-mask: url('{$iconUrl}') center / contain no-repeat;";
