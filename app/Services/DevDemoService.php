@@ -19,7 +19,7 @@ class DevDemoService
 
     public const string CUSTOMER_EMAIL = 'pelanggan@antrein.id';
 
-    public const string DEMO_SLUG = 'barbershop-garasi-demo';
+    public const string DEMO_SLUG = 'barbershop-garasi-denpasar';
 
     /**
      * Determine whether the current environment allows developer demo features.
@@ -53,7 +53,7 @@ class DevDemoService
         $customer = User::firstOrCreate(
             ['email' => self::CUSTOMER_EMAIL],
             [
-                'name' => 'Raka Pratama (Pelanggan Demo)',
+                'name' => 'Raka Pratama',
                 'password' => Hash::make('pelanggan12345'),
                 'role' => User::ROLE_CUSTOMER,
                 'is_active' => true,
@@ -82,7 +82,7 @@ class DevDemoService
         $admin = User::firstOrCreate(
             ['email' => $adminEmail],
             [
-                'name' => 'Administrator AntreIn (Demo)',
+                'name' => 'Administrator AntreIn',
                 'password' => Hash::make((string) $adminPassword),
                 'role' => User::ROLE_ADMIN,
                 'is_active' => true,
@@ -117,7 +117,7 @@ class DevDemoService
         $owner = User::firstOrCreate(
             ['email' => self::OWNER_EMAIL],
             [
-                'name' => 'Made Aryawan (Demo Owner)',
+                'name' => 'Made Aryawan',
                 'password' => Hash::make('merchant12345'),
                 'role' => User::ROLE_MERCHANT,
                 'is_active' => true,
@@ -136,9 +136,9 @@ class DevDemoService
             ['user_id' => $owner->id],
             [
                 'category_id' => $category->id,
-                'name' => 'Barbershop Garasi (Demo Development)',
+                'name' => 'Barbershop Garasi Denpasar',
                 'slug' => self::DEMO_SLUG,
-                'description' => 'Demo usaha potong rambut modern pria untuk pengujian fitur antrean digital.',
+                'description' => 'Barbershop modern pria dengan layanan potong rambut presisi, cukur higienis, dan styling profesional.',
                 'address' => 'Jl. Teuku Umar No. 88, Denpasar Barat, Bali',
                 'phone' => '081234567890',
                 'timezone' => 'Asia/Makassar',
@@ -204,7 +204,7 @@ class DevDemoService
         $operator = User::firstOrCreate(
             ['email' => self::OPERATOR_EMAIL],
             [
-                'name' => 'Wayan Sudirga (Demo Operator)',
+                'name' => 'Wayan Sudirga',
                 'password' => Hash::make('operator12345'),
                 'role' => User::ROLE_MERCHANT,
                 'is_active' => true,

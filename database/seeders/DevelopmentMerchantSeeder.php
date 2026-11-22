@@ -28,8 +28,8 @@ class DevelopmentMerchantSeeder extends Seeder
      */
     public function run(): void
     {
-        if (app()->isProduction()) {
-            $this->command?->warn('DevelopmentMerchantSeeder: environment production terdeteksi. Data demo dilewati demi keamanan.');
+        if (app()->isProduction() && ! config('app.demo_data_enabled')) {
+            $this->command?->warn('DevelopmentMerchantSeeder: environment production terdeteksi. Data contoh dilewati demi keamanan (set DEMO_DATA_ENABLED=true untuk server demo).');
 
             return;
         }
@@ -43,15 +43,15 @@ class DevelopmentMerchantSeeder extends Seeder
         // 2. Seed Primary Demo Business + Multi-Branch Cabang (used by DevDemoService & role switcher)
         $primaryBusiness = $this->provisionBusiness(
             ownerEmail: 'owner@garasi.id',
-            ownerName: 'Made Aryawan (Demo Owner)',
+            ownerName: 'Made Aryawan',
             ownerPassword: 'merchant12345',
             operatorEmail: 'operator@garasi.id',
-            operatorName: 'Wayan Sudirga (Demo Operator)',
+            operatorName: 'Wayan Sudirga',
             operatorPassword: 'operator12345',
             businessData: [
                 'category_id' => $categories->get('barbershop-pangkas-rambut')?->id,
-                'name' => 'Barbershop Garasi (Demo Development)',
-                'slug' => 'barbershop-garasi-demo',
+                'name' => 'Barbershop Garasi Denpasar',
+                'slug' => 'barbershop-garasi-denpasar',
                 'description' => 'Barbershop modern pria dengan layanan potong rambut presisi, cukur higienis, dan styling profesional.',
                 'address' => 'Jl. Teuku Umar No. 88, Denpasar Barat, Bali',
                 'area' => 'Denpasar',
@@ -83,13 +83,16 @@ class DevelopmentMerchantSeeder extends Seeder
             ],
         );
 
-        // Second branch under the same Demo Owner organization (Canggu)
+        // The organisation is named after its first branch by default; give it the brand name instead.
+        BusinessOrganization::whereKey($primaryBusiness->organization_id)->update(['name' => 'Barbershop Garasi']);
+
+        // Second branch under the same owner organization (Canggu)
         $primarySecondBranch = $this->provisionBusiness(
             ownerEmail: 'owner@garasi.id',
-            ownerName: 'Made Aryawan (Demo Owner)',
+            ownerName: 'Made Aryawan',
             ownerPassword: 'merchant12345',
             operatorEmail: 'operator.canggu@garasi.id',
-            operatorName: 'Kadek Mahendra (Operator Canggu)',
+            operatorName: 'Kadek Mahendra',
             operatorPassword: 'operator12345',
             businessData: [
                 'organization_id' => $primaryBusiness->organization_id,
@@ -537,8 +540,8 @@ class DevelopmentMerchantSeeder extends Seeder
 
         // 4. Seed 1 Pending UMKM & 1 Rejected UMKM for Admin Verification Workflow
         $this->provisionBusiness(
-            ownerEmail: 'pending-umkm@antrein.id',
-            ownerName: 'Dewi Lestari (Pemilik Menunggu)',
+            ownerEmail: 'dewi@warungtehrimbun.id',
+            ownerName: 'Dewi Lestari',
             ownerPassword: 'merchant12345',
             operatorEmail: null,
             operatorName: null,
@@ -566,8 +569,8 @@ class DevelopmentMerchantSeeder extends Seeder
         );
 
         $this->provisionBusiness(
-            ownerEmail: 'rejected-umkm@antrein.id',
-            ownerName: 'Andi Wijaya (Pemilik Ditolak)',
+            ownerEmail: 'andi@studiokilat.id',
+            ownerName: 'Andi Wijaya',
             ownerPassword: 'merchant12345',
             operatorEmail: null,
             operatorName: null,
@@ -649,7 +652,7 @@ class DevelopmentMerchantSeeder extends Seeder
     protected function seedCustomers(): array
     {
         $customerProfiles = [
-            ['email' => 'pelanggan@antrein.id', 'name' => 'Raka Pratama (Pelanggan Demo)', 'password' => 'pelanggan12345'],
+            ['email' => 'pelanggan@antrein.id', 'name' => 'Raka Pratama', 'password' => 'pelanggan12345'],
             ['email' => 'sinta.dewi@contoh.id', 'name' => 'Sinta Dewi', 'password' => 'pelanggan12345'],
             ['email' => 'bayu.aji@contoh.id', 'name' => 'Bayu Aji Nugraha', 'password' => 'pelanggan12345'],
             ['email' => 'putri.amalia@contoh.id', 'name' => 'Putri Amalia', 'password' => 'pelanggan12345'],
@@ -1026,7 +1029,7 @@ class DevelopmentMerchantSeeder extends Seeder
 
         ActivityLog::log(
             action: 'seed_initialized',
-            description: sprintf('Data simulasi antrean & ulasan untuk %s dimuat (%d tiket hari ini)', $business->name, $sequence),
+            description: sprintf('Antrean hari ini untuk %s dibuka (%d tiket)', $business->name, $sequence),
             business: $business,
         );
     }

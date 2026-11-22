@@ -21,6 +21,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Hosting platforms terminate HTTPS at a proxy; trust its forwarded headers so URLs,
+        // secure cookies and the camera (HTTPS-only) work. Override with TRUSTED_PROXIES if needed.
+        $middleware->trustProxies(at: env('TRUSTED_PROXIES', '*'));
+
         $middleware->redirectUsersTo(function (Request $request): string {
             $user = $request->user();
 

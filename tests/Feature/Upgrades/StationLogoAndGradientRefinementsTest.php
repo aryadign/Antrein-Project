@@ -286,7 +286,7 @@ class StationLogoAndGradientRefinementsTest extends TestCase
             DevelopmentMerchantSeeder::class,
         ]);
 
-        $garasi = Business::where('slug', 'barbershop-garasi-demo')->firstOrFail();
+        $garasi = Business::where('slug', 'barbershop-garasi-denpasar')->firstOrFail();
         $kopi = Business::where('slug', 'kopi-senja-roastery')->firstOrFail();
         $nusantara = Business::where('slug', 'pangkas-rambut-nusantara')->firstOrFail();
         $customer = User::where('email', 'pelanggan@antrein.id')->firstOrFail();

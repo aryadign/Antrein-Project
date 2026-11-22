@@ -66,6 +66,18 @@ return [
     */
 
     'timezone' => env('APP_TIMEZONE', 'Asia/Makassar'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Sample Data On A Demo Server
+    |--------------------------------------------------------------------------
+    |
+    | Production skips the sample stores and accounts seeder unless a demo
+    | server opts in explicitly. Turn it off again after the demo.
+    |
+    */
+
+    'demo_data_enabled' => (bool) env('DEMO_DATA_ENABLED', false),
     'business_default_timezone' => env('APP_DEFAULT_BUSINESS_TIMEZONE', 'Asia/Makassar'),
     'queue_submit_ip_rate_limit' => (int) env('QUEUE_SUBMIT_IP_RATE_LIMIT', 30),
     'queue_pii_retention_days' => (int) env('QUEUE_PII_RETENTION_DAYS', 30),

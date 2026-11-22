@@ -162,7 +162,7 @@
                 </p>
                 <div class="flex items-center gap-4 text-brand-200">
                     <a href="{{ route('login') }}" class="underline hover:text-white">Akses cepat masuk</a>
-                    <a href="{{ route('customer.queue', 'barbershop-garasi-demo') }}" class="underline hover:text-white">Contoh toko</a>
+                    <a href="{{ route('customer.queue', 'barbershop-garasi-denpasar') }}" class="underline hover:text-white">Contoh toko</a>
                     <a href="{{ route('preview.design-system') }}" class="underline hover:text-white">Pratinjau design system</a>
                 </div>
             </div>

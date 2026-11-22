@@ -24,9 +24,9 @@ class DevelopmentMerchantSeederTest extends TestCase
             'is_active' => true,
         ]);
 
-        $business = Business::where('slug', 'barbershop-garasi-demo')->firstOrFail();
+        $business = Business::where('slug', 'barbershop-garasi-denpasar')->firstOrFail();
 
-        $this->assertSame('Barbershop Garasi (Demo Development)', $business->name);
+        $this->assertSame('Barbershop Garasi Denpasar', $business->name);
         $this->assertSame(7, BusinessHour::where('business_id', $business->id)->count());
         $this->assertSame(12, Service::where('business_id', $business->id)->count());
 
@@ -52,9 +52,9 @@ class DevelopmentMerchantSeederTest extends TestCase
 
         $this->assertSame(1, User::where('email', 'owner@garasi.id')->count());
         $this->assertSame(1, User::where('email', 'pelanggan@antrein.id')->count());
-        $this->assertSame(1, Business::where('slug', 'barbershop-garasi-demo')->count());
+        $this->assertSame(1, Business::where('slug', 'barbershop-garasi-denpasar')->count());
 
-        $business = Business::where('slug', 'barbershop-garasi-demo')->firstOrFail();
+        $business = Business::where('slug', 'barbershop-garasi-denpasar')->firstOrFail();
         $this->assertSame(7, BusinessHour::where('business_id', $business->id)->count());
         $this->assertSame(12, Service::where('business_id', $business->id)->count());
     }
@@ -68,7 +68,7 @@ class DevelopmentMerchantSeederTest extends TestCase
             ->assertSuccessful();
 
         $this->assertDatabaseMissing('users', ['email' => 'owner@garasi.id']);
-        $this->assertDatabaseMissing('businesses', ['slug' => 'barbershop-garasi-demo']);
+        $this->assertDatabaseMissing('businesses', ['slug' => 'barbershop-garasi-denpasar']);
     }
 
     public function test_database_seeder_does_not_bypass_the_production_guard(): void
@@ -78,6 +78,6 @@ class DevelopmentMerchantSeederTest extends TestCase
         $this->artisan('db:seed', ['--force' => true]);
 
         $this->assertDatabaseMissing('users', ['email' => 'owner@garasi.id']);
-        $this->assertDatabaseMissing('businesses', ['slug' => 'barbershop-garasi-demo']);
+        $this->assertDatabaseMissing('businesses', ['slug' => 'barbershop-garasi-denpasar']);
     }
 }
